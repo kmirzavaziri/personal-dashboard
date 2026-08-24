@@ -9,6 +9,7 @@ import planner.service as planner
 import agenda.service as calendar
 import core.item.service as items
 import styling.service as styling
+import health.service as health
 
 PROTOCOL_VERSION = '2024-11-05'
 
@@ -72,6 +73,14 @@ def calendar_rm(services, key):
 
 def calendar_list(services):
     return '\n'.join(_entry_line(e) for e in calendar.listing()) or '(no entries)'
+
+
+def report(services):
+    return json.dumps(health.report_dict(services.config), ensure_ascii=False)
+
+
+def item_list(services, kind=None, category=None):
+    return json.dumps(items.listing(kind, category), ensure_ascii=False)
 
 
 def item_create(services, key, data):
@@ -159,6 +168,9 @@ TOOLS = [
     ('calendar_uncheck', 'Mark an entry not done.', {'key': _STR, 'week': _STR}, ['key'], calendar_uncheck),
     ('calendar_rm', 'Remove a calendar entry.', {'key': _STR}, ['key'], calendar_rm),
     ('calendar_list', 'List all calendar entries.', {}, [], calendar_list),
+    ('report', 'Return the full health plan (meals, nutrient targets, item pool) as JSON.', {}, [], report),
+    ('item_list', 'List items as [{key,short_name,kind,status,category}], optionally by kind/category.',
+     {'kind': _STR, 'category': _STR}, [], item_list),
     ('item_create', 'Create a new item file from a full data object (key, kind, fields).',
      {'key': _STR, 'data': _ANY}, ['key', 'data'], item_create),
     ('item_get', 'Read one field from an item file (YAML).', {'key': _STR, 'field': _STR}, ['key', 'field'], item_get),

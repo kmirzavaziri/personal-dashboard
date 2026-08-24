@@ -14,6 +14,27 @@ def resolve(key: str, kind: str | None = None) -> Item:
     return item
 
 
+def _category(item: Item):
+    if item.metadata.edible:
+        return item.metadata.edible.category
+    if item.metadata.clothing:
+        return item.metadata.clothing.category
+    return None
+
+
+def listing(kind: str | None = None, category: str | None = None) -> list[dict]:
+    out = []
+    for item in sorted(Item.objects.all(), key=lambda i: i.key):
+        if kind and item.kind != kind:
+            continue
+        cat = _category(item)
+        if category and cat != category:
+            continue
+        out.append({'key': item.key, 'short_name': item.short_name, 'kind': item.kind,
+                    'status': item.status, 'category': cat})
+    return out
+
+
 def create(key: str, data: dict) -> str:
     if Item.objects.get_or_none(key=key) is not None:
         raise ValueError(f'Item already exists: {key}')
