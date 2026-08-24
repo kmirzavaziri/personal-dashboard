@@ -72,11 +72,33 @@ def download_image(config, key: str, url: str) -> str:
 
 def set_field(config, key: str, field: str, value, replace: bool = False) -> str:
     item = resolve(key)
-    if field not in type(item).model_fields:
-        raise ValueError(f'Unknown field: {field}')
-    summary = _apply_field(config, item, field, value, replace)
+    parts = field.split('.')
+    if parts[0] not in type(item).model_fields:
+        raise ValueError(f'Unknown field: {parts[0]}')
+    if len(parts) == 1:
+        summary = _apply_field(config, item, field, value, replace)
+    else:
+        parent = item
+        for step in parts[:-1]:
+            parent = getattr(parent, step, None)
+            if parent is None:
+                raise ValueError(f'{field}: "{step}" is not set on {key}')
+        summary = _apply_nested(parent, parts[-1], value, replace)
     item.save()
     return f'{key}.{field} set' if summary == 'set' else f'{key}.{field}: {summary}'
+
+
+def _apply_nested(parent, leaf: str, value, replace: bool) -> str:
+    existing = getattr(parent, leaf)
+    if not replace and isinstance(existing, dict) and isinstance(value, dict):
+        setattr(parent, leaf, {**existing, **value})
+        return f'merged {len(value)} key(s)'
+    if not replace and isinstance(existing, list) and isinstance(value, list):
+        additions = [v for v in value if v not in existing]
+        setattr(parent, leaf, existing + additions)
+        return f'appended {len(additions)} entr(ies) ({len(getattr(parent, leaf))} total)'
+    setattr(parent, leaf, value)
+    return 'set'
 
 
 def _apply_field(config, item: Item, field: str, value, replace: bool) -> str:

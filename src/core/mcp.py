@@ -174,7 +174,8 @@ TOOLS = [
     ('item_create', 'Create a new item file from a full data object (key, kind, fields).',
      {'key': _STR, 'data': _ANY}, ['key', 'data'], item_create),
     ('item_get', 'Read one field from an item file (YAML).', {'key': _STR, 'field': _STR}, ['key', 'field'], item_get),
-    ('item_set', 'Set or append a field on an item. value is any JSON; dicts merge and lists append unless replace=true. '
+    ('item_set', 'Set or append a field on an item. field may be dotted for nested paths '
+     '(e.g. metadata.edible.nutrition). value is any JSON; dicts merge and lists append unless replace=true. '
      'Special: field "image" with a URL downloads it; field "sources" validates + dedups.',
      {'key': _STR, 'field': _STR, 'value': _ANY, 'replace': _BOOL}, ['key', 'field', 'value'], item_set),
     ('item_delete', 'Delete an item file.', {'key': _STR}, ['key'], item_delete),
