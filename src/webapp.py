@@ -20,6 +20,19 @@ from agenda.web import make_calendar_bp
 from mac.net import display_hosts
 
 
+def _is_local_host(host: str) -> bool:
+    return (host in ('localhost', '127.0.0.1', '0.0.0.0', '::1')
+            or host.endswith('.local')
+            or host.startswith(('192.168.', '10.')))
+
+
+def _ui_host_allowed(host: str, web_hosts: tuple[str, ...]) -> bool:
+    host = host.split(':')[0]
+    if web_hosts:
+        return host in web_hosts
+    return _is_local_host(host)
+
+
 def _valid_signature(secret: str, body: bytes, header: str | None) -> bool:
     if not header or not header.startswith('sha256='):
         return False
@@ -57,15 +70,14 @@ def create_app(services: Services) -> Flask:
             if request.headers.get('X-Proxy-Secret') != config.cf_proxy_secret:
                 return 'forbidden', 403
 
-    if config.mcp_host:
-        @app.before_request
-        def restrict_mcp_host():
-            if request.host.split(':')[0] != config.mcp_host:
-                return None
-            if request.path in public_paths or request.path == '/mcp' \
-                    or request.path.startswith('/api/'):
-                return None
-            return 'not found', 404
+    @app.before_request
+    def restrict_web_ui():
+        if request.path in public_paths or request.path == '/mcp' \
+                or request.path.startswith('/api/'):
+            return None
+        if _ui_host_allowed(request.host, config.web_hosts):
+            return None
+        return 'not found', 404
 
     env = make_env(config.templates)
 

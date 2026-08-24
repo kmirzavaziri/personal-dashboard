@@ -33,7 +33,7 @@ class Config:
     mcp_token: str | None
     webhook_secret: str | None
     cf_proxy_secret: str | None
-    mcp_host: str | None
+    web_hosts: tuple[str, ...]
     git_sha: str | None
 
     @classmethod
@@ -70,6 +70,6 @@ class Config:
             mcp_token=env.get('MCP_TOKEN') or None,
             webhook_secret=env.get('WEBHOOK_SECRET') or None,
             cf_proxy_secret=env.get('CF_PROXY_SECRET') or None,
-            mcp_host=env.get('MCP_HOST') or None,
+            web_hosts=tuple(h.strip() for h in (env.get('WEB_HOSTS') or '').split(',') if h.strip()),
             git_sha=env.get('RENDER_GIT_COMMIT') or env.get('GIT_SHA') or None,
         )

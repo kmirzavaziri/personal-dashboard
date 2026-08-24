@@ -23,7 +23,7 @@ services:
         sync: false
       - key: CF_PROXY_SECRET
         sync: false
-      - key: MCP_HOST
+      - key: WEB_HOSTS
         sync: false
       - key: ENABLE_MAC
         value: "false"
