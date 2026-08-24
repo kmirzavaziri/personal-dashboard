@@ -32,6 +32,7 @@ class Config:
     allowed_email: str | None
     mcp_token: str | None
     webhook_secret: str | None
+    cf_proxy_secret: str | None
 
     @classmethod
     def default(cls) -> 'Config':
@@ -66,4 +67,5 @@ class Config:
             allowed_email=env.get('ALLOWED_EMAIL') or None,
             mcp_token=env.get('MCP_TOKEN') or None,
             webhook_secret=env.get('WEBHOOK_SECRET') or None,
+            cf_proxy_secret=env.get('CF_PROXY_SECRET') or None,
         )

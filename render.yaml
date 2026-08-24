@@ -4,7 +4,7 @@ services:
     runtime: docker
     plan: free
     dockerfilePath: ./Dockerfile
-    healthCheckPath: /
+    healthCheckPath: /healthz
     autoDeploy: true
     envVars:
       - key: DATA_REPO
@@ -20,6 +20,8 @@ services:
       - key: ALLOWED_EMAIL
         sync: false
       - key: MCP_TOKEN
+        sync: false
+      - key: CF_PROXY_SECRET
         sync: false
       - key: ENABLE_MAC
         value: "false"

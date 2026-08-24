@@ -39,6 +39,18 @@ def create_app(services: Services) -> Flask:
         app.register_blueprint(make_bp(services))
     app.register_blueprint(make_mcp_bp(services))
 
+    @app.get('/healthz')
+    def healthz():
+        return 'ok'
+
+    if config.cf_proxy_secret:
+        @app.before_request
+        def require_cloudflare():
+            if request.path == '/healthz':
+                return None
+            if request.headers.get('X-Proxy-Secret') != config.cf_proxy_secret:
+                return 'forbidden', 403
+
     env = make_env(config.templates)
 
     @app.get('/')
