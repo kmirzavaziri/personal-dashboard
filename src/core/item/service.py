@@ -44,9 +44,15 @@ def create(key: str, data: dict) -> str:
 
 def get_field(key: str, field: str):
     item = resolve(key)
-    if field not in type(item).model_fields:
-        raise ValueError(f'Unknown field: {field}')
-    return item.to_dict().get(field)
+    parts = field.split('.')
+    if parts[0] not in type(item).model_fields:
+        raise ValueError(f'Unknown field: {parts[0]}')
+    value = item.to_dict()
+    for step in parts:
+        if not isinstance(value, dict):
+            return None
+        value = value.get(step)
+    return value
 
 
 def delete(key: str) -> str:
