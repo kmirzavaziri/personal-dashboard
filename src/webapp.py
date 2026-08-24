@@ -52,8 +52,6 @@ def create_app(services: Services) -> Flask:
         app.register_blueprint(make_bp(services))
     app.register_blueprint(make_mcp_bp(services))
 
-    public_paths = ('/healthz', '/version')
-
     @app.get('/healthz')
     def healthz():
         return 'ok'
@@ -65,19 +63,23 @@ def create_app(services: Services) -> Flask:
     if config.cf_proxy_secret:
         @app.before_request
         def require_cloudflare():
-            if request.path in public_paths:
+            if request.path == '/healthz':
                 return None
             if request.headers.get('X-Proxy-Secret') != config.cf_proxy_secret:
                 return 'forbidden', 403
 
     @app.before_request
-    def restrict_web_ui():
-        if request.path in public_paths or request.path == '/mcp' \
-                or request.path.startswith('/api/'):
+    def authorize():
+        if request.path == '/healthz':
             return None
         if _ui_host_allowed(request.host, config.web_hosts):
             return None
-        return 'not found', 404
+        if request.path == '/api/webhook':
+            return None
+        if config.mcp_token and hmac.compare_digest(
+                request.headers.get('Authorization', ''), f'Bearer {config.mcp_token}'):
+            return None
+        return {'ok': False}, 401
 
     env = make_env(config.templates)
 
@@ -107,10 +109,6 @@ def create_app(services: Services) -> Flask:
 
         @app.post('/api/sync')
         def sync():
-            token = config.mcp_token
-            auth = request.headers.get('Authorization', '')
-            if not token or not hmac.compare_digest(auth, f'Bearer {token}'):
-                return {'ok': False}, 401
             git.pull()
             return {'ok': True}
 
