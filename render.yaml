@@ -11,8 +11,6 @@ services:
         sync: false
       - key: DATA_DEPLOY_KEY_B64
         sync: false
-      - key: DATA_REPO_TOKEN
-        sync: false
       - key: GIT_AUTHOR_NAME
         value: dashboard
       - key: GIT_AUTHOR_EMAIL
@@ -25,7 +23,3 @@ services:
         sync: false
       - key: ENABLE_MAC
         value: "false"
-      - key: MAC_HOST
-        sync: false
-      - key: TS_AUTHKEY
-        sync: false
