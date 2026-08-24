@@ -28,16 +28,41 @@ One Render service serves the app on **two hostnames**, gated differently:
 | Hostname | Serves | Gate |
 |----------|--------|------|
 | `dash.<domain>` (web UI) | full UI + everything | **Cloudflare Access** (your email) |
-| `mcp.<domain>` (MCP)     | only `/mcp`, `/api/*`, `/healthz`, `/version` | **bearer token** / webhook HMAC |
+| `mcp.<domain>` (MCP)     | `/mcp` + `/api/*` | **default-deny bearer token** (whole host) |
 
-Behind both, the app itself enforces:
-- **`WEB_HOSTS` allowlist (default-deny):** the UI is served *only* on hostnames you list.
-  Any other host (the MCP subdomain, the raw `*.onrender.com` URL, anything spoofed) gets
-  `404` for UI paths — only the token-gated endpoints answer. Miss the var → UI is locked
-  everywhere but localhost. Fail-closed by design.
-- **Origin lock (`CF_PROXY_SECRET`):** the app rejects any request that didn't come through
-  your Cloudflare proxy (which injects a secret header), so the raw Render URL can't be used
-  to bypass Access. `/healthz` and `/version` stay exempt so health checks/probes work.
+Every request passes two app-level gates, in order:
+
+1. **Origin lock (`CF_PROXY_SECRET`):** reject anything that didn't arrive through your
+   Cloudflare proxy (which injects a secret header). This closes the raw `*.onrender.com`
+   backdoor and — critically — makes **`Host`-header spoofing impossible**: the app can't
+   distinguish a forged `Host: dash.<domain>` from a real one on its own, so it trusts the
+   CF-only header instead. Only `/healthz` is exempt (Render's health probe; it returns just
+   `"ok"`).
+2. **Authorization:**
+   - **UI hosts** (those in `WEB_HOSTS`) → allowed; Cloudflare Access already gated the whole
+     host at the edge with interactive SSO.
+   - **Every other host** (the MCP subdomain, the raw Render URL, anything spoofed) →
+     **default-deny**: the request must carry a valid `Authorization: Bearer <MCP_TOKEN>`,
+     or be a GitHub webhook with a valid HMAC signature. Otherwise `401`. Nothing is
+     allow-listed per-path, so no endpoint can be accidentally left open.
+
+`WEB_HOSTS` is **fail-closed**: leave it unset and the UI serves nowhere but localhost. So a
+misconfigured deploy hides the UI rather than exposing it.
+
+### Why spoofing can't get in
+- Skip Cloudflare and hit the origin directly → no secret header → `403`.
+- Point your own domain/proxy at the origin → you don't know the 256-bit secret → `403`.
+- Forge `Host: dash.<domain>` at the origin → origin lock fires *before* the host check → `403`.
+- Enter via the mcp edge with a forged `Host` → Cloudflare forwards the edge hostname it
+  served, not your header → treated as the mcp host → `401`.
+- Forge `X-Forwarded-Host` → ignored; the app reads the real `Host` (no `ProxyFix`).
+
+**Two invariants this rests on — don't break them:**
+1. **Keep `CF_PROXY_SECRET` set in production.** It is what defeats Host-spoofing; unsetting it
+   (the escape hatch) reopens that door, so use it only in an emergency.
+2. **Serve both hosts over Full (strict), never Flexible.** On a Flexible zone the CF→origin
+   hop is plaintext HTTP and the bearer token would leak there — the per-host Configuration
+   Rule in step 5 fixes this.
 
 ---
 
@@ -112,8 +137,9 @@ Without this, anyone hitting the raw `*.onrender.com` URL bypasses Access.
    isn't live first, Cloudflare's own requests get `403`'d too.
 
 **Verify:** `https://<render-url>/` → `403`, `https://dash.<domain>/` → Access login,
-`https://mcp.<domain>/` → `404`, `https://mcp.<domain>/mcp` → `401`.
-**Escape hatch:** delete `CF_PROXY_SECRET` in Render to disable the lock.
+`https://mcp.<domain>/` → `401`, `https://mcp.<domain>/mcp` (no token) → `401`.
+**Escape hatch:** delete `CF_PROXY_SECRET` in Render to disable the lock (emergency only — it
+reopens Host-spoofing; see *Why spoofing can't get in*).
 
 ### 7. Connect MCP + webhook (optional)
 - **MCP** — add `https://mcp.<domain>/mcp` as a remote connector in the Claude app, with the
@@ -137,14 +163,17 @@ Locally, `WEB_HOSTS` is unset so the UI is served on localhost/LAN automatically
 `DB_ROOT` / `STORAGE_ROOT` override the data location (default `./db`, `./storage`).
 
 ## Endpoints
-| Path | Purpose |
-|------|---------|
-| `/` and feature pages | web UI (only on `WEB_HOSTS`, behind Access) |
-| `/mcp` | MCP JSON-RPC (bearer `MCP_TOKEN`) |
-| `/api/webhook` | GitHub webhook → pull data (HMAC `WEBHOOK_SECRET`) |
-| `/api/sync` | manual "pull data now" |
-| `/healthz` | liveness (always public) |
-| `/version` | deployed commit SHA (always public) — use to confirm a deploy |
+| Path | Purpose | Reachable |
+|------|---------|-----------|
+| `/` and feature pages | web UI | UI hosts only, behind Access |
+| `/mcp` | MCP JSON-RPC | bearer `MCP_TOKEN` |
+| `/api/webhook` | GitHub webhook → pull data | HMAC `WEBHOOK_SECRET` |
+| `/api/sync` | manual "pull data now" | UI host (via Access) or bearer token |
+| `/version` | deployed commit SHA | UI host (via Access) or bearer token |
+| `/healthz` | liveness — returns `"ok"` | always public (Render health check) |
+
+Confirm a deploy: open `/version` in the browser on the UI host, or
+`curl -H "Authorization: Bearer <MCP_TOKEN>" https://mcp.<domain>/version`.
 
 ## Structural migrations
 Data and code migrate together in a short window (no zero-downtime needed):
