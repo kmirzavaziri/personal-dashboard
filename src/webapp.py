@@ -39,14 +39,20 @@ def create_app(services: Services) -> Flask:
         app.register_blueprint(make_bp(services))
     app.register_blueprint(make_mcp_bp(services))
 
+    public_paths = ('/healthz', '/version')
+
     @app.get('/healthz')
     def healthz():
         return 'ok'
 
+    @app.get('/version')
+    def version():
+        return {'sha': config.git_sha, 'branch': config.git_branch}
+
     if config.cf_proxy_secret:
         @app.before_request
         def require_cloudflare():
-            if request.path == '/healthz':
+            if request.path in public_paths:
                 return None
             if request.headers.get('X-Proxy-Secret') != config.cf_proxy_secret:
                 return 'forbidden', 403
@@ -56,7 +62,7 @@ def create_app(services: Services) -> Flask:
         def restrict_mcp_host():
             if request.host.split(':')[0] != config.mcp_host:
                 return None
-            if request.path == '/healthz' or request.path == '/mcp' \
+            if request.path in public_paths or request.path == '/mcp' \
                     or request.path.startswith('/api/'):
                 return None
             return 'not found', 404

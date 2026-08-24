@@ -34,6 +34,7 @@ class Config:
     webhook_secret: str | None
     cf_proxy_secret: str | None
     mcp_host: str | None
+    git_sha: str | None
 
     @classmethod
     def default(cls) -> 'Config':
@@ -70,4 +71,5 @@ class Config:
             webhook_secret=env.get('WEBHOOK_SECRET') or None,
             cf_proxy_secret=env.get('CF_PROXY_SECRET') or None,
             mcp_host=env.get('MCP_HOST') or None,
+            git_sha=env.get('RENDER_GIT_COMMIT') or env.get('GIT_SHA') or None,
         )
