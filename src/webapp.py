@@ -51,6 +51,16 @@ def create_app(services: Services) -> Flask:
             if request.headers.get('X-Proxy-Secret') != config.cf_proxy_secret:
                 return 'forbidden', 403
 
+    if config.mcp_host:
+        @app.before_request
+        def restrict_mcp_host():
+            if request.host.split(':')[0] != config.mcp_host:
+                return None
+            if request.path == '/healthz' or request.path == '/mcp' \
+                    or request.path.startswith('/api/'):
+                return None
+            return 'not found', 404
+
     env = make_env(config.templates)
 
     @app.get('/')
