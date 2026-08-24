@@ -35,6 +35,8 @@ class Config:
     cf_proxy_secret: str | None
     web_hosts: tuple[str, ...]
     git_sha: str | None
+    dashboard_mcp_url: str | None
+    dashboard_mcp_token: str | None
 
     @classmethod
     def default(cls) -> 'Config':
@@ -72,4 +74,6 @@ class Config:
             cf_proxy_secret=env.get('CF_PROXY_SECRET') or None,
             web_hosts=tuple(h.strip() for h in (env.get('WEB_HOSTS') or '').split(',') if h.strip()),
             git_sha=env.get('RENDER_GIT_COMMIT') or env.get('GIT_SHA') or None,
+            dashboard_mcp_url=env.get('DASHBOARD_MCP_URL') or None,
+            dashboard_mcp_token=env.get('DASHBOARD_MCP_TOKEN') or None,
         )

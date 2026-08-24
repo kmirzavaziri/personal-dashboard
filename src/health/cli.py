@@ -1,12 +1,10 @@
 import json
 
 import typer
-import yaml
 
-from core.item.item import Item
-from core.store.source import Source
+from core.mcp_client import MCPClient
 
-item_app = typer.Typer(no_args_is_help=True, add_completion=False, help='Read and edit item data files')
+item_app = typer.Typer(no_args_is_help=True, add_completion=False, help='Read item data files (edits go through MCP)')
 
 _SLOT_ORDER = [
     ('breakfast_key',   'Breakfast'),
@@ -31,67 +29,9 @@ def report(ctx: typer.Context, json_out: bool = typer.Option(False, '--json', he
         _report_text(data)
 
 
-@item_app.command(help='Print a single field from an item file.')
+@item_app.command(help='Print a single field from an item file (read via MCP).')
 def get(ctx: typer.Context, key: str, field: str):
-    item = Item.objects.get_or_none(key=key)
-    if item is None:
-        raise SystemExit(f'Item file not found: {key}')
-    if field not in type(item).model_fields:
-        raise SystemExit(f'Unknown field: {field}')
-    value = item.to_dict().get(field)
-    if value is None:
-        print('(empty)')
-    else:
-        print(yaml.dump(value, allow_unicode=True, sort_keys=False), end='')
-
-
-@item_app.command(name='set', help='Set or append a field on an item (value parsed as YAML).')
-def set_field(
-    ctx: typer.Context,
-    key: str,
-    field: str,
-    value: str,
-    replace: bool = typer.Option(False, help='Replace list entirely instead of appending'),
-):
-    item = Item.objects.get_or_none(key=key)
-    if item is None:
-        raise SystemExit(f'Item file not found: {key}')
-    if field not in type(item).model_fields:
-        raise SystemExit(f'Unknown field: {field}')
-    summary = _apply_field(item, field, yaml.safe_load(value), replace)
-    item.save()
-    if summary == 'set':
-        print(f'  {key}.{field} set')
-    else:
-        print(f'  {key}.{field}: {summary}')
-
-
-def _apply_field(item, field: str, value, replace: bool) -> str:
-    if field == 'search':
-        incoming = value if isinstance(value, dict) else {}
-        merged = incoming if replace else {**item.search.model_dump(exclude_defaults=True), **incoming}
-        item.search = Item.Search.model_validate(merged)
-        return f"set ({', '.join(merged) or 'empty'})"
-    if field == 'sources':
-        raw = value if isinstance(value, list) else [value]
-        incoming = [Source.model_validate(e) for e in raw]
-        if replace:
-            item.sources = incoming
-            return 'set'
-        seen = {(s.store.slug, s.id) for s in item.sources}
-        additions = [s for s in incoming if (s.store.slug, s.id) not in seen]
-        item.sources = item.sources + additions
-        return f'appended {len(additions)} entr(ies) ({len(item.sources)} total)'
-    existing = getattr(item, field)
-    if not replace and isinstance(existing, dict) and isinstance(value, dict):
-        setattr(item, field, {**existing, **value})
-        return f'merged {len(value)} key(s)'
-    if not replace and isinstance(existing, list) and isinstance(value, list):
-        additions = [v for v in value if v not in existing]
-        setattr(item, field, existing + additions)
-        return f'appended {len(additions)} entr(ies) ({len(getattr(item, field))} total)'
-    setattr(item, field, value)
-    return 'set'
+    print(MCPClient.from_config(ctx.obj.config).call('item_get', key=key, field=field))
 
 
 def _report_to_dict(data) -> dict:

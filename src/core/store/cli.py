@@ -1,18 +1,12 @@
 import json
-import mimetypes
-import re
-import urllib.request
 from contextlib import suppress
 from dataclasses import asdict
-from pathlib import Path
 
 import typer
 
-from core.item.item import Item
+from core.mcp_client import MCPClient
 from core.store.browser import fetch_page_text, search_food_image
-from core.store.registry import STORES
 from core.store.scrapers import SCRAPERS
-from core.store.source import Source
 from pkg.scraper.base import Blocked
 from pkg.scraper.driver import Product
 
@@ -41,23 +35,6 @@ def parse_fields(fields_str: str | None) -> set[str] | None:
 
 def compact_line(fields: set[str], parts: list[tuple[str, str]]) -> str:
     return '  ' + '  |  '.join(token for name, token in parts if name in fields and token)
-
-
-def download_image_local(url: str, key: str, images_dir: Path) -> str:
-    storage = images_dir
-    storage.mkdir(parents=True, exist_ok=True)
-    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-    with urllib.request.urlopen(req, timeout=15) as r:
-        ct = r.headers.get('Content-Type', 'image/jpeg').split(';')[0].strip()
-        data = r.read()
-    if not ct.startswith('image/'):
-        raise ValueError(f'Expected image content-type, got {ct!r}')
-    ext = mimetypes.guess_extension(ct) or '.jpg'
-    if ext in ('.jpe', '.jpeg'):
-        ext = '.jpg'
-    dest = storage / f'{key}{ext}'
-    dest.write_bytes(data)
-    return f'/storage/images/{key}{ext}'
 
 
 def fetch(url: str = typer.Argument(..., help='URL to fetch with a real browser')):
@@ -128,14 +105,12 @@ def product_cmd(
         return
     field_set = parse_fields(fields)
     raw = p.raw
-
     specs = raw.get('specs') or {}
     servings = (
         specs.get('Total Servings Per Container')
         or specs.get('Servings Per Container')
         or raw.get('servings_per_item')
     )
-
     if field_set:
         print(compact_line(field_set, [
             ('name',     p.title),
@@ -169,134 +144,65 @@ def product_cmd(
                 print(f'    {k}: {v}')
 
 
-@store_app.command(help='Fetch an image for an item and save it to the item YAML.')
+@store_app.command(help='Fetch an image for an item (scrape locally) and persist it via MCP.')
 def image(
     ctx: typer.Context,
     key: str,
     store: str = typer.Option(None, help="Use this store's source instead of the chosen one"),
     search: str = typer.Option(None, metavar='QUERY', help='Fall back to Google Images with this query'),
 ):
-    config = ctx.obj.config
-    item = Item.objects.get_or_none(key=key)
-    if not item:
-        raise SystemExit(f'Item not found: {key}')
-    if store:
-        src = next((s for s in item.sources if s.store.slug == store), None)
-        if not src:
-            raise SystemExit(f'No {store} source for {key}')
-    else:
-        src = item.chosen_source
-    if (item.image or '').startswith('/storage/'):
+    client = MCPClient.from_config(ctx.obj.config)
+    if (client.call('item_get', key=key, field='image') or '').startswith('/storage/'):
         print(f'  {key}: already has local image, skipping')
         return
+    src = client.call_json('item_chosen_source', key=key, store=store)
     img = ''
-    store_slug = 'unknown'
-    if src:
-        store_slug = src.store.slug
-        product_id = str(src.url or src.id)
-        scraper = None
-        if product_id:
-            try:
-                scraper = get_scraper(store_slug)
-            except SystemExit:
-                scraper = None
-        if product_id and scraper:
-            p = scraper.get_product(product_id)
-            img = p.image or p.raw.get('image', '')
-        elif not product_id:
-            print(f'  {key} [{store_slug}]: source has no id')
-    else:
-        if not search:
-            raise SystemExit(f'No priced source for {key}')
+    store_slug = (src or {}).get('store', 'unknown')
+    if src and (src.get('url') or src.get('id')):
+        p = get_scraper(store_slug).get_product(src.get('url') or src['id'])
+        img = p.image or p.raw.get('image', '')
     if not img and search:
         print(f"  {key}: no source image, searching Google Images for '{search}'...")
         img = search_food_image(search)
     if not img:
         print(f'  {key} [{store_slug}]: no image found')
         return
-    try:
-        local_path = download_image_local(img, key, config.images)
-        item.image = local_path
-        print(f'  {key} [{store_slug}]: {local_path}')
-    except Exception as e:
-        item.image = img
-        print(f'  {key} [{store_slug}]: download failed ({e}), keeping remote URL')
-    item.save()
+    print('  ' + client.call('item_set_image', key=key, image_url=img))
 
 
-@images_app.command(help='Download all remote image URLs to local storage.')
+@images_app.command(help='Download all remote edible image URLs to local storage (runs on the server).')
 def sync(ctx: typer.Context):
-    config = ctx.obj.config
-    for item in sorted(Item.objects.filter(kind='edible'), key=lambda i: i.key):
-        key = item.key
-        img = item.image
-        if not img or img.startswith('/storage/'):
-            continue
-        try:
-            local_path = download_image_local(img, key, config.images)
-            item.image = local_path
-            item.save()
-            print(f'  {key}: {local_path}')
-        except Exception as e:
-            print(f'  {key}: FAILED — {e}')
+    print(MCPClient.from_config(ctx.obj.config).call('sync_images'))
 
 
-@store_app.command(help='Check or populate item sources across stores.')
+@store_app.command(help='Search stores for a query, or persist one scraped source (--store --id) via MCP.')
 def populate(
     ctx: typer.Context,
     key: str,
-    store: str = typer.Option(None, help='Specific store key. Omit to check all stores.'),
-    id: str = typer.Option(None, help='Product id — fetch and save this source'),
-    query: str = typer.Option(None, help="Override search keyword (default: item's search.query)"),
+    store: str = typer.Option(None, help='Specific store key.'),
+    id: str = typer.Option(None, help='Product id — scrape and persist this source'),
+    query: str = typer.Option(None, help='Search keyword (required without --id)'),
 ):
-    item = Item.objects.get_or_none(key=key)
-    if item is None:
-        raise SystemExit(f'Item not found: {key}')
     if store and id:
-        _save_source(item, store, id)
+        _save_source(ctx.obj.config, key, store, id)
     else:
-        _check_stores(item, store, query)
+        _search_stores(store, query)
 
 
-def _parse_serving_units(serving_size: str, category: str) -> int:
-    if not serving_size or category != 'supplement':
-        return 1
-    m = re.match(r'(\d+)\s*(softgel|capsule|tablet|cap|pill|gummy|lozenge)', serving_size.strip(), re.IGNORECASE)
-    return int(m.group(1)) if m else 1
-
-
-def _derive_servings(store_key: str, item, p: Product) -> int | None:
+def _save_source(config, key: str, store: str, id: str) -> None:
+    p = get_scraper(store).get_product(id)
     raw = p.raw
     specs = raw.get('specs') or {}
-    servings = specs.get('Total Servings Per Container') or specs.get('Servings Per Container')
-    if servings:
-        return servings
-
-    servings = raw.get('servings_per_item')
-
-    if servings is None and store_key in STORES.grocery_slugs():
-        return 1
-
-    if servings is None:
-        hits = re.findall(
-            r'(?<![A-Za-z0-9\-])(\d+)\s*(?:fish gelatin\s+)?(?:veg(?:etable)?\s+)?'
-            r'(?:softgels?|capsules?|tablets?|gummies?|veg\s*caps?)',
-            p.title, re.IGNORECASE,
-        )
-        if hits:
-            servings = int(hits[-1])
-
-    if servings is not None:
-        edible = item.metadata.edible
-        our_units = _parse_serving_units(edible.serving_size if edible else '', edible.category if edible else '')
-        iherb_units = int(raw.get('iherb_serving_units') or 1)
-        ratio = max(1, our_units // max(1, iherb_units))
-        if ratio > 1:
-            try:
-                servings = int(servings) // ratio
-            except (TypeError, ValueError):
-                pass
-    return servings
+    result = MCPClient.from_config(config).call(
+        'item_add_source', key=key, store=store, id=str(id), price=p.price, url=p.url or '',
+        title=p.title, out_of_stock=(raw.get('stock_status') == 'out_of_stock'),
+        size_ml=raw.get('size_ml'),
+        specs_servings=specs.get('Total Servings Per Container') or specs.get('Servings Per Container'),
+        servings_per_item=raw.get('servings_per_item'),
+        iherb_serving_units=int(raw.get('iherb_serving_units') or 1),
+    )
+    print('  ' + result)
+    _print_variants(key, store, id, p)
 
 
 def _print_variants(key: str, store: str, id: str, p: Product) -> None:
@@ -324,75 +230,15 @@ def _print_variants(key: str, store: str, id: str, p: Product) -> None:
             print(f'    dash store populate {key} --store {store} --id {oid}')
 
 
-def _save_source(item, store: str, id: str) -> None:
-    scraper = get_scraper(store)
-    p = scraper.get_product(id)
-
-    is_out_of_stock = (p.raw.get('stock_status') or '') == 'out_of_stock'
-    price = p.price
-    servings = _derive_servings(store, item, p)
-
-    entry = {'store': store, 'id': id}
-    if is_out_of_stock:
-        entry['out_of_stock'] = True
-    if price is not None:
-        entry['price'] = price
-    ml_per_serving = item.metadata.edible.ml_per_serving if item.metadata.edible else None
-    size_ml = p.raw.get('size_ml')
-    if ml_per_serving and size_ml:
-        entry['size_ml'] = size_ml
-        servings = round(size_ml / ml_per_serving)
-    elif servings is not None:
-        try:
-            entry['servings_per_item'] = int(servings)
-        except (TypeError, ValueError):
-            entry['servings_per_item'] = servings
-    url = p.url or ''
-    if url:
-        entry['url'] = url
-
-    item.sources = [s for s in item.sources
-                    if not (s.store.slug == store and s.id == str(id))]
-    item.sources.append(Source.model_validate(entry))
-    item.save()
-
-    stock_label = ' [OUT OF STOCK]' if is_out_of_stock else ''
-    print(f"  {item.key} [{store}]: saved{stock_label} — AED {price}, {servings} servings, url: {url or '—'}")
-    _print_variants(item.key, store, id, p)
-
-
-def _check_stores(item, store: str, query: str) -> None:
-    query = query or item.search.query
+def _search_stores(store: str, query: str) -> None:
     if not query:
-        raise SystemExit(f"Item '{item.key}' has no search.query — add one to the YAML first or pass --query")
-    print(f'\n{item.key}  (query: "{query}")\n')
-
-    stores_to_check = [store] if store else (item.search.sources or STORES.scrapeable_slugs())
-    ml_per_serving = item.metadata.edible.ml_per_serving if item.metadata.edible else None
-
-    def _srv(src: Source):
-        s = src.servings_per_item
-        if s is None and src.size_ml and ml_per_serving:
-            s = round(src.size_ml / ml_per_serving)
-        return s if s is not None else '?'
-
-    sources_by_store: dict[str, list] = {}
-    for s in item.sources:
-        sources_by_store.setdefault(s.store.slug, []).append(s)
-
+        raise SystemExit('Provide --query (the local box has no item data to read a stored query from).')
+    from core.store.registry import STORES
+    stores_to_check = [store] if store else STORES.scrapeable_slugs()
+    print(f'\nquery: "{query}"\n')
     for store_key in stores_to_check:
-        if store_key in sources_by_store:
-            entries = sources_by_store[store_key]
-            if len(entries) == 1:
-                print(f'  {store_key:<16} ✓  AED {entries[0].price} / {_srv(entries[0])} srv')
-            else:
-                print(f'  {store_key:<16} ✓  {len(entries)} source(s):')
-                for src in entries:
-                    print(f'      AED {src.price} / {_srv(src)} srv  id:{src.id}')
-            continue
         try:
-            scraper = get_scraper(store_key)
-            found = scraper.search(query, limit=5)
+            found = get_scraper(store_key).search(query, limit=5)
             if not found:
                 print(f'  {store_key:<16} —  no results')
             else:
