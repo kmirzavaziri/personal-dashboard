@@ -1,0 +1,12 @@
+{% macro img_tag(image) %}<img src="{{ image }}" alt="" style="width:80px;height:80px;object-fit:contain;display:block;margin:0 auto 0.4rem;border-radius:4px;background:#fff;">{% endmacro %}
+{% macro nutrient_lines(item) %}<div class="nut-row"><span class="nut-label">Serving</span><span class="nut-val">{{ item.metadata.edible.serving_size }}</span></div>{% for key, val in (item.metadata.edible.nutrition or {}).items() if val %}
+<div class="nut-row"><span class="nut-label">{{ key | nutrient_label }}</span><span class="nut-val">{{ val }} {{ key | nutrient_unit }}</span></div>{% endfor %}{% endmacro %}
+{% macro nutrient_block(item, with_image=false) %}{% if with_image and item.image %}{{ img_tag(item.image) }}
+{% endif %}{{ nutrient_lines(item) }}{% endmacro %}
+{% macro item_tooltip(item) %}{% if item.image %}{{ img_tag(item.image) }}
+{% endif %}<div class="nut-row" style="border-bottom:1px solid #2e2e2e;margin-bottom:0.3rem;padding-bottom:0.3rem;font-size:0.78rem;white-space:normal;">{{ item.name }}</div>
+{{ nutrient_lines(item) }}{% if item.price_per_month is not none %}
+<div class="nut-row"><span class="nut-label">Per month</span><span class="nut-val">AED {{ "%.2f"|format(item.price_per_month) }}</span></div>{% endif %}{% if item.notes %}
+<div style="margin-top:0.4rem;color:var(--muted);font-size:0.78rem;white-space:normal;max-width:240px;">{{ item.notes }}</div>{% endif %}{% endmacro %}
+{% macro nutrient_tooltip(rows) %}{% for r in rows %}<div class="nut-row"><span class="nut-label">{{ r.label }}</span><span class="nut-val">{{ r.val }} <span class="nut-daily">{{ r.daily }}</span></span></div>{% if not loop.last %}
+{% endif %}{% endfor %}{% endmacro %}

@@ -1,0 +1,29 @@
+#!/usr/bin/env python3
+import json
+import os
+import re
+import sys
+import time
+
+ACTIVITY_DIR = "/tmp/claude-activity"
+
+try:
+    data = json.load(sys.stdin)
+except Exception:
+    data = {}
+
+key = os.environ.get("MAC_SESSION") or data.get("session_id") or "unknown"
+session_id = re.sub(r"[^A-Za-z0-9_.-]", "_", str(key))
+event = str(data.get("hook_event_name") or "unknown")
+
+os.makedirs(ACTIVITY_DIR, exist_ok=True)
+path = os.path.join(ACTIVITY_DIR, session_id)
+
+if event == "SessionEnd":
+    try:
+        os.remove(path)
+    except FileNotFoundError:
+        pass
+else:
+    with open(path, "w") as f:
+        f.write(f"{event} {int(time.time())}")

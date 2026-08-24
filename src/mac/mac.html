@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}My Mac{% endblock %}
+{% block max_width %}600px{% endblock %}
+{% block heading %}My Mac{% endblock %}
+
+{% block extra_css %}
+    .card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(var(--glass-blur)) saturate(1.15);
+      -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.15);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg); box-shadow: var(--glass-shadow);
+      padding: 1.2rem 1.4rem; margin-bottom: 1.25rem;
+    }
+    .state { font-size: 1.2rem; color: var(--strong); }
+    .dot { display: inline-block; width: 0.7rem; height: 0.7rem; border-radius: 50%; margin-right: 0.5rem; }
+    .dot.on { background: var(--green); } .dot.off { background: var(--muted); }
+    .remaining { color: var(--muted); margin-top: 0.3rem; }
+    .btns { display: flex; gap: 0.6rem; margin-top: 1rem; }
+    .btns .btn { flex: 1; justify-content: center; padding: 0.8rem; font-size: 0.95rem; }
+    .btn.danger:hover { border-color: var(--red); color: var(--strong); }
+    .sess { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.4rem; border-top: 1px solid var(--border); text-decoration: none; color: var(--text); border-radius: var(--radius-sm); }
+    .sess:first-child { border-top: none; }
+    .sess:hover { background: var(--tile-bg); }
+    .sess .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sess .age { color: var(--muted); font-size: 0.75rem; }
+    .tag { font-size: 0.72rem; padding: 0.1rem 0.45rem; border-radius: var(--radius-sm); }
+    .tag.working { background: rgba(143,180,136,0.15); color: var(--green); }
+    .tag.perm { background: rgba(203,176,121,0.15); color: var(--yellow); }
+    .tag.idle { background: var(--tile-bg); color: var(--muted); }
+    .label { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+    input {
+      width: 100%; padding: 0.7rem 0.8rem; margin-bottom: 0.6rem;
+      font-family: inherit; font-size: 0.95rem;
+      color: var(--text); background: rgba(0,0,0,0.25);
+      border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
+    }
+    input:focus { outline: none; border-color: var(--accent); }
+    .run-err { color: var(--red); font-size: 0.8rem; margin-top: 0.5rem; }
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="state"><span id="dot" class="dot off"></span><span id="stateText">…</span></div>
+  <div class="remaining" id="remaining"></div>
+  <div class="btns" id="btns"></div>
+</div>
+
+<div class="card">
+  <div class="label">Run a command</div>
+  <input id="runCmd" placeholder="command (e.g. claude)" autocapitalize="off" autocorrect="off" spellcheck="false">
+  <input id="runCwd" placeholder="working directory (optional, defaults to home)" autocapitalize="off" autocorrect="off" spellcheck="false">
+  <div class="btns"><button id="runBtn" class="btn">Run</button></div>
+  <div class="run-err" id="runErr"></div>
+</div>
+
+<div class="card">
+  <div class="label">Sessions</div>
+  <div id="sessions"><span class="warn">…</span></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function api(path, method, extra) {
+    return fetch(path + (extra ? "?" + extra : ""), { method: method || "GET" });
+  }
+
+  function fmtDur(s) {
+    if (s <= 0) return "0s";
+    const m = Math.floor(s / 60), sec = s % 60;
+    return m > 0 ? m + "m " + sec + "s" : sec + "s";
+  }
+
+  function tag(sess) {
+    if (sess.working) return '<span class="tag working">working</span>';
+    if (sess.event === "PermissionRequest") return '<span class="tag perm">needs permission</span>';
+    return '<span class="tag idle">idle</span>';
+  }
+
+  async function refresh() {
+    try {
+      const r = await api("/api/mac/status");
+      if (!r.ok) { document.getElementById("stateText").textContent = "no access"; return; }
+      const s = await r.json();
+      document.getElementById("dot").className = "dot " + (s.on ? "on" : "off");
+      document.getElementById("stateText").textContent =
+        s.on ? (s.working ? "Awake · sessions active" : "Awake · idle") : "Mac: released";
+      const power = s.power === "ac" ? "on external power" : "on battery — may deep-idle when bagged";
+      let sub;
+      if (s.on && s.working) sub = "held awake while sessions run · TTL floor " + fmtDur(s.remaining);
+      else if (s.on) sub = "sleeping in " + fmtDur(s.sleep_in) + " unless extended";
+      else sub = "run \u2018dash mac awake\u2019 at the keyboard to arm";
+      sub += " · " + power;
+      document.getElementById("remaining").textContent = sub;
+      const btns = document.getElementById("btns");
+      if (s.on) {
+        btns.innerHTML =
+          '<button id="extendBtn" class="btn">Extend to 30m</button>' +
+          '<button id="offBtn" class="btn danger">Sleep now</button>';
+        document.getElementById("extendBtn").onclick = async () => {
+          await api("/api/mac/extend", "POST", "min=30"); refresh();
+        };
+        document.getElementById("offBtn").onclick = async () => {
+          await api("/api/mac/off", "POST"); refresh();
+        };
+      } else {
+        btns.innerHTML = '';
+      }
+      const el = document.getElementById("sessions");
+      if (!s.sessions.length) {
+        el.innerHTML = '<span style="color:var(--muted)">none tracked</span>';
+      } else {
+        el.innerHTML = s.sessions.map(x =>
+          '<a class="sess" href="/mac/term?sock=' + encodeURIComponent(x.sock) + '">' +
+          '<span class="name">' + x.id + '</span>' +
+          tag(x) + '<span class="age">' + fmtDur(x.age) + '</span>' +
+          '</a>'
+        ).join("");
+      }
+    } catch (e) {
+      document.getElementById("stateText").textContent = "unreachable";
+    }
+  }
+
+  async function runCommand() {
+    const cmd = document.getElementById("runCmd").value.trim();
+    const cwd = document.getElementById("runCwd").value.trim();
+    const err = document.getElementById("runErr");
+    err.textContent = "";
+    if (!cmd) { err.textContent = "enter a command"; return; }
+    const btn = document.getElementById("runBtn");
+    btn.disabled = true;
+    try {
+      const r = await api(
+        "/api/mac/run", "POST",
+        "command=" + encodeURIComponent(cmd) + "&cwd=" + encodeURIComponent(cwd));
+      const data = await r.json();
+      if (!r.ok) { err.textContent = data.error || "failed to start"; return; }
+      location.href = "/mac/term?sock=" + encodeURIComponent(data.sock);
+    } catch (e) {
+      err.textContent = "unreachable";
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  document.getElementById("runBtn").onclick = runCommand;
+  document.getElementById("runCmd").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") runCommand();
+  });
+
+  refresh();
+  setInterval(refresh, 1000);
+</script>
+{% endblock %}

@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: dashboard
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: DATA_REPO
+        sync: false
+      - key: DATA_REPO_TOKEN
+        sync: false
+      - key: GIT_AUTHOR_NAME
+        value: dashboard
+      - key: GIT_AUTHOR_EMAIL
+        sync: false
+      - key: WEBHOOK_SECRET
+        sync: false
+      - key: ALLOWED_EMAIL
+        sync: false
+      - key: MCP_TOKEN
+        sync: false
+      - key: ENABLE_MAC
+        value: "false"
+      - key: MAC_HOST
+        sync: false
+      - key: TS_AUTHKEY
+        sync: false

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="aurora">
+<head>
+  <title>{% block title %}Dashboard{% endblock %}</title>
+  {% include "head_meta.html" %}
+  {% include "components.html" %}
+  <style>
+    body {
+      --pad: 2rem;
+      color: var(--text);
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      margin: 0;
+      min-height: 100vh;
+    }
+
+    /* ── Navbar (solid, full-width, sticks to top) ──────────────────────── */
+    .crumbs {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+      font-size: 0.82rem;
+      padding: calc(0.7rem + env(safe-area-inset-top)) max(var(--pad), env(safe-area-inset-right)) 0.7rem max(var(--pad), env(safe-area-inset-left));
+      background: var(--navbar-bg);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .crumbs a { color: var(--navbar-muted); text-decoration: none; transition: color 0.18s ease; }
+    .crumbs a:hover { color: var(--navbar-text); }
+    .crumb-brand { color: var(--navbar-text); font-weight: 600; }
+    .crumb-sep { color: var(--navbar-muted); opacity: 0.6; }
+    .crumb-current { color: var(--navbar-text); font-weight: 600; }
+
+    main {
+      display: block;
+      max-width: {% block max_width %}1100px{% endblock %};
+      margin: 0 auto;
+      padding: var(--pad)
+               max(var(--pad), env(safe-area-inset-right))
+               max(var(--pad), env(safe-area-inset-bottom))
+               max(var(--pad), env(safe-area-inset-left));
+    }
+
+    [id] { scroll-margin-top: calc(var(--nav-h, 3.2rem) + 0.6rem); }
+
+    @media (max-width: 900px) { body { --pad: 1rem; } }
+    @media (max-width: 600px) { :root { font-size: 92.5%; } body { --pad: 0.8rem; } }
+
+    {% block extra_css %}{% endblock %}
+  </style>
+</head>
+<body class="{% block body_class %}{% endblock %}">
+
+{% set h = self.heading()|trim %}
+<nav class="crumbs">
+  <a href="/" id="back-home" class="crumb-brand">Personal Dashboard</a>
+  {% if h %}<span class="crumb-sep">/</span><span class="crumb-current">{{ h }}</span>{% endif %}
+</nav>
+<script>
+  (function () {
+    var link = document.getElementById('back-home');
+    link.addEventListener('click', function (e) {
+      if (location.pathname === '/') return;
+      if (!document.referrer) return;
+      try {
+        var ref = new URL(document.referrer);
+        if (ref.origin === location.origin && ref.pathname === '/') {
+          e.preventDefault();
+          history.back();
+        }
+      } catch (err) {}
+    });
+  })();
+</script>
+
+<script>
+  (function () {
+    var nav = document.querySelector('.crumbs');
+    function setNavH() { document.documentElement.style.setProperty('--nav-h', nav.offsetHeight + 'px'); }
+    setNavH();
+    window.addEventListener('resize', setNavH);
+  })();
+</script>
+
+<main class="{% block wrap %}{% endblock %}">
+{% block content %}{% endblock %}
+</main>
+
+<script>
+  (function () {
+    if (matchMedia('(hover: hover)').matches) return;
+    function closeAll() {
+      document.querySelectorAll('.has-tooltip.tt-open').forEach(function (o) { o.classList.remove('tt-open'); });
+    }
+    document.querySelectorAll('.has-tooltip').forEach(function (el) {
+      if (el.querySelector('a')) return;
+      el.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var open = el.classList.contains('tt-open');
+        closeAll();
+        if (!open) el.classList.add('tt-open');
+      });
+    });
+    document.addEventListener('click', closeAll);
+  })();
+</script>
+
+<script>
+  (function () {
+    var KEY = 'details-open';
+    var page = location.pathname;
+    var map;
+    try { map = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { map = {}; }
+    document.querySelectorAll('details').forEach(function (d, i) {
+      var s = d.querySelector('summary');
+      var id = page + '::' + (s ? s.textContent.trim() : String(i));
+      if (id in map) { map[id] ? d.setAttribute('open', '') : d.removeAttribute('open'); }
+      d.addEventListener('toggle', function () {
+        map[id] = d.open;
+        try { localStorage.setItem(KEY, JSON.stringify(map)); } catch (e) {}
+      });
+    });
+  })();
+</script>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

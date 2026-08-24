@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% import "macros.html" as m %}
+
+{% block title %}Shopping List{% endblock %}
+{% block heading %}Shopping List{% endblock %}
+{% block max_width %}1000px{% endblock %}
+
+{% block extra_css %}
+    tr:target td { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+    .status-select {
+      background: var(--surface); color: var(--text);
+      border: 1px solid var(--border); border-radius: 3px;
+      font: inherit; font-size: 0.82rem; padding: 0.1rem 0.25rem; cursor: pointer;
+    }
+    .thumb-col { width: 64px; padding: 0.2rem 0.3rem; }
+    .thumb-col img { width: 56px; height: 56px; object-fit: contain; border-radius: 3px; display: block; background: var(--strong); }
+{% endblock %}
+
+{% block content %}
+<section>
+<details open>
+<summary><h2>Groceries &amp; Supplements</h2></summary>
+<table>
+  <thead>
+    <tr>
+      <th class="thumb-col"></th>
+      <th>Item</th>
+      <th class="num">Items/mo</th>
+      <th class="num">Price/item</th>
+      <th>Stock</th>
+      <th>Source</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% set grand_total = namespace(val=0) %}
+    {%- set active = pool.values() | selectattr('servings_per_week', 'gt', 0) | list -%}
+    {% for cat in categories %}
+    {%- set cat_items = active | selectattr('metadata.edible.category', 'eq', cat.key) | list -%}
+    {% if cat_items %}
+    {% set cat_total = namespace(val=0) %}
+    <tr class="category-heading-row">
+      <td colspan="6"><strong>{{ cat.label }}</strong></td>
+    </tr>
+    {% for item in cat_items %}
+    {% if item.price_per_month is not none %}
+      {% set cat_total.val = cat_total.val + item.price_per_month %}
+      {% set grand_total.val = grand_total.val + item.price_per_month %}
+    {% endif %}
+    <tr id="item-{{ item.key }}">
+      <td class="thumb-col">
+        {%- if item.image -%}<img src="{{ item.image }}" alt="">{%- endif -%}
+      </td>
+      <td>
+        {%- if item.metadata.edible.nutrition -%}
+        <span class="has-tooltip">{{ item.name }}<span class="tooltip-box">{{ m.nutrient_block(item) }}</span></span>
+        {%- else -%}{{ item.name }}{%- endif -%}
+      </td>
+      <td class="num">
+        {%- set item_refs = refs.get(item.key, []) -%}
+        {%- if item.items_per_month is not none -%}
+        <span class="has-tooltip" style="cursor:default;">{{ item.items_per_month | fmt_freq }}
+          <span class="tooltip-box" style="left:auto;right:0;text-align:left;">
+            <div class="nut-row" style="border-bottom:1px solid var(--border);margin-bottom:0.3rem;padding-bottom:0.3rem;">
+              <span class="nut-label">per week</span>
+              <span class="nut-val">
+                {%- if item.items_per_week is not none -%}~{{ item.items_per_week | round(1) }}×{%- endif -%}
+                <span style="color:var(--muted);"> ({{ item.servings_per_week }} servings)</span>
+              </span>
+            </div>
+            {%- if item_refs -%}
+              {%- for r in item_refs -%}<div class="nut-row"><span class="nut-val">{{ r }}</span></div>{% endfor -%}
+            {%- else -%}
+              <div class="nut-row"><span class="nut-label">daily supplement</span></div>
+            {%- endif -%}
+          </span>
+        </span>
+        {%- else -%}<span class="muted">—</span>{%- endif -%}
+      </td>
+      <td class="num">
+        {%- if item.price_per_month is not none or item.price_per_protein_g is not none -%}
+        <span class="has-tooltip" style="cursor:default;">{{ item.price | fmt_price }}
+          <span class="tooltip-box" style="left:auto;right:0;">
+            {%- if item.price_per_serving is not none -%}
+            <div class="nut-row"><span class="nut-label">per serving</span><span class="nut-val">{{ item.price_per_serving | fmt_price }}</span></div>
+            {%- endif -%}
+            {%- if item.price_per_month is not none -%}
+            <div class="nut-row"><span class="nut-label">per month</span><span class="nut-val">{{ item.price_per_month | fmt_price }}</span></div>
+            {%- endif -%}
+            {%- if item.price_per_protein_g is not none -%}
+            <div class="nut-row"><span class="nut-label">per g protein</span><span class="nut-val">{{ item.price_per_protein_g | fmt_price }}</span></div>
+            {%- endif -%}
+          </span>
+        </span>
+        {%- else -%}{{ item.price | fmt_price }}{%- endif -%}
+      </td>
+      <td>
+        {%- if item.metadata.edible.category == 'meal' -%}
+          <span class="muted">—</span>
+        {%- else -%}
+          <span class="status-cell" data-key="{{ item.key }}" data-status="{{ item.status or '' }}"></span>
+        {%- endif -%}
+      </td>
+      <td style="white-space:nowrap;">
+        {%- if item.url -%}
+        <a href="{{ item.url }}" target="_blank" rel="noopener" class="link">{{ item.url | fmt_store }}</a>
+        {%- set src = item.chosen_source -%}
+        {%- if src and src.servings_per_item -%}<span class="muted" style="font-size:0.82rem;"> ({{ src.servings_per_item }} srv)</span>{%- endif -%}
+        {%- else -%}<span class="muted">—</span>{%- endif -%}
+      </td>
+    </tr>
+    {% endfor %}
+    <tr class="subtotal-row">
+      <td colspan="2">{{ cat.label }} total</td>
+      <td class="num" colspan="4">{{ cat_total.val | fmt_price }} / mo</td>
+    </tr>
+    {% endif %}
+    {% endfor %}
+    <tr class="total-row">
+      <td colspan="2">Grand total</td>
+      <td class="num" colspan="4">{{ grand_total.val | fmt_price }} / mo</td>
+    </tr>
+  </tbody>
+</table>
+</details>
+</section>
+
+{% if gear %}
+<section>
+<details open>
+<summary><h2>Gear</h2></summary>
+<table>
+  <thead>
+    <tr>
+      <th class="thumb-col"></th>
+      <th>Item</th>
+      <th class="num">Price (AED)</th>
+      <th>Status</th>
+      <th>Source</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for key, item in gear.items() %}
+    <tr>
+      <td class="thumb-col">{%- if item.image -%}<img src="{{ item.image }}" alt="">{%- endif -%}</td>
+      <td>{{ item.short_name }}</td>
+      <td class="num">{% if item.price %}{{ item.price | fmt_price }}{% else %}—{% endif %}</td>
+      <td class="gear-status-cell" data-key="{{ key }}" data-status="{{ item.status or '' }}"></td>
+      <td>
+        {%- if item.url -%}
+        <a href="{{ item.url }}" target="_blank" rel="noopener" class="link">{{ item.source_title }}</a>
+        {%- else -%}—{%- endif -%}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</details>
+</section>
+{% endif %}
+
+{% if one_time_purchases %}
+<section>
+<details open>
+<summary><h2>Periodic Purchases</h2></summary>
+<table>
+  <thead>
+    <tr>
+      <th>Item</th>
+      <th>Cost</th>
+      <th>Frequency</th>
+      <th>Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in one_time_purchases %}
+    <tr>
+      <td>
+        {%- if item.link -%}
+        <a href="{{ item.link }}" target="_blank" rel="noopener" class="link">{{ item.item }} ↗</a>
+        {%- else -%}{{ item.item }}{%- endif -%}
+      </td>
+      <td class="num">{{ item.cost }}</td>
+      <td>{{ item.frequency }}</td>
+      <td class="muted">{{ item.notes }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</details>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% include "status_popover.html" %}
+<script>
+  initStatusPopover({selector: '.status-cell', endpoint: '/api/item', mode: 'inner', statuses: {{ status_config('edible') | tojson }}});
+  initStatusPopover({selector: '.gear-status-cell', endpoint: '/api/gear', mode: 'inner', statuses: {{ status_config('durable') | tojson }}});
+</script>
+{% endblock %}

@@ -1,0 +1,24 @@
+# Import architecture, enforced by `make lint-imports`.
+# Layers, high to low: apps > core > pkg. A layer may import only from layers
+# below it; apps are independent siblings (one app never imports another). The
+# composition roots (cli.py, webapp.py) sit above every layer and wire the apps
+# together, so they are intentionally left unconstrained. Shared purchasable-item
+# logic lives in core/item, so apps no longer reach across into one another.
+
+[importlinter]
+root_packages =
+    health
+    styling
+    shopping_list
+    expenses
+    mac
+    core
+    pkg
+
+[importlinter:contract:architecture]
+name = Layered, independent apps
+type = layers
+layers =
+    health | styling | shopping_list | expenses | mac
+    core
+    pkg

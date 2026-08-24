@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Calendar{% endblock %}
+{% block heading %}Calendar{% endblock %}
+{% block max_width %}100%{% endblock %}
+{% block wrap %}{% endblock %}
+{% block body_class %}calendar-page{% endblock %}
+
+{% block extra_css %}
+  body.calendar-page { height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+  body.calendar-page main { flex: 1 1 auto; min-height: 0; width: 100%; margin: 0; display: flex; flex-direction: column; padding: 1.1rem 0 0.9rem; }
+  .cal-nav { padding: 0 0.9rem; }
+
+  .cal-nav { flex: none; display: flex; align-items: center; gap: 0.7rem; margin-bottom: 1rem; }
+  .cal-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 2rem; height: 2rem; border-radius: var(--radius-sm);
+    background: var(--glass-bg); border: 1px solid var(--glass-border);
+    color: var(--strong); text-decoration: none; font-size: 1.1rem; line-height: 1;
+    backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur));
+  }
+  @media (hover: hover) { .cal-btn:hover { background: rgba(255,255,255,0.1); } }
+  .cal-span { font-size: 0.95rem; font-weight: 600; color: var(--strong); text-shadow: 0 1px 10px rgba(0,0,0,0.5); }
+  .cal-today {
+    margin-left: 0.3rem; font-size: 0.78rem; text-decoration: none;
+    color: var(--strong); padding: 0.35rem 0.7rem; border-radius: var(--radius-sm);
+    background: var(--glass-bg); border: 1px solid var(--glass-border);
+  }
+  @media (hover: hover) { .cal-today:hover { background: rgba(255,255,255,0.1); } }
+
+  .cal-board {
+    flex: 1 1 auto; min-height: 0; display: flex; overflow: hidden; margin: 0 0.9rem;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur)) saturate(1.15);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.15);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius);
+    box-shadow: var(--glass-shadow);
+    scrollbar-width: none; -ms-overflow-style: none;
+  }
+  .cal-board::-webkit-scrollbar { display: none; }
+
+  .cal-day {
+    flex: 1 1 0; min-width: 0; max-height: 100%;
+    display: flex; flex-direction: column;
+    padding: 0.7rem 0.6rem;
+    border-right: 1px solid var(--glass-border);
+  }
+  .cal-day:last-child { border-right: none; }
+  .cal-day-h { flex: none; display: flex; align-items: baseline; gap: 0.4rem; margin: 0 0.2rem 0.6rem 0.05rem; }
+  .cal-dow { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; color: var(--muted); }
+  .cal-today-badge {
+    font-size: 0.56rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--bg); background: var(--accent);
+    padding: 0.08rem 0.4rem; border-radius: 999px; align-self: center;
+  }
+  .cal-num { font-size: 1.05rem; font-weight: 600; color: var(--strong); margin-left: auto; }
+
+  .cal-cards { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-right: 0.3rem; scrollbar-width: none; -ms-overflow-style: none; }
+  .cal-cards::-webkit-scrollbar { display: none; }
+
+  .ecard {
+    display: flex; align-items: flex-start; gap: 0.35rem;
+    background: var(--surface); border-left: 3px solid;
+    border-radius: var(--radius-sm);
+    padding: 0.5rem 0.55rem; margin-bottom: 0.4rem;
+    cursor: pointer; transition: background 0.14s;
+  }
+  .ecard:last-child { margin-bottom: 0; }
+  @media (hover: hover) { .ecard:hover { background: #2e2e2e; } }
+  .ebox {
+    flex: none; width: 13px; height: 13px; margin-top: 2px;
+    border: 1.5px solid var(--muted); border-radius: 3px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 0.6rem; line-height: 1; color: var(--bg); cursor: pointer;
+  }
+  .ecard.done .ebox { background: var(--green); border-color: var(--green); }
+  .ecard.done .ebox::after { content: '✓'; }
+  .etitle { font-family: var(--font-ui); font-size: 0.8rem; line-height: 1.35; color: var(--strong); }
+  .elink { margin-left: auto; flex: none; color: var(--muted); font-size: 0.8rem; text-decoration: none; }
+  .elink:hover { opacity: 0.7; }
+
+  @media (max-width: 700px) {
+    .cal-board { overflow-x: auto; }
+    .cal-day { flex: none; width: 44vw; }
+  }
+{% endblock %}
+
+{% block content %}
+<div class="cal-nav">
+  <a class="cal-btn" href="/calendar?offset={{ offset - 1 }}" aria-label="Previous week">‹</a>
+  <a class="cal-btn" href="/calendar?offset={{ offset + 1 }}" aria-label="Next week">›</a>
+  <span class="cal-span">{{ span }}</span>
+  {% if not is_current %}<a class="cal-today" href="/calendar">Today</a>{% endif %}
+</div>
+
+<div class="cal-board">
+  {% for d in days %}
+  <div class="cal-day {{ 'is-today' if d.is_today }}">
+    <div class="cal-day-h"><span class="cal-dow">{{ d.label }}</span>{% if d.is_today %}<span class="cal-today-badge">Today</span>{% endif %}<span class="cal-num">{{ d.num }}</span></div>
+    <div class="cal-cards">
+      {% for c in d.cards %}
+      <div class="ecard {{ 'done' if c.done }}" data-key="{{ c.key }}" data-week="{{ week }}"
+           style="border-left-color: {{ c.color }}">
+        <span class="ebox" role="checkbox" aria-checked="{{ 'true' if c.done else 'false' }}"></span>
+        <span class="etitle">{{ c.title }}</span>
+        {% if c.task_key %}<a class="elink" href="/planner#task-{{ c.task_key }}" title="Open in Task Manager">🗂</a>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<script>
+  (function () {
+    function toggle(card) {
+      fetch('/api/calendar/toggle', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: card.dataset.key, week: card.dataset.week }),
+      }).then(function (r) { return r.json(); }).then(function (res) {
+        if (res && res.ok) card.classList.toggle('done', res.done);
+      });
+    }
+    document.querySelectorAll('.ecard').forEach(function (card) {
+      card.addEventListener('click', function () { toggle(card); });
+    });
+    document.querySelectorAll('.elink').forEach(function (link) {
+      link.addEventListener('click', function (e) { e.stopPropagation(); });
+    });
+  })();
+</script>
+{% endblock %}

@@ -1,0 +1,93 @@
+<script>
+window.initStatusPopover = function (opts) {
+  const statuses = opts.statuses;
+  const selfBase = opts.selfBase || '';
+  const buttonBase = opts.buttonBase || '';
+  const buttonFont = opts.buttonFont || '0.82rem';
+
+  const pop = document.createElement('div');
+  pop.style.cssText = 'position:fixed;z-index:500;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:0.35rem 0.5rem;display:none;box-shadow:0 4px 16px rgba(0,0,0,0.7);flex-direction:column;gap:0.4rem;';
+  document.body.appendChild(pop);
+
+  let activeCell = null;
+  let repositionHandler = null;
+
+  function closePop() {
+    pop.style.display = 'none';
+    activeCell = null;
+    if (repositionHandler) {
+      window.removeEventListener('scroll', repositionHandler, true);
+      window.removeEventListener('resize', repositionHandler);
+      repositionHandler = null;
+    }
+  }
+
+  function positionPop(cell) {
+    const rect = cell.getBoundingClientRect();
+    const margin = 6;
+    const ph = pop.offsetHeight;
+    const pw = pop.offsetWidth;
+    let top = rect.bottom + 4;
+    if (top + ph > window.innerHeight - margin) {
+      const above = rect.top - 4 - ph;
+      top = above >= margin ? above : Math.max(margin, window.innerHeight - ph - margin);
+    }
+    let left = rect.left;
+    if (left + pw > window.innerWidth - margin) left = Math.max(margin, window.innerWidth - pw - margin);
+    pop.style.top = top + 'px';
+    pop.style.left = left + 'px';
+  }
+
+  function render(cell) {
+    const s = statuses[cell.dataset.status] || statuses[''];
+    if (opts.mode === 'self') {
+      cell.className = (selfBase + ' ' + s.css).trim();
+      cell.textContent = s.label;
+      cell.style.cursor = 'pointer';
+    } else {
+      cell.innerHTML = '<span class="' + s.css + '" style="cursor:pointer;">' + s.label + '</span>';
+    }
+  }
+
+  async function commit(cell, next) {
+    closePop();
+    try {
+      const res = await fetch(opts.endpoint + '/' + encodeURIComponent(cell.dataset.key) + '/status', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({status: next}),
+      });
+      if (res.ok) cell.dataset.status = next;
+      else console.error('Status update failed', await res.text());
+    } catch (err) { console.error(err); }
+    render(cell);
+  }
+
+  function openPop(cell) {
+    if (activeCell === cell) { closePop(); return; }
+    activeCell = cell;
+    pop.innerHTML = '';
+    pop.style.display = 'flex';
+    Object.entries(statuses).forEach(([val, s]) => {
+      const btn = document.createElement('button');
+      btn.textContent = s.label;
+      btn.className = (buttonBase ? buttonBase + ' ' : '') + s.css;
+      btn.style.cssText = 'background:none;border:none;font:inherit;font-size:' + buttonFont + ';cursor:pointer;text-align:left;padding:0.15rem 0.25rem;border-radius:2px;';
+      if (val === cell.dataset.status) btn.style.fontWeight = 'bold';
+      btn.addEventListener('mousedown', e => { e.preventDefault(); commit(cell, val); });
+      pop.appendChild(btn);
+    });
+    positionPop(cell);
+    repositionHandler = () => positionPop(cell);
+    window.addEventListener('scroll', repositionHandler, true);
+    window.addEventListener('resize', repositionHandler);
+  }
+
+  document.querySelectorAll(opts.selector).forEach(cell => {
+    render(cell);
+    cell.addEventListener('click', e => { e.stopPropagation(); openPop(cell); });
+  });
+
+  document.addEventListener('click', closePop);
+};
+</script>

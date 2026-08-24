@@ -1,0 +1,13 @@
+.venv
+**/__pycache__
+*.pyc
+.git
+.github
+db
+storage
+db.example
+.claude
+DEPLOY_PLAN.md
+*.md
+node_modules
+.env

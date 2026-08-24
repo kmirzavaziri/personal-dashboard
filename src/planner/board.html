@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+
+{% block title %}Task Manager{% endblock %}
+{% block heading %}Task Manager{% endblock %}
+{% block max_width %}100%{% endblock %}
+{% block wrap %}{% endblock %}
+{% block body_class %}planner-page{% endblock %}
+
+{% block extra_css %}
+  body.planner-page { height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+  body.planner-page main { flex: 1 1 auto; min-height: 0; width: 100%; margin: 0; display: flex; padding: 0; }
+
+  .board { flex: 1 1 auto; min-height: 0; display: flex; gap: 0.9rem; align-items: stretch; overflow-x: auto; overflow-y: hidden; padding: 1.1rem 0.9rem 0.9rem; scrollbar-width: none; -ms-overflow-style: none; }
+  .board::-webkit-scrollbar { display: none; }
+
+  .status {
+    display: flex; flex-direction: column; min-height: 0; flex: none;
+    background: none; border: none; box-shadow: none;
+    backdrop-filter: none; -webkit-backdrop-filter: none;
+    padding: 0; margin: 0; border-radius: 0;
+  }
+  .status-pick    .grp-h { color: var(--yellow); }
+  .status-planned .grp-h { color: var(--blue); }
+  .status-missed  .grp-h { color: var(--red); }
+  .status-done    .grp-h { color: var(--green); }
+  .status-pick    .grp-h .gdot { background: var(--yellow); }
+  .status-planned .grp-h .gdot { background: var(--blue); }
+  .status-missed  .grp-h .gdot { background: var(--red); }
+  .status-done    .grp-h .gdot { background: var(--green); }
+
+  .groups { flex: 1 1 auto; min-height: 0; display: flex; gap: 0.9rem; align-items: flex-start; }
+  .grp {
+    width: 280px; flex: none; max-height: 100%;
+    display: flex; flex-direction: column;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur)) saturate(1.15);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.15);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius);
+    padding: 0 0.5rem 0 0.8rem;
+    box-shadow: var(--glass-shadow);
+  }
+  .grp.dragging { opacity: 0.4; }
+  .grp-h {
+    flex: none; display: flex; align-items: center; gap: 0.4rem;
+    font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em;
+    font-weight: 600; margin: 0.8rem 0.3rem 0 0.05rem; cursor: pointer; user-select: none;
+  }
+  .grp-h .gdot { width: 7px; height: 7px; border-radius: 2px; flex: none; }
+  .grp-h .badge { margin-left: auto; }
+  .grp.collapsed .grp-cards { display: none; }
+
+  .grp-cards { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0.8rem 0.3rem 0.8rem 0; scrollbar-width: none; -ms-overflow-style: none; }
+  .grp-cards::-webkit-scrollbar { display: none; }
+
+  .card {
+    background: var(--surface);
+    border-left: 3px solid;
+    border-radius: var(--radius-sm);
+    padding: 0.55rem 0.65rem; margin-bottom: 0.45rem;
+    cursor: pointer; transition: background 0.14s;
+  }
+  .card:last-child { margin-bottom: 0; }
+  @media (hover: hover) { .card:hover { background: #2e2e2e; } }
+  .card.dragging { opacity: 0.4; }
+  .card-title { font-family: var(--font-ui); color: var(--strong); font-size: 0.84rem; line-height: 1.4; }
+  .card-when { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.4rem; }
+  .when-chip {
+    display: inline-flex; align-items: center; gap: 0.25rem;
+    font-size: 0.68rem; color: var(--muted); text-decoration: none;
+    background: rgba(255,255,255,0.06); border: 1px solid var(--tile-border);
+    border-radius: 999px; padding: 0.1rem 0.45rem;
+  }
+  .when-chip:hover { color: var(--strong); border-color: rgba(255,255,255,0.25); }
+  .col-empty { color: var(--muted); font-size: 0.82rem; font-style: italic; opacity: 0.7; }
+
+  .modal-status {
+    display: inline-block; font-size: 0.58rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted);
+    background: rgba(255,255,255,0.06); border-radius: 999px;
+    padding: 0.12rem 0.55rem; margin-bottom: 0.55rem;
+  }
+  .modal-title {
+    font-size: 1rem; font-weight: 600; color: var(--strong);
+    text-transform: none; letter-spacing: normal;
+    margin: 0 0 0.6rem; line-height: 1.3;
+  }
+  .modal-labels { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.75rem; }
+  .modal-labels:empty { display: none; }
+  .modal-title:last-child { margin-bottom: 0; }
+  .modal-notes { color: var(--text); font-size: 0.87rem; line-height: 1.55; white-space: pre-wrap; }
+  .modal-notes:empty { display: none; }
+
+  @media (max-width: 600px) { .grp { width: 78vw; } .board { gap: 1.4rem; } }
+{% endblock %}
+
+{% macro card(t) %}
+  <div class="card" id="task-{{ t.key }}" draggable="true"
+       data-key="{{ t.key }}"
+       data-title="{{ t.title }}"
+       data-notes="{{ t.notes }}"
+       data-labels="{{ t.labels | join('|') }}"
+       data-status="{{ {'backlog': 'Backlog', 'next': 'To Pick', 'done': 'Done'}.get(t.status, t.status) }}"
+       title="{{ t.labels | join(', ') if t.labels else 'General' }}"
+       style="border-left-color: {{ label_colors[t.labels[0]] if t.labels else label_colors['General'] }}">
+    <div class="card-title">{{ t.title }}</div>
+    {% set sched = schedules.get(t.key, []) %}
+    {% if sched and t.status != 'done' %}
+    <div class="card-when">
+      {% for s in sched %}<a class="when-chip" href="/calendar?offset={{ s.offset }}">📅 {{ s.text }}</a>{% endfor %}
+    </div>
+    {% endif %}
+  </div>
+{% endmacro %}
+
+{% block content %}
+<div class="board">
+
+  <section class="status status-backlog">
+    <div class="groups" id="backlog-groups">
+      {% for label, tasks in backlog_groups %}
+      <div class="grp" draggable="true" data-label="{{ label }}" data-col="{{ label }}">
+        <div class="grp-h" style="color: {{ label_colors[label] }}">
+          <span class="gdot" style="background: {{ label_colors[label] }}"></span>{{ label }}<span class="badge">{{ tasks | length }}</span>
+        </div>
+        <div class="grp-cards">{% for t in tasks %}{{ card(t) }}{% endfor %}</div>
+      </div>
+      {% else %}<p class="col-empty">Nothing queued.</p>{% endfor %}
+    </div>
+  </section>
+
+  <section class="status status-pick">
+    <div class="groups">
+      <div class="grp" data-col="pick">
+        <div class="grp-h"><span class="gdot"></span>To Pick<span class="badge">{{ counts.next }}</span></div>
+        <div class="grp-cards">{% for t in picks %}{{ card(t) }}{% else %}<p class="col-empty">Nothing to triage.</p>{% endfor %}</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="status status-planned">
+    <div class="groups">
+      <div class="grp" data-col="planned">
+        <div class="grp-h"><span class="gdot"></span>Planned<span class="badge">{{ counts.planned }}</span></div>
+        <div class="grp-cards">{% for t in planned %}{{ card(t) }}{% else %}<p class="col-empty">Nothing scheduled.</p>{% endfor %}</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="status status-missed">
+    <div class="groups">
+      <div class="grp" data-col="missed">
+        <div class="grp-h"><span class="gdot"></span>Missed<span class="badge">{{ counts.missed }}</span></div>
+        <div class="grp-cards">{% for t in missed %}{{ card(t) }}{% else %}<p class="col-empty">Nothing missed.</p>{% endfor %}</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="status status-done">
+    <div class="groups">
+      <div class="grp" data-col="done">
+        <div class="grp-h"><span class="gdot"></span>Done<span class="badge">{{ counts.done }}</span></div>
+        <div class="grp-cards">{% for t in done %}{{ card(t) }}{% else %}<p class="col-empty">Nothing done yet.</p>{% endfor %}</div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <button class="modal-close" id="modal-close" aria-label="Close">&times;</button>
+    <div class="modal-status" id="m-status"></div>
+    <h2 class="modal-title" id="m-title"></h2>
+    <div class="modal-labels" id="m-labels"></div>
+    <div class="modal-notes" id="m-notes"></div>
+  </div>
+</div>
+
+<script>
+  var LABEL_COLORS = {{ label_colors | tojson }};
+  (function () {
+    /* ── Modal ─────────────────────────────────────────────── */
+    var overlay = document.getElementById('modal');
+    var mStatus = document.getElementById('m-status'), mTitle = document.getElementById('m-title');
+    var mLabels = document.getElementById('m-labels'), mNotes = document.getElementById('m-notes');
+    function openModal(card) {
+      mStatus.textContent = card.dataset.status || '';
+      mTitle.textContent = card.dataset.title || '';
+      mLabels.innerHTML = '';
+      (card.dataset.labels ? card.dataset.labels.split('|') : []).forEach(function (l) {
+        var chip = document.createElement('span');
+        chip.className = 'chip'; chip.textContent = l;
+        var c = LABEL_COLORS[l] || '#888'; chip.style.color = c; chip.style.borderColor = c;
+        mLabels.appendChild(chip);
+      });
+      mNotes.textContent = card.dataset.notes || '';
+      overlay.classList.add('open');
+    }
+    function closeModal() { overlay.classList.remove('open'); }
+    document.getElementById('modal-close').addEventListener('click', closeModal);
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) closeModal(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
+
+    /* ── Drag-to-sort ──────────────────────────────────────── */
+    function post(url, body) {
+      fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    }
+    function afterElement(container, sel, x, y, horizontal) {
+      var els = Array.prototype.slice.call(container.querySelectorAll(':scope > ' + sel + ':not(.dragging)'));
+      var best = { dist: -Infinity, el: null };
+      els.forEach(function (el) {
+        var box = el.getBoundingClientRect();
+        var offset = horizontal ? (x - box.left - box.width / 2) : (y - box.top - box.height / 2);
+        if (offset < 0 && offset > best.dist) best = { dist: offset, el: el };
+      });
+      return best.el;
+    }
+    function makeSortable(container, sel, horizontal, persist, skipSel) {
+      var dragged = null;
+      container.addEventListener('dragstart', function (e) {
+        var item = e.target.closest(sel);
+        if (!item || item.parentNode !== container) return;
+        if (skipSel && e.target.closest(skipSel)) return;
+        dragged = item;
+        e.dataTransfer.effectAllowed = 'move';
+        try { e.dataTransfer.setData('text/plain', ''); } catch (_) {}
+        setTimeout(function () { item.classList.add('dragging'); }, 0);
+      });
+      container.addEventListener('dragover', function (e) {
+        if (!dragged) return;
+        e.preventDefault();
+        var after = afterElement(container, sel, e.clientX, e.clientY, horizontal);
+        if (after == null) container.appendChild(dragged);
+        else container.insertBefore(dragged, after);
+      });
+      container.addEventListener('drop', function (e) { if (dragged) e.preventDefault(); });
+      container.addEventListener('dragend', function () {
+        if (!dragged) return;
+        dragged.classList.remove('dragging'); dragged = null;
+        persist(container);
+      });
+    }
+    function labelsOf(container) {
+      return Array.prototype.map.call(container.querySelectorAll(':scope > .grp'), function (g) { return g.dataset.label; });
+    }
+    function keysOf(container) {
+      return Array.prototype.map.call(container.querySelectorAll(':scope > .card'), function (c) { return c.dataset.key; });
+    }
+
+    var backlogGroups = document.getElementById('backlog-groups');
+    if (backlogGroups) makeSortable(backlogGroups, '.grp', true, function (c) { post('/api/planner/reorder-groups', { order: labelsOf(c) }); }, '.grp-cards');
+    document.querySelectorAll('.grp-cards').forEach(function (c) {
+      makeSortable(c, '.card', false, function (cc) { post('/api/planner/reorder-cards', { keys: keysOf(cc) }); });
+    });
+
+    /* click opens modal (suppressed automatically when a drag happens) */
+    document.querySelectorAll('.card').forEach(function (card) {
+      card.addEventListener('click', function () { openModal(card); });
+    });
+    document.querySelectorAll('.when-chip').forEach(function (chip) {
+      chip.addEventListener('click', function (e) { e.stopPropagation(); });
+    });
+
+    /* stateful collapse: click a column header to toggle */
+    var COLLAPSE_KEY = 'planner-collapsed';
+    var collapsed;
+    try { collapsed = new Set(JSON.parse(localStorage.getItem(COLLAPSE_KEY) || '[]')); } catch (e) { collapsed = new Set(); }
+    document.querySelectorAll('.grp').forEach(function (grp) {
+      var key = grp.dataset.col;
+      if (key && collapsed.has(key)) grp.classList.add('collapsed');
+      var head = grp.querySelector('.grp-h');
+      if (!head) return;
+      head.addEventListener('click', function () {
+        grp.classList.toggle('collapsed');
+        if (!key) return;
+        if (grp.classList.contains('collapsed')) collapsed.add(key); else collapsed.delete(key);
+        localStorage.setItem(COLLAPSE_KEY, JSON.stringify(Array.from(collapsed)));
+      });
+    });
+
+    /* preserve horizontal scroll across refreshes */
+    var board = document.querySelector('.board');
+    if (board) {
+      var saved = sessionStorage.getItem('planner-scroll');
+      if (saved) board.scrollLeft = parseInt(saved, 10) || 0;
+      board.addEventListener('scroll', function () { sessionStorage.setItem('planner-scroll', board.scrollLeft); });
+    }
+  })();
+</script>
+{% endblock %}

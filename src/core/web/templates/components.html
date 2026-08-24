@@ -1,0 +1,182 @@
+<style>
+  /* ══════════════════════════════════════════════════════════════════════
+     DESIGN SYSTEM — canonical components, shared by every page.
+     Surfaces/colours are driven by the tokens in head_meta.html; edit tokens
+     there to retune globally. Add reusable components here, never per-page.
+     ══════════════════════════════════════════════════════════════════════ */
+
+  /* ── Glass surfaces ─────────────────────────────────────────────────── */
+  section, .panel {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur)) saturate(1.15);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.15);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.1rem;
+    box-shadow: var(--glass-shadow);
+  }
+  section:last-child, .panel:last-child { margin-bottom: 0; }
+  section > :first-child, .panel > :first-child,
+  .tile > :first-child, .card > :first-child { margin-top: 0; }
+
+  /* Responsive card grid — a shared layout for tile/card collections */
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 1rem; }
+
+  /* Flat content tile — sits INSIDE a glass surface (never glass-on-glass) */
+  .tile {
+    background: var(--tile-bg);
+    border: 1px solid var(--tile-border);
+    border-radius: var(--radius-sm);
+    padding: 0.55rem 0.65rem;
+  }
+
+  /* ── Section headings ───────────────────────────────────────────────── */
+  h2 {
+    font-size: 1rem; color: var(--strong); font-weight: 600;
+    margin: 0 0 0.8rem; text-transform: uppercase; letter-spacing: 0.07em;
+  }
+  h2:not(:first-child) { margin-top: 1.6rem; }
+  h3 { font-size: 0.92rem; color: var(--strong); font-weight: 600; margin: 1.25rem 0 0.5rem; }
+  h3:first-child { margin-top: 0; }
+
+  /* ── Collapsible section (details/summary as a card header) ─────────── */
+  details > summary { list-style: none; cursor: pointer; user-select: none; }
+  details > summary::-webkit-details-marker { display: none; }
+  details > summary::marker { display: none; }
+  summary > h2, summary > h3 { margin: 0; }
+  details > summary { transition: opacity 0.15s; }
+  @media (hover: hover) { details > summary:hover { opacity: 0.72; } }
+  details[open] > summary { margin-bottom: 0.8rem; }
+
+  details::details-content {
+    height: 0; overflow: hidden;
+    content-visibility: hidden;
+    transition: height 0.28s ease, content-visibility 0.28s allow-discrete, overflow 0.28s allow-discrete;
+  }
+  details[open]::details-content { height: auto; overflow: visible; content-visibility: visible; }
+  .section-note, .note {
+    border-left: 2px solid var(--border); padding: 0.4rem 0.75rem;
+    color: var(--muted); font-size: 0.82rem; margin-bottom: 1rem;
+  }
+
+  /* ── Links ──────────────────────────────────────────────────────────── */
+  a.link, .link { color: var(--accent); text-decoration: none; }
+  a.link:hover, .link:hover { text-decoration: underline; }
+
+  /* ── Semantic status text ───────────────────────────────────────────── */
+  .status-ok, .on-target, .status-owned { color: var(--green); }
+  .status-low, .warn { color: var(--yellow); }
+  .status-out, .off-target, .status-pending { color: var(--red); }
+  .status-basket { color: var(--accent); }
+  .status-ordered { color: var(--c-mauve); }
+
+  /* ── Categorical badge variants (earthy, desaturated) ───────────────── */
+  .badge.b-sage  { border-color: var(--c-sage);  color: var(--c-sage); }
+  .badge.b-sand  { border-color: var(--c-sand);  color: var(--c-sand); }
+  .badge.b-clay  { border-color: var(--c-clay);  color: var(--c-clay); }
+  .badge.b-slate { border-color: var(--c-slate); color: var(--c-slate); }
+  .badge.b-mauve { border-color: var(--c-mauve); color: var(--c-mauve); }
+  .badge.b-teal  { border-color: var(--c-teal);  color: var(--c-teal); }
+
+  /* ── Tables ─────────────────────────────────────────────────────────── */
+  table { border-collapse: collapse; width: 100%; margin-bottom: 1rem; }
+  table:last-child { margin-bottom: 0; }
+  th {
+    background: rgba(255,255,255,0.05); color: var(--muted);
+    font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em;
+    padding: 0.5rem 0.75rem; text-align: left;
+    border-bottom: 1px solid rgba(255,255,255,0.12);
+  }
+  td { padding: 0.4rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.08); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  @media (hover: hover) { tr:hover td { background: rgba(255,255,255,0.04); } }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .muted { color: var(--muted); }
+  .total-row td { font-weight: bold; color: var(--strong); background: rgba(255,255,255,0.07); border-top: 1px solid rgba(255,255,255,0.12); }
+  .subtotal-row td { color: var(--muted); background: rgba(255,255,255,0.03); border-top: 1px solid rgba(255,255,255,0.10); font-style: italic; }
+  .category-heading-row td { color: var(--strong); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.8rem 0.75rem 0.3rem; border-bottom: 1px solid rgba(255,255,255,0.10); }
+
+  /* ── Chips / badges / pills ─────────────────────────────────────────── */
+  .badge {
+    background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 10px; padding: 0.05rem 0.5rem; font-size: 0.72rem; color: var(--muted);
+  }
+  .chip {
+    font-size: 0.7rem; padding: 0.1rem 0.55rem; border-radius: 10px;
+    border: 1px solid; background: transparent;
+  }
+  .pill {
+    display: inline-block; font-size: 0.68rem; padding: 0.1rem 0.5rem;
+    border-radius: 20px; background: rgba(255,255,255,0.08); color: var(--muted);
+  }
+
+  /* ── Buttons ────────────────────────────────────────────────────────── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    background: rgba(255,255,255,0.06); color: var(--text);
+    border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
+    padding: 0.45rem 0.85rem; font: inherit; font-size: 0.82rem; cursor: pointer;
+    transition: background 0.14s, border-color 0.14s;
+  }
+  @media (hover: hover) { .btn:hover { background: rgba(255,255,255,0.11); border-color: rgba(255,255,255,0.2); } }
+  .btn-accent { color: var(--bg); background: var(--accent); border-color: var(--accent); }
+  .btn-accent:hover { filter: brightness(1.08); background: var(--accent); }
+
+  /* ── Nutrition rows (health) ────────────────────────────────────────── */
+  .nut-row { display: flex; justify-content: space-between; gap: 1.5rem; padding: 0.15rem 0; }
+  .nut-label { color: var(--muted); }
+  .nut-val { color: var(--text); }
+  .nut-daily { color: var(--accent); margin-left: 0.4rem; }
+
+  /* ── Hover tooltip ──────────────────────────────────────────────────── */
+  .has-tooltip { position: relative; cursor: help; }
+  .tooltip-box {
+    display: none; position: absolute; left: 0; top: calc(100% + 4px); z-index: 200;
+    background: var(--overlay-bg);
+    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-sm);
+    padding: 0.5rem 0.75rem; min-width: 220px; font-size: 0.78rem; color: var(--text);
+    white-space: nowrap; pointer-events: none; box-shadow: 0 8px 28px rgba(0,0,0,0.5);
+  }
+  @media (hover: hover) { .has-tooltip:hover .tooltip-box { display: block; } }
+  .has-tooltip.tt-open .tooltip-box { display: block; }
+
+  /* ── Modal ──────────────────────────────────────────────────────────── */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 1000; display: none;
+    align-items: center; justify-content: center; padding: 1.5rem;
+    background: transparent;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    position: relative; width: 100%; max-width: 620px;
+    font-family: var(--font-ui);
+    background: var(--overlay-bg);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-lg);
+    padding: 1.3rem 1.6rem 1.4rem;
+    box-shadow: 0 30px 90px rgba(0,0,0,0.7);
+  }
+  .modal-close {
+    position: absolute; top: 0.9rem; right: 1rem;
+    width: 1.7rem; height: 1.7rem; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,0.05); border: none;
+    color: var(--muted); font-size: 1.2rem; line-height: 1; cursor: pointer;
+    transition: background 0.14s, color 0.14s;
+  }
+  .modal-close:hover { background: rgba(255,255,255,0.1); color: var(--strong); }
+
+  @media (max-width: 900px) {
+    section, .panel { padding: 0.9rem 1rem; border-radius: var(--radius); }
+    table { display: block; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
+    th, td { padding: 0.4rem 0.6rem; }
+    .tooltip-box { max-width: calc(100vw - 2rem); white-space: normal; }
+  }
+  @media (max-width: 600px) {
+    h2 { font-size: 0.95rem; }
+    th, td { padding: 0.35rem 0.5rem; }
+    .modal { padding: 1.2rem 1.2rem; }
+  }
+</style>

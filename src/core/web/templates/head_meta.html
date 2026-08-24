@@ -1,0 +1,112 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%233b4252'/%3E%3Crect x='4' y='19' width='6' height='9' rx='1' fill='%2388c0d0'/%3E%3Crect x='13' y='11' width='6' height='17' rx='1' fill='%23a3be8c'/%3E%3Crect x='22' y='15' width='6' height='13' rx='1' fill='%2388c0d0'/%3E%3C/svg%3E">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Dashboard">
+<link rel="apple-touch-icon" href="/storage/images/apple-touch-icon.png">
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
+  }
+</script>
+<style>
+  /* ── Themes ──────────────────────────────────────────────────────────
+     Active theme = the `data-theme` value on <html> (see base.html).
+     To add a theme, copy a block and rename the selector; to switch,
+     change the attribute. `:root` alone is the fallback palette.        */
+
+  :root,
+  :root[data-theme="nord"] {
+    --bg:      #2e3440;  /* Polar Night nord0  */
+    --surface: #3b4252;  /* Polar Night nord1  */
+    --border:  #434c5e;  /* Polar Night nord2  */
+    --text:    #e5e9f0;  /* Snow Storm  nord5  */
+    --muted:   #7b869c;  /* dimmed frost       */
+    --accent:  #88c0d0;  /* Frost       nord8  */
+    --green:   #a3be8c;  /* Aurora green       */
+    --yellow:  #ebcb8b;  /* Aurora yellow      */
+    --red:     #bf616a;  /* Aurora red         */
+    --shadow:  #262b35;  /* deepest, for wells */
+    --strong:  #eceff4;  /* Snow Storm nord6, near-white */
+  }
+
+  :root[data-theme="aurora"] {
+    /* ── palette tuned to the misty-forest backdrop ──────────────────────
+       Warm-sand accent, sage greens, muted-earth semantics. No blue, no
+       bright yellow. `--accent` is the ONE UI accent (headings, links,
+       highlights); --green/--yellow/--red are semantic only; the --c-*
+       tokens are desaturated categorical hues for labels/badges.        */
+    /* Neutral white/grey text; Gruvbox Material accents. */
+    --bg:      #1d2021;
+    --surface: #282828;
+    --border:  #383a3a;
+    --text:    #e7e9e7;
+    --muted:   #9aa09c;
+    --strong:  #f6f8f6;
+    --accent:  #a9b665;  /* olive green — the single UI accent */
+    --green:   #89b482;  /* success / on-target — aqua  */
+    --yellow:  #d8a657;  /* caution / low               */
+    --red:     #ea6962;  /* error / off-target          */
+    --blue:    #7ba3d1;  /* scheduled / planned         */
+    --shadow:  #141617;
+
+    --c-sage:  #a9b665;
+    --c-sand:  #d8a657;
+    --c-clay:  #e78a4e;
+    --c-slate: #7daea3;
+    --c-mauve: #d3869b;
+    --c-teal:  #89b482;
+  }
+
+  /* ── design tokens (theme-independent): glass, radii, navbar ────────────
+     Edit these in ONE place to retune the whole app's surfaces.          */
+  :root {
+    interpolate-size: allow-keywords;
+    --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    --overlay-bg:   rgba(20,21,19,0.97);
+    --glass-bg:     rgba(20,26,36,0.2);
+    --glass-border: rgba(255,255,255,0.10);
+    --glass-blur:   11px;
+    --glass-shadow: 0 14px 44px rgba(0,0,0,0.32);
+    --tile-bg:      rgba(255,255,255,0.05);
+    --tile-border:  rgba(255,255,255,0.09);
+    --radius:       14px;
+    --radius-lg:    16px;
+    --radius-sm:    8px;
+    --navbar-bg:     #000000;
+    --navbar-text:   #e8ebe6;
+    --navbar-muted:  #8a8f88;
+    --navbar-accent: #a9b665;
+  }
+
+  :root[data-theme="midnight"] {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --border: #2e2e2e;
+    --text: #d4d4d4;
+    --muted: #888;
+    --accent: #4a9eff;
+    --green: #4caf78;
+    --yellow: #e0c060;
+    --red: #e06060;
+    --shadow: #000;
+    --strong: #fff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html {
+    min-height: 100%;
+    background: var(--bg);
+    overscroll-behavior-y: none;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: -1;
+    background: url('/storage/images/backdrop.jpg') center center / cover no-repeat;
+  }
+  html, body { overscroll-behavior-y: none; overscroll-behavior-x: auto; }
+</style>

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Personal Dashboard{% endblock %}
+{% block heading %}{% endblock %}
+{% block max_width %}640px{% endblock %}
+
+{% block extra_css %}
+  .nav { display: flex; flex-direction: column; gap: 0.7rem; }
+  .nav-item {
+    display: flex; align-items: center; gap: 1rem;
+    padding: 1rem 1.15rem;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur)) saturate(1.15);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.15);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius);
+    text-decoration: none; color: var(--text);
+    box-shadow: var(--glass-shadow);
+    transition: border-color 0.15s, background 0.15s;
+  }
+  @media (hover: hover) { .nav-item:hover { border-color: rgba(255,255,255,0.22); background: rgba(255,255,255,0.08); } }
+  .nav-item .icon { font-size: 1.25rem; width: 1.6rem; text-align: center; }
+  .nav-item .label { font-size: 0.98rem; color: var(--strong); }
+  .nav-item .arrow { margin-left: auto; color: var(--muted); }
+{% endblock %}
+
+{% block content %}
+<nav class="nav">
+  <a href="/planner" class="nav-item"><span class="icon">🗂</span><span class="label">Task Manager</span><span class="arrow">→</span></a>
+  <a href="/calendar" class="nav-item"><span class="icon">📅</span><span class="label">Calendar</span><span class="arrow">→</span></a>
+  <a href="/health" class="nav-item"><span class="icon">⚕</span><span class="label">Health</span><span class="arrow">→</span></a>
+  <a href="/styling" class="nav-item"><span class="icon">👔</span><span class="label">Styling</span><span class="arrow">→</span></a>
+  <a href="/shopping" class="nav-item"><span class="icon">🛒</span><span class="label">Shopping List</span><span class="arrow">→</span></a>
+  <a href="/expenses" class="nav-item"><span class="icon">💳</span><span class="label">Budget</span><span class="arrow">→</span></a>
+  {% if enable_mac %}<a href="/mac" class="nav-item"><span class="icon">💻</span><span class="label">My Mac</span><span class="arrow">→</span></a>{% endif %}
+</nav>
+{% endblock %}
