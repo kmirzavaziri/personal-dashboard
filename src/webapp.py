@@ -107,6 +107,10 @@ def create_app(services: Services) -> Flask:
 
         @app.post('/api/sync')
         def sync():
+            token = config.mcp_token
+            auth = request.headers.get('Authorization', '')
+            if not token or not hmac.compare_digest(auth, f'Bearer {token}'):
+                return {'ok': False}, 401
             git.pull()
             return {'ok': True}
 
