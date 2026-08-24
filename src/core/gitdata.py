@@ -12,11 +12,14 @@ class GitData:
         self._lock = threading.Lock()
         self._timer: threading.Timer | None = None
 
-    def _git(self, *args: str) -> subprocess.CompletedProcess:
-        return subprocess.run(
-            ['git', '-C', str(self.root), *args],
-            capture_output=True, text=True, check=False,
-        )
+    def _git(self, *args: str, timeout: float = 25.0) -> subprocess.CompletedProcess:
+        try:
+            return subprocess.run(
+                ['git', '-C', str(self.root), *args],
+                capture_output=True, text=True, check=False, timeout=timeout,
+            )
+        except subprocess.TimeoutExpired:
+            return subprocess.CompletedProcess(args, 1, '', 'timeout')
 
     def pull(self) -> None:
         with self._lock:
