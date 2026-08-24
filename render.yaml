@@ -9,6 +9,8 @@ services:
     envVars:
       - key: DATA_REPO
         sync: false
+      - key: DATA_DEPLOY_KEY_B64
+        sync: false
       - key: DATA_REPO_TOKEN
         sync: false
       - key: GIT_AUTHOR_NAME
