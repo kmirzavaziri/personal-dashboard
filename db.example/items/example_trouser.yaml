@@ -1,0 +1,17 @@
+# example_trouser
+key: example_trouser
+kind: clothing
+short_name: Sample Chino Trousers
+name: Sample Chino Trousers
+image: ''
+status: owned
+sources:
+- store: example-store
+  price: 60.0
+  url: ''
+metadata:
+  clothing:
+    brand: Example Brand
+    category: trouser
+    size_ok: true
+    goal: Placeholder bottomwear goal

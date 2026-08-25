@@ -1,0 +1,19 @@
+fit:
+  top: L
+  waist: 34
+  inseam: 34
+  shoe_eu: [43, 43.5, 44]
+
+context:
+  - label: Size
+    value: "L"
+  - label: Waist
+    value: 34 in
+  - label: Build
+    value: Placeholder build description
+
+goals:
+  - category: Polo — Placeholder
+    description: Describe the polo you are looking for.
+  - category: Trouser — Placeholder
+    description: Describe the trousers you are looking for.

@@ -1,0 +1,20 @@
+# example_snack
+key: example_snack
+kind: edible
+short_name: Sample Snack
+name: Sample Protein Snack (1 pack)
+notes: Placeholder snack. Replace with your own.
+image: ''
+status: OK
+sources:
+- store: example-store
+  price: 6.0
+  servings_per_item: 1
+metadata:
+  edible:
+    serving_size: 1 pack
+    nutrition:
+      protein_g: 15
+      net_carbs_g: 5
+      calories: 150
+    category: snack

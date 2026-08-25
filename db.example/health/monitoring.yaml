@@ -1,0 +1,8 @@
+- what: Body weight
+  method: Home scale
+  frequency: Weekly
+  notes: Placeholder note.
+- what: Blood panel
+  method: Sample lab
+  frequency: Semi-annually
+  notes: Placeholder note.

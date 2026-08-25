@@ -1,0 +1,18 @@
+# example_omega3
+key: example_omega3
+kind: edible
+short_name: Sample Omega-3
+name: Sample Omega-3 Fish Oil (2 softgels)
+notes: Placeholder supplement. Replace with your own.
+image: ''
+status: OK
+sources:
+- store: example-store
+  price: 40.0
+  servings_per_item: 45
+metadata:
+  edible:
+    serving_size: 2 softgels
+    nutrition:
+      epa_dha_mg: 800
+    category: supplement

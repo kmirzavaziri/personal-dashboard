@@ -1,0 +1,20 @@
+- key: snack
+  label: Snacks
+  order: 1
+  is_food: true
+- key: supplement
+  label: Supplements
+  order: 2
+  is_food: false
+- key: meal
+  label: Meals
+  order: 3
+  is_food: true
+- key: hygiene
+  label: Hygiene
+  order: 4
+  is_food: false
+- key: care
+  label: Personal Care
+  order: 5
+  is_food: false

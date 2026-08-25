@@ -1,0 +1,18 @@
+# example_multivitamin
+key: example_multivitamin
+kind: edible
+short_name: Sample Multivitamin
+name: Sample Daily Multivitamin (1 tablet)
+notes: Placeholder supplement. Replace with your own.
+image: ''
+status: OK
+sources:
+- store: example-store
+  price: 30.0
+  servings_per_item: 60
+metadata:
+  edible:
+    serving_size: 1 tablet
+    nutrition:
+      vitamin_d3_iu: 2000
+    category: supplement

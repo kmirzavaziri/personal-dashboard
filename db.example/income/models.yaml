@@ -1,0 +1,16 @@
+# Placeholder model roster. Replace provider/slug with your own backends.
+- name: model-a
+  provider: openrouter
+  slug: example/model-a
+  role: explore
+  enabled: true
+- name: model-b
+  provider: openrouter
+  slug: example/model-b
+  role: explore
+  enabled: true
+- name: consolidator
+  provider: openrouter
+  slug: example/consolidator
+  role: consolidate
+  enabled: true

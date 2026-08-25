@@ -1,0 +1,9 @@
+- key: daily
+  order: 0
+  tracking: daily
+- key: monthly
+  order: 1
+  tracking: monthly
+- key: other
+  order: 2
+  tracking: monthly

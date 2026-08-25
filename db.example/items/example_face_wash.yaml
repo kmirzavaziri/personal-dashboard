@@ -1,0 +1,16 @@
+# example_face_wash
+key: example_face_wash
+kind: edible
+short_name: Sample Face Wash
+name: Sample Gentle Face Wash (1 pump)
+notes: Placeholder personal-care item. Replace with your own.
+image: ''
+status: OK
+sources:
+- store: example-store
+  price: 35.0
+  servings_per_item: 120
+metadata:
+  edible:
+    serving_size: 1 pump
+    category: care

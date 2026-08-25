@@ -1,0 +1,6 @@
+# Clinic groups keyed by the clinic_groups key used in skin_clinic.yaml.
+example_clinic:
+  - name: Sample Clinic
+    tags: [Placeholder tag, Another tag]
+    whatsapp: https://example.com
+    website: https://example.com

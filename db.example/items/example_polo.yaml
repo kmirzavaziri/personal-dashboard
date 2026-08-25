@@ -1,0 +1,17 @@
+# example_polo
+key: example_polo
+kind: clothing
+short_name: Sample Polo Shirt
+name: Sample Polo Shirt
+image: ''
+status: candidate
+sources:
+- store: example-store
+  price: 45.0
+  url: ''
+metadata:
+  clothing:
+    brand: Example Brand
+    category: polo
+    size_ok: true
+    goal: Placeholder topwear goal

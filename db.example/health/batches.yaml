@@ -1,0 +1,26 @@
+# Batch definitions. pool_key must match an edible item key in items/.
+capsule_daily:
+  - pool_key: example_multivitamin
+    servings: 1
+  - pool_key: example_omega3
+    servings: 1
+
+morning_care:
+  variants:
+    - name: Home days
+      days: "Tue · Thu · Sat · Sun"
+      entries:
+        - pool_key: example_face_wash
+          weekly_uses: 4
+          note: "Lather on wet face, rinse"
+    - name: Gym days
+      days: "Mon · Wed · Fri"
+      entries:
+        - pool_key: example_face_wash
+          weekly_uses: 3
+          note: "Lather on wet face, rinse"
+
+oral_hygiene:
+  - pool_key: example_toothpaste
+    weekly_uses: 14
+    note: "Brush 2 minutes"

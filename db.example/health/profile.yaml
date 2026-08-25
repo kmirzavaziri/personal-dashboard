@@ -1,0 +1,37 @@
+context:
+  - label: Gender
+    value: Placeholder
+  - label: Age
+    value: "30"
+  - label: Height
+    value: 180 cm
+  - label: Weight
+    value: 80 kg
+  - label: Goal
+    value: Placeholder health goal
+
+goals:
+  - category: Physical
+    description: Placeholder physical goal. Replace with your own.
+  - category: Diet
+    description: Placeholder dietary approach.
+
+care_guide:
+  - name: Sample Face Wash
+    short_name: Face Wash
+    context: in shower
+    category: Skin
+    does: Placeholder description of what this product does.
+    apply: Placeholder application instructions.
+    expect: Placeholder expected results.
+
+supplement_strategy:
+  - "Placeholder rule: prefer fewer, higher-quality supplements."
+  - "Placeholder rule: optimise for price per effective dose."
+
+one_time_purchases:
+  - item: Sample blood panel
+    cost: "AED 400"
+    frequency: Every 6 months
+    notes: Placeholder one-time purchase.
+    link: "https://example.com"

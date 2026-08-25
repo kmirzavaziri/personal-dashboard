@@ -1,0 +1,15 @@
+- key: calories
+  label: Calories
+  unit: kcal
+- key: protein_g
+  label: Protein
+  unit: g
+- key: net_carbs_g
+  label: Net carbs
+  unit: g
+- key: vitamin_d3_iu
+  label: Vitamin D3
+  unit: IU
+- key: epa_dha_mg
+  label: EPA+DHA
+  unit: mg

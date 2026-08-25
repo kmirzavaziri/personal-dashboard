@@ -1,0 +1,7 @@
+# sample-next-task
+key: sample-next-task
+title: Sample scheduled task
+labels:
+- Work
+status: next
+order: 20

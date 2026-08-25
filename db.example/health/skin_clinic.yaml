@@ -1,0 +1,14 @@
+- heading: Sample Treatment
+  note: >-
+    Placeholder overview of a treatment plan. Replace with your own.
+  phases:
+    - name: Treatment course
+      why_label: 'Why:'
+      why: >-
+        Placeholder rationale for this treatment approach.
+      steps:
+        - text: Placeholder step one.
+        - text: Placeholder step two.
+  clinic_groups:
+    - label: Clinic
+      key: example_clinic

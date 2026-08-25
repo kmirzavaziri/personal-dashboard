@@ -1,0 +1,8 @@
+# sample-backlog-task
+key: sample-backlog-task
+title: Sample backlog task
+labels:
+- Personal
+status: backlog
+order: 10
+notes: Placeholder task. Replace with your own.

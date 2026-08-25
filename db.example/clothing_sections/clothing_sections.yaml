@@ -1,0 +1,32 @@
+- key: polo
+  label: Polos
+  order: 1
+  aliases: []
+- key: tee
+  label: Tees
+  order: 2
+  aliases: [tshirt, t-shirt]
+- key: shirt
+  label: Shirts
+  order: 3
+  aliases: []
+- key: trouser
+  label: Trousers
+  order: 4
+  aliases: [trousers, jeans]
+- key: shoes
+  label: Shoes
+  order: 5
+  aliases: []
+- key: socks_underwear
+  label: Socks & Underwear
+  order: 6
+  aliases: [socks, underwear]
+- key: loungewear
+  label: Loungewear
+  order: 7
+  aliases: []
+- key: accessories
+  label: Accessories
+  order: 8
+  aliases: []

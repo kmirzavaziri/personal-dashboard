@@ -1,0 +1,12 @@
+- name: Morning Routine
+  sections:
+    - heading: Capsules
+      batches: [capsule_daily]
+      note_mode: servings
+      subtotal_unit: pills
+    - heading: Skincare
+      batches: [morning_care]
+      note_mode: care
+    - heading: Oral Hygiene
+      batches: [oral_hygiene]
+      note_mode: care

@@ -1,0 +1,20 @@
+# example_lunch
+key: example_lunch
+kind: edible
+short_name: Sample Lunch
+name: Sample Lunch Plate (1 serving)
+notes: Placeholder meal. Replace with your own.
+image: ''
+status: OK
+sources:
+- store: example-store
+  price: 18.0
+  servings_per_item: 1
+metadata:
+  edible:
+    serving_size: 1 plate
+    nutrition:
+      protein_g: 40
+      net_carbs_g: 12
+      calories: 500
+    category: meal

@@ -1,0 +1,32 @@
+schedule: "3x/week. Placeholder split."
+
+warmup:
+  - exercise: Sample warmup
+    sets_reps: "2 x 15"
+    notes: Placeholder note.
+
+sections:
+  - name: Push
+    exercises:
+      - exercise: Sample Press
+        weight: 40 kg
+        sets_reps: "3 x 8"
+        notes: ""
+  - name: Pull
+    exercises:
+      - exercise: Sample Row
+        weight: 30 kg
+        sets_reps: "3 x 10"
+        notes: ""
+  - name: Legs
+    exercises:
+      - exercise: Sample Squat
+        weight: 50 kg
+        sets_reps: "3 x 10"
+        notes: ""
+
+overload: Placeholder progression rule.
+
+when_to_change:
+  - period: Month 3
+    action: Placeholder progression action.

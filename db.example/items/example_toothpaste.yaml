@@ -1,0 +1,16 @@
+# example_toothpaste
+key: example_toothpaste
+kind: edible
+short_name: Sample Toothpaste
+name: Sample Toothpaste (1 application)
+notes: Placeholder hygiene item. Replace with your own.
+image: ''
+status: OK
+sources:
+- store: example-store
+  price: 15.0
+  servings_per_item: 100
+metadata:
+  edible:
+    serving_size: 1 application
+    category: hygiene

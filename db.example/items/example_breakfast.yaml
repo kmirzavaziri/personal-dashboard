@@ -1,0 +1,20 @@
+# example_breakfast
+key: example_breakfast
+kind: edible
+short_name: Sample Breakfast
+name: Sample Breakfast Bowl (1 serving)
+notes: Placeholder meal. Replace with your own.
+image: ''
+status: OK
+sources:
+- store: example-store
+  price: 12.0
+  servings_per_item: 1
+metadata:
+  edible:
+    serving_size: 1 bowl
+    nutrition:
+      protein_g: 30
+      net_carbs_g: 8
+      calories: 350
+    category: meal

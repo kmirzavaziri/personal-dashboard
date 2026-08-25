@@ -1,0 +1,13 @@
+# example_water_bottle
+key: example_water_bottle
+kind: durable
+short_name: Sample Water Bottle
+name: Sample Reusable Water Bottle
+notes: Placeholder gear item. Replace with your own.
+image: ''
+status: owned
+sources:
+- store: example-store
+  price: 25.0
+metadata:
+  durable: {}

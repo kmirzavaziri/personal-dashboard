@@ -1,0 +1,7 @@
+# sample-done-task
+key: sample-done-task
+title: Sample completed task
+labels:
+- Learning
+status: done
+order: 30

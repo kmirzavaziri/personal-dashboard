@@ -1,0 +1,20 @@
+# example_dinner
+key: example_dinner
+kind: edible
+short_name: Sample Dinner
+name: Sample Dinner Plate (1 serving)
+notes: Placeholder meal. Replace with your own.
+image: ''
+status: OK
+sources:
+- store: example-store
+  price: 20.0
+  servings_per_item: 1
+metadata:
+  edible:
+    serving_size: 1 plate
+    nutrition:
+      protein_g: 45
+      net_carbs_g: 10
+      calories: 550
+    category: meal

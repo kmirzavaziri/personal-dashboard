@@ -1,0 +1,29 @@
+- nutrient: Protein
+  daily_target: '>=120g'
+  purpose: 'Muscle maintenance'
+  nutrient_key: protein_g
+  target_min: 120
+  target_max: 220
+- nutrient: Net Carbs
+  daily_target: '<=50g'
+  purpose: 'Placeholder carb ceiling'
+  nutrient_key: net_carbs_g
+  target_max: 50
+- nutrient: Calories
+  daily_target: '1500-2500 kcal'
+  purpose: 'Placeholder calorie range'
+  nutrient_key: calories
+  target_min: 1500
+  target_max: 2500
+- nutrient: Vitamin D3
+  daily_target: '2000 IU'
+  purpose: 'Placeholder micronutrient target'
+  nutrient_key: vitamin_d3_iu
+  target_min: 2000
+  target_max: 4000
+- nutrient: EPA + DHA (Omega-3)
+  daily_target: '1000+ mg'
+  purpose: 'Placeholder omega-3 target'
+  nutrient_key: epa_dha_mg
+  target_min: 1000
+  target_max: 3000

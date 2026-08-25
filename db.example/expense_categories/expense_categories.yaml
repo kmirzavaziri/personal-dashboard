@@ -1,0 +1,12 @@
+- key: snack
+  account: daily
+  display: Snack
+- key: supplement
+  account: monthly
+  display: Self care
+- key: care
+  account: monthly
+  display: Self care
+- key: hygiene
+  account: monthly
+  display: Self care

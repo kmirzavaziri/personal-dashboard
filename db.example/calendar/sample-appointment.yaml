@@ -1,0 +1,8 @@
+# sample-appointment
+key: sample-appointment
+title: Sample appointment
+labels:
+- Personal
+notes: Placeholder dated event.
+order: 3
+date: '2026-09-20'
