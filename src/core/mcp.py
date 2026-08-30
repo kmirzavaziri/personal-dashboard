@@ -83,8 +83,28 @@ def item_list(services, kind=None, category=None):
     return json.dumps(items.listing(kind, category), ensure_ascii=False)
 
 
+def _as_object(value):
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except (ValueError, TypeError):
+            return value
+    return value
+
+
+def _as_container(value):
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+        except (ValueError, TypeError):
+            return value
+        if isinstance(parsed, (dict, list)):
+            return parsed
+    return value
+
+
 def item_create(services, key, data):
-    return items.create(key, data)
+    return items.create(key, _as_object(data))
 
 
 def item_get(services, key, field):
@@ -93,7 +113,7 @@ def item_get(services, key, field):
 
 
 def item_set(services, key, field, value, replace=False):
-    return items.set_field(services.config, key, field, value, replace)
+    return items.set_field(services.config, key, field, _as_container(value), replace)
 
 
 def item_delete(services, key):
@@ -145,6 +165,7 @@ _INT = {'type': 'integer'}
 _BOOL = {'type': 'boolean'}
 _NUM = {'type': 'number'}
 _LABELS = {'type': 'array', 'items': {'type': 'string'}}
+_OBJ = {'type': 'object'}
 _ANY = {}
 
 TOOLS = [
@@ -172,7 +193,7 @@ TOOLS = [
     ('item_list', 'List items as [{key,short_name,kind,status,category}], optionally by kind/category.',
      {'kind': _STR, 'category': _STR}, [], item_list),
     ('item_create', 'Create a new item file from a full data object (key, kind, fields).',
-     {'key': _STR, 'data': _ANY}, ['key', 'data'], item_create),
+     {'key': _STR, 'data': _OBJ}, ['key', 'data'], item_create),
     ('item_get', 'Read one field from an item file (YAML).', {'key': _STR, 'field': _STR}, ['key', 'field'], item_get),
     ('item_set', 'Set or append a field on an item. field may be dotted for nested paths '
      '(e.g. metadata.edible.nutrition). value is any JSON; dicts merge and lists append unless replace=true. '
