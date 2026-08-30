@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 
-from agenda.model import CalendarEntry
 from agenda.view import render
+import agenda.service as agenda
 
 
 def make_calendar_bp(services) -> Blueprint:
@@ -14,19 +14,10 @@ def make_calendar_bp(services) -> Blueprint:
     @bp.post('/api/calendar/toggle')
     def toggle():
         data = request.get_json(force=True)
-        entry = CalendarEntry.objects.get_or_none(key=data.get('key'))
-        if entry is None:
+        try:
+            done = agenda.toggle(data.get('key'), data.get('week') or None)
+        except ValueError:
             return jsonify(ok=False), 404
-        if entry.day:
-            week = data.get('week', '')
-            if week in entry.done_weeks:
-                entry.done_weeks.remove(week)
-            else:
-                entry.done_weeks.append(week)
-            entry.save()
-            return jsonify(ok=True, done=week in entry.done_weeks)
-        entry.done = not entry.done
-        entry.save()
-        return jsonify(ok=True, done=entry.done)
+        return jsonify(ok=True, done=done)
 
     return bp

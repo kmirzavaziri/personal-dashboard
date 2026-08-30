@@ -37,4 +37,3 @@ class CalendarEntry(Model):
     day: str = ''
     date: str = ''
     done_weeks: list[str] = []
-    done: bool = False

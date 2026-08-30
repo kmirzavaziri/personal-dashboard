@@ -47,14 +47,12 @@ def _placement(task: Task, links: list[CalendarEntry], today: date) -> tuple[str
         return task.status, task.order
     recurring = any(e.day for e in links)
     dated = [e for e in links if e.date]
-    future = sorted(date.fromisoformat(e.date) for e in dated if not e.done and date.fromisoformat(e.date) >= today)
-    past = sorted((date.fromisoformat(e.date) for e in dated if not e.done and date.fromisoformat(e.date) < today), reverse=True)
+    future = sorted(date.fromisoformat(e.date) for e in dated if date.fromisoformat(e.date) >= today)
+    past = sorted((date.fromisoformat(e.date) for e in dated if date.fromisoformat(e.date) < today), reverse=True)
     if recurring or future:
         return 'planned', future[0] if future else date.max
     if past:
         return 'missed', past[0]
-    if dated:
-        return 'done', task.order
     return task.status, task.order
 
 

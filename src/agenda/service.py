@@ -3,6 +3,7 @@ from datetime import date
 
 from agenda.model import CalendarEntry, DAYS, current_week
 from planner.model import Task
+import planner.service as planner
 
 
 def slug(text: str) -> str:
@@ -75,15 +76,28 @@ def edit(key: str, title=None, day=None, on=None, task=None, labels=None, notes=
     return entry
 
 
+def is_done(entry: CalendarEntry, week: str) -> bool:
+    if entry.day:
+        return week in entry.done_weeks
+    task = Task.objects.get_or_none(key=entry.task_key)
+    return task is not None and task.status == 'done'
+
+
+def _require_task(entry: CalendarEntry) -> str:
+    if not entry.task_key:
+        raise ValueError(f'{entry.key}: dated entry has no linked task to complete')
+    return entry.task_key
+
+
 def check(key: str, week=None) -> CalendarEntry:
     entry = get(key)
     if entry.day:
         target = week or current_week()
         if target not in entry.done_weeks:
             entry.done_weeks.append(target)
+        entry.save()
     else:
-        entry.done = True
-    entry.save()
+        planner.move(_require_task(entry), 'done')
     return entry
 
 
@@ -93,10 +107,18 @@ def uncheck(key: str, week=None) -> CalendarEntry:
         target = week or current_week()
         if target in entry.done_weeks:
             entry.done_weeks.remove(target)
+        entry.save()
     else:
-        entry.done = False
-    entry.save()
+        planner.move(_require_task(entry), 'next')
     return entry
+
+
+def toggle(key: str, week=None) -> bool:
+    entry = get(key)
+    target = week or current_week()
+    done = is_done(entry, target)
+    (uncheck if done else check)(key, target)
+    return not done
 
 
 def remove(key: str) -> None:

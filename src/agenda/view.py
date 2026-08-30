@@ -18,6 +18,11 @@ def _eff_labels(entry: CalendarEntry, tasks: dict[str, Task]) -> list[str]:
     return task.labels if task else []
 
 
+def _task_done(entry: CalendarEntry, tasks: dict[str, Task]) -> bool:
+    task = tasks.get(entry.task_key)
+    return task is not None and task.status == 'done'
+
+
 def _title(entry: CalendarEntry, tasks: dict[str, Task]) -> str:
     if entry.title:
         return entry.title
@@ -40,7 +45,7 @@ def _card(entry: CalendarEntry, week: str, tasks: dict[str, Task], colors: dict[
         'labels': labels,
         'notes': entry.notes,
         'color': colors[labels[0]] if labels else colors[UNLABELED],
-        'done': (week in entry.done_weeks) if entry.day else entry.done,
+        'done': (week in entry.done_weeks) if entry.day else _task_done(entry, tasks),
         'when': _when(entry),
         'recurring': bool(entry.day),
         'task_key': entry.task_key,
