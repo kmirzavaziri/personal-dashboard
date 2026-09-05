@@ -10,6 +10,7 @@ import agenda.service as calendar
 import core.item.service as items
 import styling.service as styling
 import health.service as health
+from core.oauth import valid_access_token
 
 PROTOCOL_VERSION = '2024-11-05'
 
@@ -239,9 +240,12 @@ def make_mcp_bp(services) -> Blueprint:
     token = services.config.mcp_token
 
     def _authorized() -> bool:
-        if not token:
+        header = request.headers.get('Authorization', '')
+        if not token and not services.config.oauth_client_secret:
             return True
-        return request.headers.get('Authorization') == f'Bearer {token}'
+        if token and header == f'Bearer {token}':
+            return True
+        return valid_access_token(services.config, header)
 
     @bp.post('/mcp')
     def endpoint():

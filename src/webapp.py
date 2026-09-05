@@ -7,6 +7,7 @@ from flask import Flask, Response, request, send_from_directory
 from core.config import Config
 from core.gitdata import GitData
 from core.mcp import make_mcp_bp
+from core.oauth import is_public_path, make_oauth_bp, resource_metadata_url, valid_access_token
 from core.services import Services
 from core.web.templating import make_env
 from pkg.model.base import Model
@@ -51,6 +52,8 @@ def create_app(services: Services) -> Flask:
     for make_bp in blueprints:
         app.register_blueprint(make_bp(services))
     app.register_blueprint(make_mcp_bp(services))
+    if config.oauth_client_secret:
+        app.register_blueprint(make_oauth_bp(config))
 
     @app.get('/healthz')
     def healthz():
@@ -76,10 +79,17 @@ def create_app(services: Services) -> Flask:
             return None
         if request.path == '/api/webhook':
             return None
-        if config.mcp_token and hmac.compare_digest(
-                request.headers.get('Authorization', ''), f'Bearer {config.mcp_token}'):
+        if is_public_path(request.path):
             return None
-        return {'ok': False}, 401
+        header = request.headers.get('Authorization', '')
+        if config.mcp_token and hmac.compare_digest(header, f'Bearer {config.mcp_token}'):
+            return None
+        if valid_access_token(config, header):
+            return None
+        resp = Response('{"ok": false}', status=401, mimetype='application/json')
+        if request.path == '/mcp' and config.oauth_client_secret:
+            resp.headers['WWW-Authenticate'] = f'Bearer resource_metadata="{resource_metadata_url(config)}"'
+        return resp
 
     env = make_env(config.templates)
 
