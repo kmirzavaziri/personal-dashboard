@@ -1,6 +1,7 @@
 import atexit
 import hashlib
 import hmac
+from dataclasses import replace
 
 from flask import Flask, Response, request, send_from_directory
 
@@ -44,6 +45,14 @@ def _valid_signature(secret: str, body: bytes, header: str | None) -> bool:
 def create_app(services: Services) -> Flask:
     config = services.config
     app = Flask(__name__, static_folder=None)
+
+    git = None
+    if config.git_backup:
+        git = GitData(config.data_dir, config.git_branch, config.git_push_debounce)
+        git.pull()
+        Model.on_change(git.mark_dirty)
+        atexit.register(git.flush)
+        services = replace(services, git=git)
 
     blueprints = [make_health_bp, make_shopping_bp, make_styling_bp,
                   make_expenses_bp, make_planner_bp, make_calendar_bp]
@@ -111,12 +120,7 @@ def create_app(services: Services) -> Flask:
     def storage(filename: str):
         return send_from_directory(config.storage, filename)
 
-    if config.git_backup:
-        git = GitData(config.data_dir, config.git_branch, config.git_push_debounce)
-        git.pull()
-        Model.on_change(git.mark_dirty)
-        atexit.register(git.flush)
-
+    if git is not None:
         @app.post('/api/sync')
         def sync():
             git.pull()

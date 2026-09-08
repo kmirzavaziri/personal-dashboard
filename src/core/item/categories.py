@@ -18,7 +18,7 @@ class ClothingSection(Model):
     key: str
     label: str
     order: int
-    aliases: tuple[str, ...]
+    aliases: tuple[str, ...] = ()
 
 
 @cache
@@ -52,6 +52,6 @@ def clothing_sections() -> tuple[ClothingSection, ...]:
 
 def clothing_section_of(category: str) -> str:
     for s in _sections():
-        if category == s.key or category in s.aliases:
+        if category == s.key:
             return s.key
     return 'other'

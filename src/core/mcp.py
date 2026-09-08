@@ -3,6 +3,8 @@ import json
 import yaml
 from flask import Blueprint, jsonify, request
 
+from pkg.model.io import read_yaml
+
 from planner.model import Task
 from agenda.model import CalendarEntry
 import planner.service as planner
@@ -78,6 +80,26 @@ def calendar_list(services):
 
 def report(services):
     return json.dumps(health.report_dict(services.config), ensure_ascii=False)
+
+
+def profile(services):
+    config = services.config
+    return json.dumps({
+        'health': read_yaml(config.health_db / 'profile.yaml') or {},
+        'styling': read_yaml(config.styling_db / 'profile.yaml') or {},
+    }, ensure_ascii=False)
+
+
+def data_push(services):
+    if services.git is None:
+        return 'git backup disabled — nothing to push'
+    return services.git.flush()
+
+
+def data_pull(services):
+    if services.git is None:
+        return 'git backup disabled — nothing to pull'
+    return services.git.pull()
 
 
 def item_list(services, kind=None, category=None):
@@ -191,6 +213,11 @@ TOOLS = [
     ('calendar_rm', 'Remove a calendar entry.', {'key': _STR}, ['key'], calendar_rm),
     ('calendar_list', 'List all calendar entries.', {}, [], calendar_list),
     ('report', 'Return the full health plan (meals, nutrient targets, item pool) as JSON.', {}, [], report),
+    ('profile', 'Return the health and styling profiles (context, goals, fit targets) as JSON — '
+     'the personal context to ground health/shopping/styling decisions.', {}, [], profile),
+    ('data_push', 'Commit and push all pending data changes to the data repo immediately (force flush).',
+     {}, [], data_push),
+    ('data_pull', 'Pull the latest data from the data repo into the server (fast-forward).', {}, [], data_pull),
     ('item_list', 'List items as [{key,short_name,kind,status,category}], optionally by kind/category.',
      {'kind': _STR, 'category': _STR}, [], item_list),
     ('item_create', 'Create a new item file from a full data object (key, kind, fields).',

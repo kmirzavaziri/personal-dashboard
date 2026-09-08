@@ -6,4 +6,5 @@ db/
 storage/
 .DS_Store
 .idea/
-.claude/
+.claude/*
+!.claude/skills/

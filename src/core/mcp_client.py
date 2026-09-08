@@ -25,7 +25,7 @@ class MCPClient:
     def call(self, tool: str, **arguments) -> str:
         payload = {'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call',
                    'params': {'name': tool, 'arguments': {k: v for k, v in arguments.items() if v is not None}}}
-        headers = {'Content-Type': 'application/json'}
+        headers = {'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}
         if self.token:
             headers['Authorization'] = f'Bearer {self.token}'
         req = urllib.request.Request(self.url, data=json.dumps(payload).encode(), headers=headers, method='POST')

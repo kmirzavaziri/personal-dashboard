@@ -21,9 +21,10 @@ class GitData:
         except subprocess.TimeoutExpired:
             return subprocess.CompletedProcess(args, 1, '', 'timeout')
 
-    def pull(self) -> None:
+    def pull(self) -> str:
         with self._lock:
-            self._git('pull', '--ff-only', 'origin', self.branch)
+            result = self._git('pull', '--ff-only', 'origin', self.branch)
+            return (result.stdout + result.stderr).strip()[-400:] or 'up to date'
 
     def mark_dirty(self) -> None:
         with self._lock:
@@ -33,11 +34,16 @@ class GitData:
             self._timer.daemon = True
             self._timer.start()
 
-    def flush(self) -> None:
+    def flush(self) -> str:
         with self._lock:
             self._timer = None
             self._git('add', '-A')
-            if not self._git('status', '--porcelain').stdout.strip():
-                return
+            status = self._git('status', '--porcelain').stdout.strip()
+            if not status:
+                return 'nothing to commit'
+            count = len(status.splitlines())
             self._git('commit', '-m', f'data: {datetime.now():%Y-%m-%d %H:%M:%S}')
-            self._git('push', 'origin', self.branch)
+            push = self._git('push', 'origin', self.branch)
+            if push.returncode != 0:
+                return f'committed {count} file(s), push FAILED: {push.stderr.strip()[-300:]}'
+            return f'pushed {count} file(s)'
