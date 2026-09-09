@@ -59,10 +59,12 @@
     .clinic-tags { color: var(--muted); font-size: 0.78rem; flex: 1; }
     .wa-link { color: var(--green); text-decoration: none; white-space: nowrap; }
     .wa-link:hover { text-decoration: underline; }
+    @media (max-width: 900px) {
+      .routine-variants { flex-direction: column; gap: 0.5rem; }
+    }
     @media (max-width: 600px) {
       .goal-block { flex-direction: column; gap: 0.2rem; }
       .goal-category { flex-basis: auto; }
-      .routine-variants { flex-direction: column; gap: 0.5rem; }
       .clinic-row { flex-wrap: wrap; gap: 0.2rem 0.75rem; }
       .clinic-name, .clinic-tags { flex-basis: 100%; }
     }

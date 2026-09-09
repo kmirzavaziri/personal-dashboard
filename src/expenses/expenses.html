@@ -5,8 +5,6 @@
 {% block max_width %}680px{% endblock %}
 
 {% block extra_css %}
-  .account-total-row td { font-weight: 600; color: var(--strong); background: rgba(255,255,255,0.02); border-top: 1px solid var(--border); }
-  .grand-total-row td { font-size: 1rem; font-weight: bold; color: var(--strong); background: var(--surface); border-top: 2px solid var(--accent); }
   .thumb { width: 24px; height: 24px; object-fit: contain; vertical-align: middle; border-radius: 3px; background: var(--strong); margin-right: 5px; }
   .tag { font-size: 0.72rem; color: var(--muted); margin-left: 0.35rem; }
   .badge-workday { font-size: 0.65rem; font-weight: 600; letter-spacing: 0.04em; color: var(--accent); border: 1px solid var(--accent); border-radius: 3px; padding: 0 4px; margin-left: 0.4rem; opacity: 0.75; vertical-align: middle; }
@@ -68,7 +66,7 @@
       </tr>
       {% endif %}
       {% endfor %}
-      <tr class="account-total-row">
+      <tr class="total-row">
         <td colspan="2">{{ sec.name }} total</td>
         {% if sec.tracking == "daily" %}
         <td class="num aed" data-tip="AED {{ sec.total | fmt }} / mo">AED {{ sec.daily_total | fmt1 }} / day</td>
