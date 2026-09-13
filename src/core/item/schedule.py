@@ -7,24 +7,22 @@ from core.item.scheduled import ScheduledItem
 from pkg.model.base import Model
 from pkg.model.io import read_yaml
 
-PLAN_SLOTS: dict[str, str] = {
-    'breakfast_key': 'breakfast',
-    'lunch_key': 'lunch',
-    'dinner_key': 'dinner',
-    'snack_key': 'snack',
-    'night_snack_key': 'night snack',
-}
+PLAN_SLOTS: list[str] = ['breakfast', 'lunch', 'dinner', 'snack', 'night']
 
-_OCCASION_ORDER = list(PLAN_SLOTS.values())
+_OCCASION_ORDER = PLAN_SLOTS
 
 
-class PlanDay(Model):
-    day: str
-    breakfast_key: str
-    lunch_key: str
-    dinner_key: str
-    snack_key: str
-    night_snack_key: str
+class SlotPlan(Model):
+    breakfast: list[str] = []
+    lunch: list[str] = []
+    dinner: list[str] = []
+    snack: list[str] = []
+    night: list[str] = []
+
+
+class PlanGroup(Model):
+    days: list[str]
+    plan: SlotPlan
 
 
 class BatchEntry(BaseModel):
@@ -51,8 +49,8 @@ class Batch:
     variants: list[Variant]
 
 
-def load_plan(config) -> list[PlanDay]:
-    return PlanDay.from_file(config.health_db / 'weekly_plan.yaml')
+def load_plan(config) -> list[PlanGroup]:
+    return PlanGroup.from_file(config.health_db / 'weekly_plan.yaml')
 
 
 def load_batches(config) -> dict[str, Batch]:
@@ -89,13 +87,14 @@ def iter_entries(batch: Batch):
 def assign_scheduled_servings(pool, plan, batches: dict[str, Batch]) -> None:
     occasions_seen: dict[str, set[str]] = {key: set() for key in pool}
 
-    for day in plan:
-        for slot, occasion in PLAN_SLOTS.items():
-            key = getattr(day, slot)
-            if key not in pool:
-                continue
-            pool[key].servings_per_week += 1
-            occasions_seen[key].add(occasion)
+    for group in plan:
+        n = len(group.days)
+        for occasion in PLAN_SLOTS:
+            for key in getattr(group.plan, occasion):
+                if key not in pool:
+                    continue
+                pool[key].servings_per_week += n
+                occasions_seen[key].add(occasion)
 
     for batch in batches.values():
         for entry in iter_entries(batch):

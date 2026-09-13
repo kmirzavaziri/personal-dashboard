@@ -1,8 +1,6 @@
 import re
 from dataclasses import dataclass
 
-from pydantic import ConfigDict
-
 from core.config import Config
 from core.item.item import Item
 from core.item.scheduled import ScheduledItem
@@ -13,13 +11,13 @@ from core.item.schedule import (
     assign_scheduled_servings,
     iter_entries,
     load_batches,
+    load_plan,
 )
 from pkg.model.base import Model
 from pkg.model.io import read_yaml
 
-_WEEKEND  = {'Sat', 'Sun'}
+_WEEKEND = {'Sat', 'Sun'}
 _GYM_DAYS = {'Mon', 'Wed', 'Fri'}
-_HOME_DAYS = _WEEKEND | _GYM_DAYS
 _FISH_ALLOWED_DAYS = {'Sat', 'Sun', 'Tue', 'Thu'}
 
 
@@ -34,10 +32,6 @@ def _infer_breakfast_location(day_name: str, item: ScheduledItem) -> str:
     if 'office' in locations:
         return 'office'
     return 'home'
-
-
-def _infer_snack_location(day_name: str) -> str:
-    return 'home' if day_name in _WEEKEND else 'office'
 
 
 class NutrientTarget(Model):
@@ -59,22 +53,17 @@ class DayNutrition:
     calories: float
 
 
-class DayPlan(Model):
-    model_config = ConfigDict(extra='forbid', arbitrary_types_allowed=True)
+@dataclass
+class PlanRow:
+    days: list[str]
+    slots: dict[str, list[ScheduledItem]]
+    nutrition: DayNutrition
+    breakfast_location: str
+    fish_conflict: bool
 
-    day: str
-    breakfast_key: str
-    lunch_key: str
-    dinner_key: str
-    snack_key: str
-    night_snack_key: str
-    nutrition: DayNutrition = DayNutrition(0, 0, 0)
-    breakfast_location: str = ''
-    snack_location: str = ''
-    fish_conflict: bool = False
-    breakfast_available: bool = True
-    snack_available: bool = True
-    night_available: bool = True
+    @property
+    def days_label(self) -> str:
+        return ', '.join(self.days)
 
 
 @dataclass
@@ -114,7 +103,7 @@ def load_routine(config: Config) -> list[RoutinePhase]:
 class WeeklyData:
     pool: dict[str, ScheduledItem]
     nutrient_targets: list[NutrientTarget]
-    plan: list[DayPlan]
+    plan: list[PlanRow]
     weekly_nutrition: DayNutrition
     batches: dict[str, Batch]
     routine: list[RoutinePhase]
@@ -126,68 +115,34 @@ def _units_count(item: ScheduledItem) -> int:
     return int(m.group(1)) if m else 1
 
 
-def _assign_day_locations(plan: list[DayPlan], pool: dict[str, ScheduledItem]) -> None:
-    for day in plan:
-        b_item = pool.get(day.breakfast_key)
-        day.breakfast_location = _infer_breakfast_location(day.day, b_item) if b_item else 'home'
-        day.snack_location = _infer_snack_location(day.day)
-
-
-def _reachable_at_breakfast(item: ScheduledItem | None, location: str, day_name: str) -> bool:
-    if item is None:
-        return True
-    locations = item.metadata.edible.locations
-    if locations and location not in locations:
-        return False
-    return location != 'home' or day_name in _HOME_DAYS
-
-
-def _reachable_at_home(item: ScheduledItem | None) -> bool:
-    if item is None:
-        return True
-    locations = item.metadata.edible.locations
-    return not locations or 'home' in locations
-
-
-def _assign_availability(plan: list[DayPlan], pool: dict[str, ScheduledItem]) -> None:
-    for day in plan:
-        day.breakfast_available = _reachable_at_breakfast(
-            pool.get(day.breakfast_key), day.breakfast_location, day.day)
-        day.snack_available = _reachable_at_home(pool.get(day.snack_key))
-        day.night_available = _reachable_at_home(pool.get(day.night_snack_key))
-
-
-def _accumulate_macros(plan: list[DayPlan], pool: dict[str, ScheduledItem]) -> DayNutrition:
-    total_protein = total_carbs = total_calories = 0.0
-    for day in plan:
+def _build_rows(plan_groups, pool: dict[str, ScheduledItem]) -> tuple[list[PlanRow], DayNutrition]:
+    rows: list[PlanRow] = []
+    total = DayNutrition(0.0, 0.0, 0.0)
+    for group in plan_groups:
+        slots: dict[str, list[ScheduledItem]] = {}
         p = c = k = 0.0
-        for slot in PLAN_SLOTS:
-            item = pool.get(getattr(day, slot))
-            if not item:
-                continue
-            nutrition = item.metadata.edible.nutrition
-            p += nutrition.get('protein_g', 0)
-            c += nutrition.get('net_carbs_g', 0)
-            k += nutrition.get('calories', 0)
-        day.nutrition = DayNutrition(protein_g=p, net_carbs_g=c, calories=k)
-        total_protein += p
-        total_carbs += c
-        total_calories += k
-    return DayNutrition(protein_g=total_protein, net_carbs_g=total_carbs, calories=total_calories)
-
-
-def _day_has_fish(day: DayPlan, pool: dict[str, ScheduledItem]) -> bool:
-    for slot in ('breakfast_key', 'snack_key'):
-        item = pool.get(getattr(day, slot, ''))
-        if item and 'fish' in item.metadata.edible.has:
-            return True
-    return False
-
-
-def _flag_fish_conflicts(plan: list[DayPlan], pool: dict[str, ScheduledItem]) -> None:
-    for day in plan:
-        if _day_has_fish(day, pool) and day.day not in _FISH_ALLOWED_DAYS:
-            day.fish_conflict = True
+        for occasion in PLAN_SLOTS:
+            items = [pool[key] for key in getattr(group.plan, occasion) if key in pool]
+            slots[occasion] = items
+            for item in items:
+                nutrition = item.metadata.edible.nutrition
+                p += nutrition.get('protein_g', 0) or 0
+                c += nutrition.get('net_carbs_g', 0) or 0
+                k += nutrition.get('calories', 0) or 0
+        breakfast = slots.get('breakfast') or []
+        location = _infer_breakfast_location(group.days[0], breakfast[0]) if breakfast else 'home'
+        has_fish = any('fish' in it.metadata.edible.has for items in slots.values() for it in items)
+        fish_conflict = has_fish and any(d not in _FISH_ALLOWED_DAYS for d in group.days)
+        rows.append(PlanRow(
+            days=list(group.days), slots=slots,
+            nutrition=DayNutrition(p, c, k),
+            breakfast_location=location, fish_conflict=fish_conflict,
+        ))
+        n = len(group.days)
+        total.protein_g += p * n
+        total.net_carbs_g += c * n
+        total.calories += k * n
+    return rows, total
 
 
 def _nutrient_totals(pool: dict[str, ScheduledItem]) -> tuple[dict[str, float], dict[str, list]]:
@@ -247,15 +202,12 @@ def _compute_batch_subtotals(batches: dict[str, Batch], pool: dict[str, Schedule
 def compute(config: Config) -> WeeklyData:
     pool = {item.key: ScheduledItem(item, 0, []) for item in Item.objects.filter(kind='edible')}
     nutrient_targets = NutrientTarget.from_file(config.health_db / 'nutrient_targets.yaml')
-    plan = DayPlan.from_file(config.health_db / 'weekly_plan.yaml')
+    plan_groups = load_plan(config)
     batches = load_batches(config)
     routine = load_routine(config)
 
-    _assign_day_locations(plan, pool)
-    _assign_availability(plan, pool)
-    assign_scheduled_servings(pool, plan, batches)
-    weekly_nutrition = _accumulate_macros(plan, pool)
-    _flag_fish_conflicts(plan, pool)
+    assign_scheduled_servings(pool, plan_groups, batches)
+    plan, weekly_nutrition = _build_rows(plan_groups, pool)
     daily_averages, contributors = _nutrient_totals(pool)
     _assign_nutrient_targets(nutrient_targets, daily_averages, contributors)
     apply_default_servings(pool)

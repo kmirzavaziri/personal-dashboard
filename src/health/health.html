@@ -103,40 +103,25 @@
   <table>
     <thead>
       <tr>
-        <th>Day</th><th>Breakfast</th><th>Lunch</th><th>Dinner</th><th>Snack</th><th>Night</th>
+        <th>Days</th><th>Breakfast</th><th>Lunch</th><th>Dinner</th><th>Snack</th><th>Night</th><th class="num">Per&nbsp;day</th>
       </tr>
     </thead>
     <tbody>
-      {% for day in plan %}
-      {%- set b_item = pool[day.breakfast_key] -%}
-      {%- set c_item = pool[day.snack_key] -%}
-      {%- set n_item = pool[day.night_snack_key] -%}
+      {% for row in plan %}
       <tr>
-        <td><strong>{{ day.day }}</strong></td>
         <td>
-          <span class="has-tooltip">
-            <a href="/shopping#item-{{ day.breakfast_key }}" class="plan-link">{{ thumb(b_item) }}{{ b_item.short_name }}</a>
-            <span class="tooltip-box">{{ m.nutrient_block(b_item, true) }}</span>
-          </span>
-          <span class="badge {{ day.breakfast_location if day.breakfast_available else 'unavailable' }}">{{ day.breakfast_location if day.breakfast_available else 'unavailable' }}</span>
+          <strong>{{ row.days_label }}</strong>
+          {%- if row.slots.get('breakfast') %} <span class="badge {{ row.breakfast_location }}">{{ row.breakfast_location }}</span>{% endif -%}
         </td>
-        <td><span class="has-tooltip"><a href="/shopping#item-{{ day.lunch_key }}" class="plan-link">{{ thumb(pool[day.lunch_key]) }}{{ pool[day.lunch_key].short_name }}</a><span class="tooltip-box">{{ m.nutrient_block(pool[day.lunch_key], true) }}</span></span></td>
-        <td><span class="has-tooltip"><a href="/shopping#item-{{ day.dinner_key }}" class="plan-link">{{ thumb(pool[day.dinner_key]) }}{{ pool[day.dinner_key].short_name }}</a><span class="tooltip-box">{{ m.nutrient_block(pool[day.dinner_key], true) }}</span></span></td>
+        {%- for occ in ['breakfast', 'lunch', 'dinner', 'snack', 'night'] -%}
         <td>
-          <span class="has-tooltip">
-            <a href="/shopping#item-{{ day.snack_key }}" class="plan-link">{{ thumb(c_item) }}{{ c_item.short_name }}</a>
-            <span class="tooltip-box">{{ m.nutrient_block(c_item, true) }}</span>
-          </span>
-          {%- if day.fish_conflict %}<span class="badge fish-conflict">fish day!</span>{% endif -%}
-          {%- if not day.snack_available %}<span class="badge unavailable">unavailable</span>{% endif -%}
+          {%- for it in row.slots.get(occ, []) -%}
+          <span class="has-tooltip"><a href="/shopping#item-{{ it.key }}" class="plan-link">{{ thumb(it) }}{{ it.short_name }}</a><span class="tooltip-box">{{ m.nutrient_block(it, true) }}</span></span>{% if not loop.last %}<br>{% endif %}
+          {%- endfor -%}
+          {%- if occ == 'lunch' and row.fish_conflict %} <span class="badge fish-conflict">fish day!</span>{% endif -%}
         </td>
-        <td>
-          <span class="has-tooltip">
-            <a href="/shopping#item-{{ day.night_snack_key }}" class="plan-link">{{ thumb(n_item) }}{{ n_item.short_name }}</a>
-            <span class="tooltip-box">{{ m.nutrient_block(n_item, true) }}</span>
-          </span>
-          {%- if not day.night_available %}<span class="badge unavailable">unavailable</span>{% endif -%}
-        </td>
+        {%- endfor -%}
+        <td class="num muted" style="white-space:nowrap;">{{ row.nutrition.protein_g | round | int }}P · {{ row.nutrition.net_carbs_g | round | int }}C · {{ row.nutrition.calories | round | int }}k</td>
       </tr>
       {% endfor %}
     </tbody>

@@ -1,36 +1,28 @@
 from health.nutrition import compute
-
-_SLOT_ORDER = [
-    ('breakfast_key',   'Breakfast'),
-    ('lunch_key',       'Lunch'),
-    ('dinner_key',      'Dinner'),
-    ('snack_key',       'Snack'),
-    ('night_snack_key', 'Night'),
-]
+from core.item.schedule import PLAN_SLOTS
 
 
 def report_dict(config) -> dict:
     data = compute(config)
 
     plan = []
-    for day in data.plan:
+    for row in data.plan:
         slots = {}
-        for slot, label in _SLOT_ORDER:
-            key = getattr(day, slot, '')
-            if not key:
+        for occasion in PLAN_SLOTS:
+            items = row.slots.get(occasion) or []
+            if not items:
                 continue
-            item = data.pool.get(key)
-            entry = {'key': key, 'name': item.short_name if item else key}
-            if slot == 'breakfast_key':
-                entry['location'] = day.breakfast_location
-            slots[label] = entry
+            slots[occasion] = [{'key': it.key, 'name': it.short_name} for it in items]
         plan.append({
-            'day': day.day,
+            'days': row.days,
+            'days_label': row.days_label,
+            'location': row.breakfast_location,
+            'fish_conflict': row.fish_conflict,
             'slots': slots,
             'nutrition': {
-                'protein_g':   round(day.nutrition.protein_g, 1),
-                'net_carbs_g': round(day.nutrition.net_carbs_g, 1),
-                'calories':    round(day.nutrition.calories),
+                'protein_g':   round(row.nutrition.protein_g, 1),
+                'net_carbs_g': round(row.nutrition.net_carbs_g, 1),
+                'calories':    round(row.nutrition.calories),
             },
         })
 
