@@ -109,10 +109,7 @@
     <tbody>
       {% for row in plan %}
       <tr>
-        <td>
-          <strong>{{ row.days_label }}</strong>
-          {%- if row.slots.get('breakfast') %} <span class="badge {{ row.breakfast_location }}">{{ row.breakfast_location }}</span>{% endif -%}
-        </td>
+        <td><strong>{{ row.days_label }}</strong></td>
         {%- for occ in ['breakfast', 'lunch', 'dinner', 'snack', 'night'] -%}
         <td>
           {%- for it in row.slots.get(occ, []) -%}
