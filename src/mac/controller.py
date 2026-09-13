@@ -83,8 +83,6 @@ def arm(config: Config, minutes: int) -> None:
         else:
             raise SystemExit(f'keep-awake controller failed to start — see {state.LOG}')
 
-    procs.start_ttyd(config)
-
 
 def controller_loop() -> None:
     state.PIDFILE.write_text(str(os.getpid()))
