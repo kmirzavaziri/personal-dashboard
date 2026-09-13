@@ -264,7 +264,7 @@ def _tool_defs() -> list[dict]:
 
 def make_mcp_bp(services) -> Blueprint:
     bp = Blueprint('mcp', __name__)
-    token = services.config.mcp_token
+    token = services.config.api_token
 
     def _authorized() -> bool:
         header = request.headers.get('Authorization', '')

@@ -30,16 +30,16 @@ class Config:
     enable_mac: bool
     mac_host: str | None
     allowed_email: str | None
-    mcp_token: str | None
+    api_token: str | None
     oauth_client_id: str | None
     oauth_client_secret: str | None
-    mcp_public_url: str | None
+    api_public_url: str | None
     webhook_secret: str | None
     cf_proxy_secret: str | None
     web_hosts: tuple[str, ...]
     git_sha: str | None
-    dashboard_mcp_url: str | None
-    dashboard_mcp_token: str | None
+    dashboard_api_url: str | None
+    dashboard_api_token: str | None
 
     @classmethod
     def default(cls) -> 'Config':
@@ -72,14 +72,14 @@ class Config:
             enable_mac=_flag(env.get('ENABLE_MAC'), True),
             mac_host=env.get('MAC_HOST') or None,
             allowed_email=env.get('ALLOWED_EMAIL') or None,
-            mcp_token=env.get('MCP_TOKEN') or None,
+            api_token=env.get('API_TOKEN') or None,
             oauth_client_id=env.get('OAUTH_CLIENT_ID') or None,
             oauth_client_secret=env.get('OAUTH_CLIENT_SECRET') or None,
-            mcp_public_url=env.get('MCP_PUBLIC_URL') or None,
+            api_public_url=env.get('API_PUBLIC_URL') or None,
             webhook_secret=env.get('WEBHOOK_SECRET') or None,
             cf_proxy_secret=env.get('CF_PROXY_SECRET') or None,
             web_hosts=tuple(h.strip() for h in (env.get('WEB_HOSTS') or '').split(',') if h.strip()),
             git_sha=env.get('RENDER_GIT_COMMIT') or env.get('GIT_SHA') or None,
-            dashboard_mcp_url=env.get('DASHBOARD_MCP_URL') or None,
-            dashboard_mcp_token=env.get('DASHBOARD_MCP_TOKEN') or None,
+            dashboard_api_url=env.get('DASHBOARD_API_URL') or None,
+            dashboard_api_token=env.get('DASHBOARD_API_TOKEN') or None,
         )

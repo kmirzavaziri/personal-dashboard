@@ -50,8 +50,8 @@ def _unsign(key: bytes, token: str) -> dict | None:
 
 
 def _base_url(config) -> str:
-    if config.mcp_public_url:
-        return config.mcp_public_url.rstrip('/')
+    if config.api_public_url:
+        return config.api_public_url.rstrip('/')
     scheme = request.headers.get('X-Forwarded-Proto') or request.scheme
     return f'{scheme}://{request.host}'
 

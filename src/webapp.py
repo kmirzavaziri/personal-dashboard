@@ -107,7 +107,7 @@ def create_app(services: Services) -> Flask:
         if is_public_path(request.path):
             return None
         header = request.headers.get('Authorization', '')
-        if config.mcp_token and hmac.compare_digest(header, f'Bearer {config.mcp_token}'):
+        if config.api_token and hmac.compare_digest(header, f'Bearer {config.api_token}'):
             return None
         if valid_access_token(config, header):
             return None

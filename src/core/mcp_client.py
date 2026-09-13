@@ -14,13 +14,13 @@ def _text(result: dict) -> str:
 class MCPClient:
     def __init__(self, url: str | None, token: str | None):
         if not url:
-            raise MCPError('DASHBOARD_MCP_URL is not set — cannot reach the dashboard to persist data')
+            raise MCPError('DASHBOARD_API_URL is not set — cannot reach the dashboard to persist data')
         self.url = url
         self.token = token
 
     @classmethod
     def from_config(cls, config) -> 'MCPClient':
-        return cls(config.dashboard_mcp_url, config.dashboard_mcp_token)
+        return cls(config.dashboard_api_url, config.dashboard_api_token)
 
     def call(self, tool: str, **arguments) -> str:
         payload = {'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call',

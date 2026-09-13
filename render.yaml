@@ -19,13 +19,13 @@ services:
         sync: false
       - key: ALLOWED_EMAIL
         sync: false
-      - key: MCP_TOKEN
+      - key: API_TOKEN
         sync: false
       - key: OAUTH_CLIENT_ID
         sync: false
       - key: OAUTH_CLIENT_SECRET
         sync: false
-      - key: MCP_PUBLIC_URL
+      - key: API_PUBLIC_URL
         sync: false
       - key: CF_PROXY_SECRET
         sync: false
