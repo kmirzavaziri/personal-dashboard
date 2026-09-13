@@ -158,9 +158,10 @@ def image(
     src = client.call_json('item_chosen_source', key=key, store=store)
     img = ''
     store_slug = (src or {}).get('store', 'unknown')
-    if src and (src.get('url') or src.get('id')):
-        p = get_scraper(store_slug).get_product(src.get('url') or src['id'])
-        img = p.image or p.raw.get('image', '')
+    if src and (src.get('url') or src.get('id')) and store_slug in SCRAPERS:
+        with suppress(Exception):
+            p = get_scraper(store_slug).get_product(src.get('url') or src['id'])
+            img = p.image or p.raw.get('image', '')
     if not img and search:
         print(f"  {key}: no source image, searching Google Images for '{search}'...")
         img = search_food_image(search)
