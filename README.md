@@ -28,7 +28,7 @@ One Render service serves the app on **two hostnames**, gated differently:
 | Hostname | Serves | Gate |
 |----------|--------|------|
 | `dash.<domain>` (web UI) | full UI + everything | **Cloudflare Access** (your email) |
-| `mcp.<domain>` (MCP)     | `/mcp` + `/api/*` | **default-deny bearer token** (whole host) |
+| `api.<domain>` (API)     | `/mcp` + `/api/*` | **default-deny bearer token** (whole host) |
 
 Every request passes two app-level gates, in order:
 
@@ -41,8 +41,8 @@ Every request passes two app-level gates, in order:
 2. **Authorization:**
    - **UI hosts** (those in `WEB_HOSTS`) → allowed; Cloudflare Access already gated the whole
      host at the edge with interactive SSO.
-   - **Every other host** (the MCP subdomain, the raw Render URL, anything spoofed) →
-     **default-deny**: the request must carry a valid `Authorization: Bearer <MCP_TOKEN>`,
+   - **Every other host** (the API subdomain, the raw Render URL, anything spoofed) →
+     **default-deny**: the request must carry a valid `Authorization: Bearer <API_TOKEN>`,
      or be a GitHub webhook with a valid HMAC signature. Otherwise `401`. Nothing is
      allow-listed per-path, so no endpoint can be accidentally left open.
 
@@ -53,8 +53,8 @@ misconfigured deploy hides the UI rather than exposing it.
 - Skip Cloudflare and hit the origin directly → no secret header → `403`.
 - Point your own domain/proxy at the origin → you don't know the 256-bit secret → `403`.
 - Forge `Host: dash.<domain>` at the origin → origin lock fires *before* the host check → `403`.
-- Enter via the mcp edge with a forged `Host` → Cloudflare forwards the edge hostname it
-  served, not your header → treated as the mcp host → `401`.
+- Enter via the api edge with a forged `Host` → Cloudflare forwards the edge hostname it
+  served, not your header → treated as the api host → `401`.
 - Forge `X-Forwarded-Host` → ignored; the app reads the real `Host` (no `ProxyFix`).
 
 **Two invariants this rests on — don't break them:**
@@ -102,7 +102,7 @@ base64 < data_key | tr -d '\n'      # copy this → DATA_DEPLOY_KEY_B64
 | `GIT_AUTHOR_EMAIL` | email for the auto-commits |
 | `WEB_HOSTS` | `dash.<your-domain>` — comma-separated; **the UI serves only on these** |
 | `ALLOWED_EMAIL` | your email (informational; Cloudflare Access enforces the real gate) |
-| `MCP_TOKEN` | a random secret the MCP endpoint requires (`openssl rand -hex 32`) |
+| `API_TOKEN` | a random secret the API host requires — MCP, SMS ingest, etc. (`openssl rand -hex 32`) |
 | `WEBHOOK_SECRET` | a random secret to enable GitHub-webhook pulls (`/api/webhook`) |
 | `CF_PROXY_SECRET` | a random secret for the origin lock — **set last**, see step 6 (`openssl rand -hex 32`) |
 | `ENABLE_MAC` | `false` unless you set up the Mac bridge |
@@ -115,14 +115,14 @@ In your `<domain>` zone:
 
 1. **DNS** — two proxied (🟠) CNAMEs → your Render URL:
    - `dash.<domain>` → `<your-service>.onrender.com`
-   - `mcp.<domain>`  → `<your-service>.onrender.com`
+   - `api.<domain>`  → `<your-service>.onrender.com`
    Add both as **Custom Domains** on the Render service too.
 2. **TLS** — Render serves valid HTTPS, so use **Full (strict)**. If your zone default is
    *Flexible* (to not disturb other subdomains), add a per-host override instead:
    *Rules → Configuration Rules*, expression
-   `(http.host in {"dash.<domain>" "mcp.<domain>"})`, set **SSL → Full (strict)**.
+   `(http.host in {"dash.<domain>" "api.<domain>"})`, set **SSL → Full (strict)**.
 3. **Access** (*Zero Trust → Access → Applications → Add → Self-hosted*):
-   - Application domain: **`dash.<domain>` only** (do **not** add the mcp host — it uses a
+   - Application domain: **`dash.<domain>` only** (do **not** add the api host — it uses a
      token, not interactive login).
    - Policy: **Allow**, Include → Emails → your email.
 
@@ -130,25 +130,46 @@ In your `<domain>` zone:
 Without this, anyone hitting the raw `*.onrender.com` URL bypasses Access.
 
 1. *Rules → Transform Rules → Modify Request Header → Create*:
-   - Expression: `(http.host in {"dash.<domain>" "mcp.<domain>"})`
+   - Expression: `(http.host in {"dash.<domain>" "api.<domain>"})`
    - **Set static** header `X-Proxy-Secret` = your `CF_PROXY_SECRET` value.
    - Deploy.
 2. **Only then** set `CF_PROXY_SECRET` in Render (step 4). Order matters — if the header rule
    isn't live first, Cloudflare's own requests get `403`'d too.
 
 **Verify:** `https://<render-url>/` → `403`, `https://dash.<domain>/` → Access login,
-`https://mcp.<domain>/` → `401`, `https://mcp.<domain>/mcp` (no token) → `401`.
+`https://api.<domain>/` → `401`, `https://api.<domain>/mcp` (no token) → `401`.
 **Escape hatch:** delete `CF_PROXY_SECRET` in Render to disable the lock (emergency only — it
 reopens Host-spoofing; see *Why spoofing can't get in*).
 
 ### 7. Connect MCP + webhook (optional)
-- **MCP** — add `https://mcp.<domain>/mcp` as a remote connector in the Claude app, with the
-  `MCP_TOKEN` as its bearer token.
+- **MCP** — add `https://api.<domain>/mcp` as a remote connector in the Claude app, with the
+  `API_TOKEN` as its bearer token.
 - **GitHub webhook** — in the data repo: *Settings → Webhooks*, payload URL
-  `https://mcp.<domain>/api/webhook`, content-type `application/json`, secret = `WEBHOOK_SECRET`.
+  `https://api.<domain>/api/webhook`, content-type `application/json`, secret = `WEBHOOK_SECRET`.
   Lets out-of-band edits (a hand-push to the data repo) trigger an immediate pull.
 
 Done — edits in the app commit back to your private repo automatically; git is your backup.
+
+### 8. Bank SMS → transactions (optional)
+Capture bank transaction texts on an iPhone and append them to the data repo, to feed the
+budget later. iOS won't let any app read SMS (and needs no paid developer account), so use a
+built-in **Shortcuts automation** that forwards messages to `/api/sms/ingest`. Each POST is
+appended as one JSON line to `db/transactions/YYYY-MM.jsonl` (raw body preserved, so a parser
+can reprocess history). iOS passes only the message **body**, not the sender — route/parse on
+content (bank texts name the bank/card anyway).
+
+**Shortcut automation** (Shortcuts → *Automation → + → Personal Automation → Message*):
+1. Filter: iOS requires one, so set **Message contains** a single space `" "` as a catch-all
+   (leave *Sender* empty — bank sender IDs are alphanumeric, not Contacts). The server decides
+   what's a transaction; the phone just forwards.
+2. Action **Get Contents of URL**:
+   - URL `https://api.<domain>/api/sms/ingest` · Method **POST**
+   - Header `Authorization` = `Bearer <API_TOKEN>`
+   - Request Body **JSON** → field `text` = the **Shortcut Input** variable (the message)
+3. **Run Immediately** (turn off *Ask Before Running*).
+
+On a scale-to-zero host the first message after an idle period may hit a cold start — add a
+retry in the shortcut (on failure: wait ~60s, repeat) or keep the service warm.
 
 ---
 
@@ -166,14 +187,15 @@ Locally, `WEB_HOSTS` is unset so the UI is served on localhost/LAN automatically
 | Path | Purpose | Reachable |
 |------|---------|-----------|
 | `/` and feature pages | web UI | UI hosts only, behind Access |
-| `/mcp` | MCP JSON-RPC | bearer `MCP_TOKEN` |
+| `/mcp` | MCP JSON-RPC | bearer `API_TOKEN` |
+| `/api/sms/ingest` | append a raw message → `db/transactions/YYYY-MM.jsonl` | bearer `API_TOKEN` |
 | `/api/webhook` | GitHub webhook → pull data | HMAC `WEBHOOK_SECRET` |
 | `/api/sync` | manual "pull data now" | UI host (via Access) or bearer token |
 | `/version` | deployed commit SHA | UI host (via Access) or bearer token |
 | `/healthz` | liveness — returns `"ok"` | always public (Render health check) |
 
 Confirm a deploy: open `/version` in the browser on the UI host, or
-`curl -H "Authorization: Bearer <MCP_TOKEN>" https://mcp.<domain>/version`.
+`curl -H "Authorization: Bearer <API_TOKEN>" https://api.<domain>/version`.
 
 ## Structural migrations
 Data and code migrate together in a short window (no zero-downtime needed):
