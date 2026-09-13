@@ -76,9 +76,6 @@ def create_app(services: Services) -> Flask:
 
     @app.post('/api/sms/ingest')
     def sms_ingest():
-        header = request.headers.get('Authorization', '')
-        if not config.sms_token or not hmac.compare_digest(header, f'Bearer {config.sms_token}'):
-            return {'ok': False}, 401
         payload = request.get_json(silent=True)
         if payload is None:
             payload = {'text': request.get_data(as_text=True)}
@@ -105,7 +102,7 @@ def create_app(services: Services) -> Flask:
             return None
         if _ui_host_allowed(request.host, config.web_hosts):
             return None
-        if request.path in ('/api/webhook', '/api/sms/ingest'):
+        if request.path == '/api/webhook':
             return None
         if is_public_path(request.path):
             return None
