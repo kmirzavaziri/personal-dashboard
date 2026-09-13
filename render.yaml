@@ -21,6 +21,8 @@ services:
         sync: false
       - key: MCP_TOKEN
         sync: false
+      - key: SMS_INGEST_TOKEN
+        sync: false
       - key: OAUTH_CLIENT_ID
         sync: false
       - key: OAUTH_CLIENT_SECRET

@@ -31,6 +31,7 @@ class Config:
     mac_host: str | None
     allowed_email: str | None
     mcp_token: str | None
+    sms_token: str | None
     oauth_client_id: str | None
     oauth_client_secret: str | None
     mcp_public_url: str | None
@@ -73,6 +74,7 @@ class Config:
             mac_host=env.get('MAC_HOST') or None,
             allowed_email=env.get('ALLOWED_EMAIL') or None,
             mcp_token=env.get('MCP_TOKEN') or None,
+            sms_token=env.get('SMS_INGEST_TOKEN') or None,
             oauth_client_id=env.get('OAUTH_CLIENT_ID') or None,
             oauth_client_secret=env.get('OAUTH_CLIENT_SECRET') or None,
             mcp_public_url=env.get('MCP_PUBLIC_URL') or None,

@@ -1,7 +1,9 @@
 import atexit
 import hashlib
 import hmac
+import json
 from dataclasses import replace
+from datetime import datetime, timezone
 
 from flask import Flask, Response, request, send_from_directory
 
@@ -72,6 +74,23 @@ def create_app(services: Services) -> Flask:
     def version():
         return {'sha': config.git_sha, 'branch': config.git_branch}
 
+    @app.post('/api/sms/ingest')
+    def sms_ingest():
+        header = request.headers.get('Authorization', '')
+        if not config.sms_token or not hmac.compare_digest(header, f'Bearer {config.sms_token}'):
+            return {'ok': False}, 401
+        payload = request.get_json(silent=True)
+        if payload is None:
+            payload = {'text': request.get_data(as_text=True)}
+        record = {'received_at': datetime.now(timezone.utc).isoformat(), 'source': 'sms', 'payload': payload}
+        path = config.db / 'transactions' / f"{datetime.now(timezone.utc):%Y-%m}.jsonl"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open('a', encoding='utf-8') as f:
+            f.write(json.dumps(record, ensure_ascii=False) + '\n')
+        if git is not None:
+            git.mark_dirty()
+        return {'ok': True}
+
     if config.cf_proxy_secret:
         @app.before_request
         def require_cloudflare():
@@ -86,7 +105,7 @@ def create_app(services: Services) -> Flask:
             return None
         if _ui_host_allowed(request.host, config.web_hosts):
             return None
-        if request.path == '/api/webhook':
+        if request.path in ('/api/webhook', '/api/sms/ingest'):
             return None
         if is_public_path(request.path):
             return None
