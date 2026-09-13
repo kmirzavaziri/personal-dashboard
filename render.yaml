@@ -27,6 +27,8 @@ services:
         sync: false
       - key: API_PUBLIC_URL
         sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
       - key: CF_PROXY_SECRET
         sync: false
       - key: WEB_HOSTS

@@ -1,9 +1,7 @@
 import atexit
 import hashlib
 import hmac
-import json
 from dataclasses import replace
-from datetime import datetime, timezone
 
 from flask import Flask, Response, request, send_from_directory
 
@@ -21,6 +19,7 @@ from expenses.web import make_expenses_bp
 from mac.web import make_mac_bp
 from planner.web import make_planner_bp
 from agenda.web import make_calendar_bp
+from messaging.web import make_messaging_bp
 from mac.net import display_hosts
 
 
@@ -57,7 +56,7 @@ def create_app(services: Services) -> Flask:
         services = replace(services, git=git)
 
     blueprints = [make_health_bp, make_shopping_bp, make_styling_bp,
-                  make_expenses_bp, make_planner_bp, make_calendar_bp]
+                  make_expenses_bp, make_planner_bp, make_calendar_bp, make_messaging_bp]
     if config.enable_mac:
         blueprints.append(make_mac_bp)
     for make_bp in blueprints:
@@ -73,20 +72,6 @@ def create_app(services: Services) -> Flask:
     @app.get('/version')
     def version():
         return {'sha': config.git_sha, 'branch': config.git_branch}
-
-    @app.post('/api/sms/ingest')
-    def sms_ingest():
-        payload = request.get_json(silent=True)
-        if payload is None:
-            payload = {'text': request.get_data(as_text=True)}
-        record = {'received_at': datetime.now(timezone.utc).isoformat(), 'source': 'sms', 'payload': payload}
-        path = config.db / 'transactions' / f"{datetime.now(timezone.utc):%Y-%m}.jsonl"
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open('a', encoding='utf-8') as f:
-            f.write(json.dumps(record, ensure_ascii=False) + '\n')
-        if git is not None:
-            git.mark_dirty()
-        return {'ok': True}
 
     if config.cf_proxy_secret:
         @app.before_request

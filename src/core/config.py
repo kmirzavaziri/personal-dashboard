@@ -34,6 +34,7 @@ class Config:
     oauth_client_id: str | None
     oauth_client_secret: str | None
     api_public_url: str | None
+    telegram_bot_token: str | None
     webhook_secret: str | None
     cf_proxy_secret: str | None
     web_hosts: tuple[str, ...]
@@ -76,6 +77,7 @@ class Config:
             oauth_client_id=env.get('OAUTH_CLIENT_ID') or None,
             oauth_client_secret=env.get('OAUTH_CLIENT_SECRET') or None,
             api_public_url=env.get('API_PUBLIC_URL') or None,
+            telegram_bot_token=env.get('TELEGRAM_BOT_TOKEN') or None,
             webhook_secret=env.get('WEBHOOK_SECRET') or None,
             cf_proxy_secret=env.get('CF_PROXY_SECRET') or None,
             web_hosts=tuple(h.strip() for h in (env.get('WEB_HOSTS') or '').split(',') if h.strip()),
