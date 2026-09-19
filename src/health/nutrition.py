@@ -199,6 +199,47 @@ def _compute_batch_subtotals(batches: dict[str, Batch], pool: dict[str, Schedule
     return subtotals
 
 
+def _fmt_qty(q: float) -> str:
+    return str(int(round(q))) if abs(q - round(q)) < 0.05 else f'{q:.1f}'
+
+
+def scale_portion(serving_size: str, calories: float, budget: float) -> str:
+    if not calories or calories <= 0:
+        return serving_size
+    m = re.match(r'^\s*~?\s*([\d.]+)\s*(.*)$', serving_size or '')
+    if not m:
+        return serving_size
+    qty = float(m.group(1)) * (budget / calories)
+    rest = m.group(2).strip()
+    unit = rest.split(' ')[0] if rest else ''
+    if unit in ('g', 'ml', 'kg'):
+        step = 5 if qty >= 20 else 1
+        return f'{int(round(qty / step) * step)} {unit}'
+    q = round(qty * 2) / 2
+    label = rest
+    if q != 1 and label and not label.endswith('s'):
+        label += 's'
+    return f'{_fmt_qty(q)} {label}'.strip()
+
+
+def snack_options(pool: dict, budget: float) -> list[dict]:
+    opts = []
+    for item in pool.values():
+        if item.metadata.edible.category != 'treat':
+            continue
+        cals = (item.metadata.edible.nutrition or {}).get('calories')
+        if not cals:
+            continue
+        opts.append({
+            'key': item.key,
+            'name': item.short_name,
+            'image': item.image,
+            'portion': scale_portion(item.metadata.edible.serving_size, cals, budget),
+        })
+    opts.sort(key=lambda o: o['name'])
+    return opts
+
+
 def compute(config: Config) -> WeeklyData:
     pool = {item.key: ScheduledItem(item, 0, []) for item in Item.objects.filter(kind='edible')}
     nutrient_targets = NutrientTarget.from_file(config.health_db / 'nutrient_targets.yaml')

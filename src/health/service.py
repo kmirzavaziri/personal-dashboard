@@ -1,9 +1,11 @@
-from health.nutrition import compute
+from health.nutrition import compute, snack_options
 from core.item.schedule import PLAN_SLOTS
 
 
 def report_dict(config) -> dict:
     data = compute(config)
+    cs = data.pool.get('calories_snack')
+    snack_budget = int((cs.metadata.edible.nutrition or {}).get('calories', 100)) if cs else 100
 
     plan = []
     for row in data.plan:
@@ -12,7 +14,14 @@ def report_dict(config) -> dict:
             items = row.slots.get(occasion) or []
             if not items:
                 continue
-            slots[occasion] = [{'key': it.key, 'name': it.short_name} for it in items]
+            grouped, index = [], {}
+            for it in items:
+                if it.key in index:
+                    grouped[index[it.key]]['count'] += 1
+                else:
+                    index[it.key] = len(grouped)
+                    grouped.append({'key': it.key, 'name': it.short_name, 'count': 1})
+            slots[occasion] = grouped
         plan.append({
             'days': row.days,
             'days_label': row.days_label,
@@ -56,6 +65,8 @@ def report_dict(config) -> dict:
 
     return {
         'plan': plan,
+        'snack_budget': snack_budget,
+        'snack_options': snack_options(data.pool, snack_budget),
         'weekly_nutrition': {
             'protein_g':   round(data.weekly_nutrition.protein_g, 1),
             'net_carbs_g': round(data.weekly_nutrition.net_carbs_g, 1),

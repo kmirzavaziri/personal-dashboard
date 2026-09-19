@@ -1,7 +1,7 @@
 
 from pathlib import Path
 
-from health.nutrition import compute
+from health.nutrition import compute, snack_options
 from core.web.templating import make_env, trim_number
 from core.item.nutrients import nutrient
 from core.item.categories import food_categories
@@ -59,13 +59,29 @@ def _tooltip_rows(target) -> list[dict]:
     return rows
 
 
+def _group_items(items):
+    out, index = [], {}
+    for it in items:
+        if it.key in index:
+            i = index[it.key]
+            out[i] = (out[i][0], out[i][1] + 1)
+        else:
+            index[it.key] = len(out)
+            out.append((it, 1))
+    return out
+
+
 _jinja.filters['fmt_actual'] = _fmt_actual
 _jinja.filters['tooltip_rows'] = _tooltip_rows
+_jinja.filters['group_items'] = _group_items
 
 
 def render(services) -> str:
     config = services.config
     nutrition = compute(config)
+    cs = nutrition.pool.get('calories_snack')
+    snack_budget = int((cs.metadata.edible.nutrition or {}).get('calories', 100)) if cs else 100
+    options = snack_options(nutrition.pool, snack_budget)
     profile = read_yaml(config.health_db / 'profile.yaml')
     gym = read_yaml(config.health_db / 'gym.yaml')
     monitoring = read_yaml(config.health_db / 'monitoring.yaml') or []
@@ -80,6 +96,8 @@ def render(services) -> str:
         supplement_strategy=profile.get('supplement_strategy', []),
         nutrient_targets=nutrition.nutrient_targets,
         plan=nutrition.plan,
+        snack_options=options,
+        snack_budget=snack_budget,
         pool=nutrition.pool,
         weekly_nutrition=nutrition.weekly_nutrition,
         batches=nutrition.batches,

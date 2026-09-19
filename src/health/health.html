@@ -112,8 +112,8 @@
         <td><strong>{{ row.days_label }}</strong></td>
         {%- for occ in ['breakfast', 'lunch', 'dinner', 'snack', 'night'] -%}
         <td>
-          {%- for it in row.slots.get(occ, []) -%}
-          <span class="has-tooltip"><a href="/shopping#item-{{ it.key }}" class="plan-link">{{ thumb(it) }}{{ it.short_name }}</a><span class="tooltip-box">{{ m.nutrient_block(it, true) }}</span></span>{% if not loop.last %}<br>{% endif %}
+          {%- for it, count in row.slots.get(occ, []) | group_items -%}
+          <span class="has-tooltip"><a href="/shopping#item-{{ it.key }}" class="plan-link">{{ thumb(it) }}{{ it.short_name }}{% if count > 1 %} ×{{ count }}{% endif %}</a><span class="tooltip-box">{{ m.nutrient_block(it, true) }}</span></span>{% if not loop.last %}<br>{% endif %}
           {%- endfor -%}
           {%- if occ == 'lunch' and row.fish_conflict %} <span class="badge fish-conflict">fish day!</span>{% endif -%}
         </td>
@@ -123,6 +123,21 @@
       {% endfor %}
     </tbody>
   </table>
+
+  {% if snack_options %}
+  <h4>Calories snack — pick any (~{{ snack_budget }} kcal each)</h4>
+  <div class="note">Each <strong>Calories snack</strong> in the plan is a ~{{ snack_budget }} kcal block. Grab whatever you're craving from the list — the portions below are all worth the same calories, so the day's total holds no matter which you pick.</div>
+  <table>
+    <tbody>
+      {% for o in snack_options %}
+      <tr>
+        <td><a href="/shopping#item-{{ o.key }}" class="plan-link">{% if o.image %}<img src="{{ o.image }}" style="width:36px;height:36px;object-fit:contain;vertical-align:middle;border-radius:3px;margin-right:5px;background:#fff;">{% endif %}{{ o.name }}</a></td>
+        <td class="num"><strong>{{ o.portion }}</strong></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
   </details>
 </section>
 
