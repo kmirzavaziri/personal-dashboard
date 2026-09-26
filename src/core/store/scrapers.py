@@ -357,6 +357,7 @@ class AmazonAEScraper(PlaywrightScraper):
 
 class IHerbAEScraper(PlaywrightScraper):
     slug = 'iherb-ae'
+    stealth = True
     search_ready = '.product-cell'
     search_wait_ms = 1_000
 
