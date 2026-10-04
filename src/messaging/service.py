@@ -1,5 +1,4 @@
 import json
-import re
 import urllib.request
 from datetime import datetime, timezone
 from urllib.error import URLError
@@ -15,10 +14,6 @@ def _inbox_dir(config):
 
 def _config(config) -> dict:
     return read_yaml(config.db / 'messaging' / 'config.yaml') or {}
-
-
-def _text_of(payload) -> str:
-    return payload.get('text', '') if isinstance(payload, dict) else str(payload)
 
 
 def record(config, source: str, payload) -> dict:
@@ -52,26 +47,5 @@ def send(config, channel: str, text: str) -> bool:
         return False
 
 
-def _matches(match: str, text: str) -> bool:
-    if not match:
-        return True
-    if match.startswith('re:'):
-        return re.search(match[3:], text) is not None
-    return match.lower() in text.lower()
-
-
-def relay(config, text: str) -> list[str]:
-    sent = []
-    for rule in _config(config).get('relay') or []:
-        if rule.get('to') and _matches(rule.get('match', ''), text) and send(config, rule['to'], text):
-            sent.append(rule['to'])
-    return sent
-
-
 def ingest(config, source: str, payload) -> dict:
-    entry = record(config, source, payload)
-    try:
-        relay(config, _text_of(payload))
-    except Exception:
-        pass
-    return entry
+    return record(config, source, payload)
