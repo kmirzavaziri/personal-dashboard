@@ -16,6 +16,9 @@ npx wrangler deploy
 
 Both values are stored as Worker secrets, so nothing host-specific lives in the repo.
 
+The worker is email-triggered, not HTTP — `wrangler.toml` sets `workers_dev = false`, so it deploys
+with no `workers.dev` subdomain and no route (`No deploy targets` on deploy is expected and fine).
+
 ## Wire up Cloudflare Email Routing
 
 1. Cloudflare dashboard → your zone → **Email → Email Routing** → enable (adds the MX records).

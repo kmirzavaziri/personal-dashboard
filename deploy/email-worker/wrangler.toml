@@ -2,3 +2,4 @@ name = "bank-email-ingest"
 main = "worker.js"
 compatibility_date = "2026-10-01"
 compatibility_flags = ["nodejs_compat"]
+workers_dev = false
