@@ -1,6 +1,7 @@
 from flask import Blueprint, request
 
 import messaging.service as messaging
+import transactions.service as transactions
 
 
 def make_messaging_bp(services) -> Blueprint:
@@ -11,7 +12,11 @@ def make_messaging_bp(services) -> Blueprint:
         payload = request.get_json(silent=True)
         if payload is None:
             payload = {'text': request.get_data(as_text=True)}
-        messaging.ingest(services.config, source, payload)
+        entry = messaging.ingest(services.config, source, payload)
+        try:
+            transactions.ingest(services.config, entry)
+        except Exception:
+            pass
         if services.git is not None:
             services.git.mark_dirty()
         return {'ok': True}

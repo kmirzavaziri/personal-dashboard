@@ -23,9 +23,71 @@
     z-index: 10;
   }
   [data-tip]:hover::after { opacity: 1; }
+
+  .period { color: var(--muted); font-size: 0.82rem; margin: 0 0 0.7rem; }
+  .budget-row { margin: 0.55rem 0; }
+  .budget-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 0.86rem; margin-bottom: 3px; }
+  .bar { height: 8px; border-radius: 4px; background: var(--border); overflow: hidden; }
+  .bar > span { display: block; height: 100%; border-radius: 4px; }
+  .bar.green  > span { background: var(--green, #6fb98f); }
+  .bar.yellow > span { background: #d4b24a; }
+  .bar.red    > span { background: var(--red, #cf7f78); }
+  .bar.none   > span { background: var(--muted); opacity: 0.35; }
+  .bnote { font-size: 0.74rem; margin-top: 3px; color: var(--muted); }
+  .bnote.red    { color: var(--red, #cf7f78); }
+  .bnote.yellow { color: #c79a2e; }
+  .tx-amt { font-variant-numeric: tabular-nums; }
+  .tx-cat { font-size: 0.76rem; color: var(--muted); background: transparent; border: 1px solid var(--border); border-radius: 3px; padding: 1px 4px; }
 {% endblock %}
 
 {% block content %}
+
+<section>
+  <details open>
+  <summary><h2>Budget vs Actual</h2></summary>
+  <div class="period">{{ period_label }}</div>
+  {% if budget_rows %}
+  {% for r in budget_rows %}
+  <div class="budget-row">
+    <div class="budget-head">
+      <span>{{ r.category }}</span>
+      <span class="tx-amt">AED {{ r.actual | fmt }}{% if r.budget > 0 %} <span class="muted">/ {{ r.budget | fmt }}</span>{% else %} <span class="muted">(untracked)</span>{% endif %}</span>
+    </div>
+    <div class="bar {{ r.status }}"><span style="width: {{ r.pct }}%"></span></div>
+    {% if r.note %}<div class="bnote {{ r.status }}">{{ r.note }}</div>{% endif %}
+  </div>
+  {% endfor %}
+  {% else %}
+  <div class="muted">No transactions recorded yet this month.</div>
+  {% endif %}
+  </details>
+</section>
+
+{% for c in card_sections %}
+<section>
+  <details open>
+  <summary><h2>{{ c.account }}<span class="tag">AED {{ c.total | fmt }} · {{ c.count }} tx</span></h2></summary>
+  <table>
+    <thead><tr><th>When</th><th>Where</th><th>Category</th><th class="num">AED</th></tr></thead>
+    <tbody>
+      {% for t in c.txns %}
+      <tr>
+        <td class="muted">{{ t.when }}</td>
+        <td>{{ t.venue or t.type }}</td>
+        <td>
+          <select class="tx-cat" data-id="{{ t.id }}">
+            <option value="">—</option>
+            {% for c in categories %}<option value="{{ c }}"{% if c == t.category %} selected{% endif %}>{{ c }}</option>{% endfor %}
+          </select>
+        </td>
+        <td class="num tx-amt"{% if t.currency != 'AED' %} data-tip="{{ t.currency }} {{ t.orig_amount }}"{% endif %}>{{ t.amount | fmt }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </details>
+</section>
+{% endfor %}
 
 {% for sec in account_sections %}
 <section>
@@ -120,4 +182,18 @@
   </details>
 </section>
 
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.querySelectorAll('select.tx-cat').forEach(function (sel) {
+    sel.addEventListener('change', function () {
+      fetch('/api/transaction/' + sel.dataset.id + '/category', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category: sel.value }),
+      });
+    });
+  });
+</script>
 {% endblock %}

@@ -1,0 +1,11 @@
+{
+  "name": "bank-email-ingest",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "postal-mime": "^2.2.7"
+  },
+  "devDependencies": {
+    "wrangler": "^3.90.0"
+  }
+}
