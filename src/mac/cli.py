@@ -91,10 +91,26 @@ def attach(label: str = typer.Argument('', help='Session label to attach to; omi
     _session_menu(sessions.SOCK_DIR)
 
 
-@mac_app.command(help='Arm the keep-awake controller (default 30m).')
-def awake(ctx: typer.Context, minutes: int = typer.Argument(None, help='Minutes to stay awake')):
-    controller.arm(ctx.obj.config, minutes if minutes is not None else controller.DEFAULT_TTL_MIN)
-    print('done')
+def _parse_ttl(value: str) -> int:
+    m = re.fullmatch(r'(?:(\d+)\s*h)?\s*(?:(\d+)\s*m)?', value.strip().lower())
+    if m and (m.group(1) or m.group(2)):
+        return int(m.group(1) or 0) * 60 + int(m.group(2) or 0)
+    raise typer.BadParameter(f"invalid duration '{value}' — need a unit, e.g. 4h, 30m, 1h30m")
+
+
+def _fmt_min(minutes: int) -> str:
+    h, m = divmod(minutes, 60)
+    return (f'{h}h' if h else '') + (f'{m}m' if m or not h else '')
+
+
+@mac_app.command(help='Arm the keep-awake controller (default 30m). Duration needs a unit: 4h, 30m, 1h30m.')
+def awake(
+    ctx: typer.Context,
+    duration: str = typer.Argument(None, help='How long to stay awake (unit required): 4h, 30m, 1h30m'),
+):
+    mins = _parse_ttl(duration) if duration is not None else controller.DEFAULT_TTL_MIN
+    controller.arm(ctx.obj.config, mins)
+    print(f'awake for {_fmt_min(mins)}')
 
 
 @mac_app.command(help='Release the keep-awake hold and let the Mac sleep.')
