@@ -1,4 +1,4 @@
-# Bank email → `/api/ingest/email`
+# Forwarded email → `/api/ingest/email`
 
 A Cloudflare Email Worker that parses a forwarded email and POSTs `{from, to, subject, text, message_id}`
 to the dashboard ingest endpoint. Retries 3× to ride out an origin cold start.
@@ -22,14 +22,14 @@ with no `workers.dev` subdomain and no route (`No deploy targets` on deploy is e
 ## Wire up Cloudflare Email Routing
 
 1. Cloudflare dashboard → your zone → **Email → Email Routing** → enable (adds the MX records).
-2. **Routes** → create an address like `bank@<your-domain>` → action **Send to a Worker** → `bank-email-ingest`.
+2. **Routes** → create an address like `ingest@<your-domain>` → action **Send to a Worker** → `email-ingest`.
 
 ## Gmail filter
 
-1. Gmail → Settings → **Forwarding and POP/IMAP** → add `bank@<your-domain>` as a forwarding address.
-   Gmail sends a confirmation code there; to read it, temporarily route `bank@` to your own inbox,
+1. Gmail → Settings → **Forwarding and POP/IMAP** → add `ingest@<your-domain>` as a forwarding address.
+   Gmail sends a confirmation code there; to read it, temporarily route that address to your own inbox,
    grab the code, then switch the route back to the Worker.
-2. Gmail → Settings → **Filters** → match your bank's sender(s) → **Forward it to** `bank@<your-domain>`.
+2. Gmail → Settings → **Filters** → match the sender(s) you want to ingest → **Forward it to** `ingest@<your-domain>`.
 
 The ingest endpoint is Cloudflare-proxied, so the Worker's POST picks up the origin-lock header
 automatically; `INGEST_URL` (a secret) is the only host-specific value and never touches the repo.
