@@ -8,6 +8,7 @@ from core.services import Services
 from health import cli as health_cli
 from mac import cli as mac_cli
 from styling import cli as styling_cli
+from transactions import cli as transactions_cli
 from core.store import cli as store_cli
 
 _PAGES = {
@@ -32,6 +33,7 @@ mac_cli.register(app)
 health_cli.register(app)
 store_cli.register(app)
 styling_cli.register(app)
+transactions_cli.register(app)
 
 
 def check(ctx: typer.Context, page: str = typer.Argument('all', help="Page to check, or 'all'")):

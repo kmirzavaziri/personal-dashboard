@@ -25,11 +25,17 @@ def record(config, source: str, payload) -> dict:
     return entry
 
 
-def inbox(config, month: str | None = None) -> list[dict]:
-    path = _inbox_dir(config) / f'{month or datetime.now(timezone.utc):%Y-%m}.jsonl'
-    if not path.exists():
-        return []
+def _read(path) -> list[dict]:
     return [json.loads(line) for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
+
+
+def inbox(config, month: str | None = None) -> list[dict]:
+    path = _inbox_dir(config) / f'{month or f"{datetime.now(timezone.utc):%Y-%m}"}.jsonl'
+    return _read(path) if path.exists() else []
+
+
+def all_entries(config) -> list[dict]:
+    return [e for path in sorted(_inbox_dir(config).glob('*.jsonl')) for e in _read(path)]
 
 
 def send(config, channel: str, text: str) -> bool:

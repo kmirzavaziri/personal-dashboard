@@ -12,6 +12,7 @@ import agenda.service as calendar
 import core.item.service as items
 import styling.service as styling
 import health.service as health
+import transactions.service as transactions
 from core.oauth import valid_access_token
 
 PROTOCOL_VERSION = '2024-11-05'
@@ -189,6 +190,21 @@ def styling_move(services, key, status):
     return styling.move(key, status)
 
 
+def transactions_list(services, month=None):
+    return json.dumps([
+        {k: t.get(k) for k in ('id', 'ts', 'account', 'type', 'amount', 'currency', 'amount_aed', 'venue')}
+        | {'category': t.get('category_override') or t.get('category')}
+        for t in transactions.transactions(services.config, month)
+    ], ensure_ascii=False)
+
+
+def transactions_backfill(services):
+    summary = transactions.backfill(services.config)
+    if services.git is not None:
+        services.git.mark_dirty()
+    return summary
+
+
 _STR = {'type': 'string'}
 _INT = {'type': 'integer'}
 _BOOL = {'type': 'boolean'}
@@ -258,6 +274,10 @@ TOOLS = [
      {'key': _STR, 'labels': _LABELS}, ['key'], styling_flag),
     ('styling_move', 'Move a styling item to another status group.',
      {'key': _STR, 'status': _STR}, ['key', 'status'], styling_move),
+    ('transactions_list', 'List recorded transactions for a month (YYYY-MM, default current) as JSON.',
+     {'month': _STR}, [], transactions_list),
+    ('transactions_backfill', 'Replay every inbox message through the transaction parser without sending alerts; '
+     'idempotent (dedups against recorded transactions). Returns a summary.', {}, [], transactions_backfill),
 ]
 
 _DISPATCH = {name: fn for name, _d, _p, _r, fn in TOOLS}

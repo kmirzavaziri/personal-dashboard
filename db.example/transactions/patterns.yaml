@@ -1,0 +1,23 @@
+# Tried in order; first match wins. action: record (default) | alert | ignore.
+# Placeholders: {amount} {remaining} {currency} {last4} expand to named groups, {number} to a bare number.
+# alert: message template over the named groups plus {account} (display name from cards.yaml).
+- name: example_payment_received
+  action: ignore
+  regex: 'Your payment of {currency} {amount} has been received for card ending {last4}'
+- name: example_declined
+  action: alert
+  alert: '⚠️ Declined: {currency} {amount} at {venue} on {account}'
+  regex: 'Your transaction of {currency} {amount} at (?P<venue>.+?) using card ending {last4} was declined'
+- name: example_bill_due
+  action: alert
+  alert: '🧾 Bill due {due}: {currency} {amount} on {account}'
+  regex: 'Payment of {currency} {amount} for card ending {last4} is due on (?P<due>[\w/-]+)'
+- name: example_refund
+  negate: true
+  set:
+    type: refund
+  regex: '{currency} {amount} from (?P<venue>.+?) was refunded to card ending {last4}'
+- name: example_purchase
+  set:
+    type: purchase
+  regex: 'Card ending {last4} was used for {currency} {amount} at (?P<venue>.+?)\. Available limit [A-Z]{3} {remaining}'

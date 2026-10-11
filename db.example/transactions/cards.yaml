@@ -1,0 +1,11 @@
+# Card / account registry. Parsed messages are matched by last4 first, then by name.
+- last4: '1111'
+  bank: Example Bank
+  kind: credit
+  display: Example Bank (credit)
+  usage: main credit card
+- last4: '2222'
+  bank: Example Bank
+  kind: debit
+  display: Example Bank (debit)
+  usage: debit; foreign-currency subscriptions

@@ -1,0 +1,6 @@
+- match: 're:TAXI|METRO|PARKING|FUEL'
+  category: Transport
+- match: 're:COFFEE|CAFE'
+  category: Snack
+- match: 're:RESTAURANT|PIZZA|BURGER|SUPERMARKET'
+  category: Food

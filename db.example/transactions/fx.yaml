@@ -1,0 +1,3 @@
+# Fixed rates to AED for pegged currencies; others are fetched live and cached per day.
+pegs:
+  USD: 3.6725

@@ -11,6 +11,7 @@ npm install
 npx wrangler login
 npx wrangler secret put API_TOKEN       # same value as the app's API_TOKEN
 npx wrangler secret put INGEST_URL      # https://<your-api-host>/api/ingest/email
+npx wrangler secret put PROXY_SECRET    # optional — only if the app enforces an origin-lock header
 npx wrangler deploy
 ```
 
@@ -31,5 +32,7 @@ with no `workers.dev` subdomain and no route (`No deploy targets` on deploy is e
    grab the code, then switch the route back to the Worker.
 2. Gmail → Settings → **Filters** → match the sender(s) you want to ingest → **Forward it to** `ingest@<your-domain>`.
 
-The ingest endpoint is Cloudflare-proxied, so the Worker's POST picks up the origin-lock header
-automatically; `INGEST_URL` (a secret) is the only host-specific value and never touches the repo.
+If the app enforces an origin lock (`CF_PROXY_SECRET`, normally injected by a Cloudflare request-header
+rule), set the same value as the Worker's `PROXY_SECRET`: a Worker's request to a hostname in its own zone
+skips that header rule, so without it the app answers 403. Failed hand-offs are logged with their status
+(`wrangler tail email-ingest`, or the Worker's observability logs).

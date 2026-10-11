@@ -11,8 +11,6 @@ from pkg.model.io import read_yaml
 
 HERE = Path(__file__).parent
 
-_USD_AED = 3.6725
-
 _DAYS_PER_MONTH = 365.25 / 12
 
 _WORKDAYS_PER_MONTH = _DAYS_PER_MONTH * 5 / 7
@@ -32,8 +30,8 @@ def _to_monthly(cost: float, frequency: str) -> float:
 
 
 def _tx_aed(tx: dict) -> float:
-    amount = tx.get('amount') or 0
-    return amount * _USD_AED if (tx.get('currency') or 'AED').upper() == 'USD' else amount
+    aed = tx.get('amount_aed')
+    return aed if aed is not None else tx.get('amount') or 0
 
 
 def _tx_category(tx: dict) -> str:

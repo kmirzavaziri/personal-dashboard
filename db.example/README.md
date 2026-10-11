@@ -28,6 +28,9 @@ cp -r db.example db && dash server up
 - `calendar/` — recurring (`day:`) and dated (`date:`) entries; `task_key`
   links an entry to a planner task.
 - `styling/profile.yaml` — fit/size profile driving the styling review.
+- `transactions/` — message parsing rules: `patterns.yaml` (regex per message
+  template, `action: record | alert | ignore`), `cards.yaml` (last4/name →
+  account display), `autolabel.yaml` (venue → category), `fx.yaml` (pegged rates).
 
 ## Cross-references to keep valid when you edit
 

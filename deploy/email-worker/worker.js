@@ -18,11 +18,13 @@ export default {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ' + env.API_TOKEN,
           'User-Agent': 'Mozilla/5.0',
+          ...(env.PROXY_SECRET ? { 'X-Proxy-Secret': env.PROXY_SECRET } : {}),
         },
         body: JSON.stringify(payload),
       });
       if (res.ok) return;
       lastStatus = res.status;
+      console.error('ingest attempt', attempt + 1, 'failed with status', res.status, (await res.text()).slice(0, 200));
       await new Promise((r) => setTimeout(r, 3000));
     }
     throw new Error('ingest failed after retries, last status ' + lastStatus);

@@ -1,12 +1,22 @@
 import hashlib
 import json
 import re
+from collections import Counter, defaultdict
 from datetime import datetime, timezone
 
 import messaging.service as messaging
 from pkg.model.io import read_yaml
+from transactions import fx
 
-_AMOUNT_HINT = re.compile(r'(?:AED|USD)\s*[\d,]+\.\d{2}', re.I)
+_NUMBER = r'(?:\d[\d,]*(?:\.\d+)?|\.\d+)'
+_TOKENS = {
+    'amount': f'(?P<amount>{_NUMBER})',
+    'remaining': f'(?P<remaining>{_NUMBER})',
+    'currency': r'(?P<currency>[A-Z]{3})',
+    'last4': r'(?P<last4>\d{4})',
+    'number': _NUMBER,
+}
+_AMOUNT_HINT = re.compile(r'\b[A-Z]{3} ?(?:\d[\d,]*)?\.\d{2}\b')
 _TXN_HINT = re.compile(r'card|spent|withdrawal|purchase|available limit|avl bal', re.I)
 
 
@@ -31,7 +41,8 @@ def _num(value):
 
 
 def _text_of(payload):
-    return payload.get('text', '') if isinstance(payload, dict) else str(payload)
+    text = payload.get('text', '') if isinstance(payload, dict) else str(payload or '')
+    return ' '.join(text.split())
 
 
 def _matches(match, text):
@@ -40,17 +51,27 @@ def _matches(match, text):
     return match.lower() in text.lower()
 
 
+def _expand(regex):
+    return re.sub(r'\{(\w+)\}', lambda m: _TOKENS.get(m[1], m[0]), regex)
+
+
 def parse_text(text, patterns):
     for pattern in patterns:
-        m = re.search(pattern['regex'], text, re.I)
+        m = re.search(_expand(pattern['regex']), text, re.I)
         if not m:
             continue
         fields = dict(pattern.get('set') or {})
         fields.update({k: v for k, v in m.groupdict().items() if v is not None})
+        amount = _num(fields.get('amount'))
+        if amount is not None and pattern.get('negate'):
+            amount = -amount
         return {
+            'action': pattern.get('action', 'record'),
+            'alert': pattern.get('alert', ''),
+            'groups': fields,
             'type': fields.get('type', 'purchase'),
-            'currency': fields.get('currency'),
-            'amount': _num(fields.get('amount')),
+            'currency': (fields.get('currency') or '').upper() or None,
+            'amount': amount,
             'last4': fields.get('last4'),
             'card_name': (fields.get('card_name') or '').strip(),
             'venue': (fields.get('venue') or '').strip(),
@@ -84,7 +105,7 @@ def _auto_category(parsed, rules):
 
 
 def _signature(tx):
-    return f"{tx.get('last4') or tx['account']}|{tx['amount']:.2f}|{tx['ts'][:10]}"
+    return f"{tx.get('last4') or tx['account']}|{tx['amount']:.2f}|{tx['ts'][:10]}|{tx.get('remaining')}"
 
 
 def _month_path(config, ts):
@@ -122,24 +143,33 @@ def set_category(config, tx_id, category):
     return False
 
 
-def ingest(config, entry):
-    text = _text_of(entry.get('payload'))
-    parsed = parse_text(text, _patterns(config))
-    if not parsed or parsed['amount'] is None:
-        if looks_like_transaction(text):
-            messaging.send(config, 'notifications', 'Unparsed transaction — add a pattern:\n\n' + text)
-        return None
+def _repeated(config, entry, text):
+    ts = entry.get('received_at') or ''
+    return any(
+        e.get('received_at', '') < ts and _text_of(e.get('payload')) == text
+        for e in messaging.inbox(config, ts[:7] or None)
+    )
+
+
+def _alert_text(parsed, account):
+    return parsed['alert'].format_map(defaultdict(str, parsed['groups'], account=account))
+
+
+def _record(config, entry, text, parsed, account):
     ts = entry.get('received_at') or datetime.now(timezone.utc).isoformat()
     category = _auto_category(parsed, _autolabel(config))
+    rate = fx.rate(config, parsed['currency'], ts[:10])
     tx = {
         'id': hashlib.sha1(f"{ts}|{text}".encode()).hexdigest()[:12],
         'ts': ts,
         'source': entry.get('source', ''),
-        'account': _account(parsed, _cards(config)),
+        'account': account,
         'last4': parsed.get('last4'),
         'type': parsed['type'],
         'amount': parsed['amount'],
         'currency': parsed['currency'],
+        'amount_aed': round(parsed['amount'] * rate, 2) if rate is not None else None,
+        'fx_rate': rate,
         'venue': parsed['venue'],
         'remaining': parsed['remaining'],
         'category': category,
@@ -156,3 +186,36 @@ def ingest(config, entry):
     with path.open('a', encoding='utf-8') as f:
         f.write(json.dumps(tx, ensure_ascii=False) + '\n')
     return tx
+
+
+def ingest(config, entry, notify=True):
+    text = _text_of(entry.get('payload'))
+    parsed = parse_text(text, _patterns(config))
+    if parsed is None or (parsed['action'] == 'record' and parsed['amount'] is None):
+        if not looks_like_transaction(text):
+            return {'action': 'none'}
+        if notify and not _repeated(config, entry, text):
+            messaging.send(config, 'notifications', 'Unparsed transaction — add a pattern:\n\n' + text)
+        return {'action': 'unparsed', 'text': text}
+    if parsed['action'] == 'ignore':
+        return {'action': 'ignore', 'pattern': parsed['pattern']}
+    if _repeated(config, entry, text):
+        return {'action': 'repeat', 'pattern': parsed['pattern']}
+    account = _account(parsed, _cards(config))
+    if parsed['action'] == 'alert':
+        message = _alert_text(parsed, account)
+        if notify:
+            messaging.send(config, 'notifications', message)
+        return {'action': 'alert', 'message': message}
+    tx = _record(config, entry, text, parsed, account)
+    return {'action': 'record', 'tx': tx} if tx else {'action': 'duplicate', 'pattern': parsed['pattern']}
+
+
+def backfill(config):
+    results = [ingest(config, entry, notify=False)
+               for entry in sorted(messaging.all_entries(config), key=lambda e: e.get('received_at', ''))]
+    counts = Counter(r['action'] for r in results)
+    lines = [f'{action}: {n}' for action, n in sorted(counts.items()) if action != 'none']
+    lines += [f"alert (not sent): {r['message']}" for r in results if r['action'] == 'alert']
+    lines += [f"unparsed: {r['text']}" for r in results if r['action'] == 'unparsed']
+    return '\n'.join(lines) or 'nothing to backfill'
