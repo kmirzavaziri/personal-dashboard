@@ -48,6 +48,7 @@ def _card(entry: CalendarEntry, week: str, tasks: dict[str, Task], colors: dict[
         'done': (week in entry.done_weeks) if entry.day else _task_done(entry, tasks),
         'when': _when(entry),
         'recurring': bool(entry.day),
+        'milestone': entry.milestone,
         'task_key': entry.task_key,
     }
 

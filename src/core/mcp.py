@@ -53,12 +53,13 @@ def planner_list(services, label=None, status=None):
     return '\n'.join(_task_line(t) for t in planner.listing(label, status)) or '(no tasks)'
 
 
-def calendar_add(services, title=None, day=None, date_=None, task=None, labels=None, notes=''):
-    return _entry_line(calendar.add(title, day, date_, task, labels, notes))
+def calendar_add(services, title=None, day=None, date_=None, task=None, labels=None, notes='', milestone=False):
+    return _entry_line(calendar.add(title, day, date_, task, labels, notes, milestone))
 
 
-def calendar_edit(services, key, title=None, day=None, date_=None, task=None, labels=None, notes=None, order=None):
-    return _entry_line(calendar.edit(key, title, day, date_, task, labels, notes, order))
+def calendar_edit(services, key, title=None, day=None, date_=None, task=None, labels=None, notes=None, order=None,
+                  milestone=None):
+    return _entry_line(calendar.edit(key, title, day, date_, task, labels, notes, order, milestone))
 
 
 def calendar_check(services, key, week=None):
@@ -202,11 +203,13 @@ TOOLS = [
     ('planner_rm', 'Remove a task.', {'key': _STR}, ['key'], planner_rm),
     ('planner_list', 'List tasks, optionally filtered.',
      {'label': _STR, 'status': _STR}, [], planner_list),
-    ('calendar_add', 'Add a calendar entry: day (recurring weekday) OR date_ (YYYY-MM-DD); optional task link.',
-     {'title': _STR, 'day': _STR, 'date_': _STR, 'task': _STR, 'labels': _LABELS, 'notes': _STR}, [], calendar_add),
+    ('calendar_add', 'Add a calendar entry: day (recurring weekday) OR date_ (YYYY-MM-DD). A dated entry must '
+     'link a task, or set milestone=true for a record-only marker; recurring entries may be task-less.',
+     {'title': _STR, 'day': _STR, 'date_': _STR, 'task': _STR, 'labels': _LABELS, 'notes': _STR,
+      'milestone': _BOOL}, [], calendar_add),
     ('calendar_edit', 'Edit a calendar entry; only passed fields change.',
      {'key': _STR, 'title': _STR, 'day': _STR, 'date_': _STR, 'task': _STR, 'labels': _LABELS,
-      'notes': _STR, 'order': _INT}, ['key'], calendar_edit),
+      'notes': _STR, 'order': _INT, 'milestone': _BOOL}, ['key'], calendar_edit),
     ('calendar_check', 'Mark an entry done (recurring: for the given/current ISO week).',
      {'key': _STR, 'week': _STR}, ['key'], calendar_check),
     ('calendar_uncheck', 'Mark an entry not done.', {'key': _STR, 'week': _STR}, ['key'], calendar_uncheck),

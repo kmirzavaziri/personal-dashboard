@@ -76,6 +76,8 @@
   }
   .ecard.done .ebox { background: var(--green); border-color: var(--green); }
   .ecard.done .ebox::after { content: '✓'; }
+  .ecard.milestone { cursor: default; }
+  .emark { flex: none; width: 13px; margin-top: 2px; color: var(--muted); font-size: 0.7rem; line-height: 1; text-align: center; }
   .etitle { font-family: var(--font-ui); font-size: 0.8rem; line-height: 1.35; color: var(--strong); }
   .elink { margin-left: auto; flex: none; color: var(--muted); font-size: 0.8rem; text-decoration: none; }
   .elink:hover { opacity: 0.7; }
@@ -100,9 +102,9 @@
     <div class="cal-day-h"><span class="cal-dow">{{ d.label }}</span>{% if d.is_today %}<span class="cal-today-badge">Today</span>{% endif %}<span class="cal-num">{{ d.num }}</span></div>
     <div class="cal-cards">
       {% for c in d.cards %}
-      <div class="ecard {{ 'done' if c.done }}" data-key="{{ c.key }}" data-week="{{ week }}"
+      <div class="ecard {{ 'done' if c.done }} {{ 'milestone' if c.milestone }}" data-key="{{ c.key }}" data-week="{{ week }}"
            style="border-left-color: {{ c.color }}">
-        <span class="ebox" role="checkbox" aria-checked="{{ 'true' if c.done else 'false' }}"></span>
+        {% if c.milestone %}<span class="emark" title="Record marker">◆</span>{% else %}<span class="ebox" role="checkbox" aria-checked="{{ 'true' if c.done else 'false' }}"></span>{% endif %}
         <span class="etitle">{{ c.title }}</span>
         {% if c.task_key %}<a class="elink" href="/planner#task-{{ c.task_key }}" title="Open in Task Manager">🗂</a>{% endif %}
       </div>
@@ -122,7 +124,7 @@
         if (res && res.ok) card.classList.toggle('done', res.done);
       });
     }
-    document.querySelectorAll('.ecard').forEach(function (card) {
+    document.querySelectorAll('.ecard:not(.milestone)').forEach(function (card) {
       card.addEventListener('click', function () { toggle(card); });
     });
     document.querySelectorAll('.elink').forEach(function (link) {

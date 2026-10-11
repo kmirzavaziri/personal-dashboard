@@ -1,6 +1,8 @@
 from datetime import date, timedelta
 from typing import ClassVar
 
+from pydantic import model_validator
+
 from pkg.model.base import Model
 
 DAYS = ('mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun')
@@ -36,4 +38,22 @@ class CalendarEntry(Model):
     task_key: str = ''
     day: str = ''
     date: str = ''
+    milestone: bool = False
     done_weeks: list[str] = []
+
+    @property
+    def recurring(self) -> bool:
+        return bool(self.day)
+
+    @property
+    def needs_task(self) -> bool:
+        return not self.recurring and not self.milestone
+
+    @model_validator(mode='after')
+    def _reject_orphan(self) -> 'CalendarEntry':
+        if self.needs_task and not self.task_key:
+            raise ValueError(
+                f'{self.key}: a dated entry must link a task (task_key) or be marked a milestone; '
+                'only recurring (day) entries may be task-less'
+            )
+        return self

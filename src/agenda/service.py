@@ -33,7 +33,14 @@ def get(key: str) -> CalendarEntry:
     return entry
 
 
-def add(title=None, day=None, on=None, task=None, labels=None, notes: str = '') -> CalendarEntry:
+def _assert_linked(entry: CalendarEntry) -> None:
+    if entry.needs_task and not entry.task_key:
+        raise ValueError(
+            f'{entry.key}: a dated entry must link a task, or pass milestone for a record-only marker'
+        )
+
+
+def add(title=None, day=None, on=None, task=None, labels=None, notes: str = '', milestone: bool = False) -> CalendarEntry:
     if bool(day) == bool(on):
         raise ValueError('pass exactly one of day (weekday) or date (YYYY-MM-DD)')
     if day and day not in DAYS:
@@ -46,12 +53,15 @@ def add(title=None, day=None, on=None, task=None, labels=None, notes: str = '') 
         raise ValueError('provide a title, or task to pull it from')
     display = title or Task.objects.get(key=task).title
     entry = CalendarEntry(key=unique_key(slug(display)), title=title or '', task_key=task or '',
-                          day=day or '', date=on or '', labels=flatten(labels), notes=notes, order=next_order())
+                          day=day or '', date=on or '', labels=flatten(labels), notes=notes,
+                          milestone=milestone, order=next_order())
+    _assert_linked(entry)
     entry.save()
     return entry
 
 
-def edit(key: str, title=None, day=None, on=None, task=None, labels=None, notes=None, order=None) -> CalendarEntry:
+def edit(key: str, title=None, day=None, on=None, task=None, labels=None, notes=None, order=None,
+         milestone=None) -> CalendarEntry:
     entry = get(key)
     if title is not None:
         entry.title = title
@@ -70,8 +80,11 @@ def edit(key: str, title=None, day=None, on=None, task=None, labels=None, notes=
         entry.labels = flatten(labels)
     if notes is not None:
         entry.notes = notes
+    if milestone is not None:
+        entry.milestone = milestone
     if order is not None:
         entry.order = int(order)
+    _assert_linked(entry)
     entry.save()
     return entry
 
