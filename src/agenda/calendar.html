@@ -20,6 +20,7 @@
     backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur));
   }
   @media (hover: hover) { .cal-btn:hover { background: rgba(255,255,255,0.1); } }
+  @media (pointer: coarse) { .cal-btn { width: 2.6rem; height: 2.6rem; } }
   .cal-span { font-size: 0.95rem; font-weight: 600; color: var(--strong); text-shadow: 0 1px 10px rgba(0,0,0,0.5); }
   .cal-today {
     margin-left: 0.3rem; font-size: 0.78rem; text-decoration: none;
@@ -83,8 +84,17 @@
   .elink:hover { opacity: 0.7; }
 
   @media (max-width: 700px) {
-    .cal-board { overflow-x: auto; }
-    .cal-day { flex: none; width: 44vw; }
+    body.calendar-page { height: auto; overflow: visible; display: block; }
+    body.calendar-page main { display: block; }
+    .cal-board { flex-direction: column; overflow: visible; }
+    .cal-day {
+      flex: none; width: auto; max-height: none; scroll-margin-top: calc(var(--nav-h, 3.2rem) + 0.6rem);
+      border-right: none; border-bottom: 1px solid var(--glass-border);
+    }
+    .cal-day:last-child { border-bottom: none; }
+    .cal-day.is-today { background: rgba(255,255,255,0.04); }
+    .cal-cards { overflow: visible; padding-right: 0; }
+    .elink { padding: 0.45rem; margin: -0.45rem -0.45rem -0.45rem auto; }
   }
 {% endblock %}
 
@@ -124,6 +134,8 @@
         if (res && res.ok) card.classList.toggle('done', res.done);
       });
     }
+    var today = document.querySelector('.cal-day.is-today');
+    if (today && matchMedia('(max-width: 700px)').matches) today.scrollIntoView({block: 'start'});
     document.querySelectorAll('.ecard:not(.milestone)').forEach(function (card) {
       card.addEventListener('click', function () { toggle(card); });
     });

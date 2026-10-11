@@ -86,6 +86,11 @@
   .goal-block:last-child { border-bottom: none; }
   .goal-category { flex: 0 0 14rem; font-weight: 600; color: var(--strong); font-size: 0.8rem; }
   .goal-desc { flex: 1; color: var(--muted); font-size: 0.8rem; }
+  @media (hover: none) { .card-del { opacity: 1; width: 36px; height: 36px; font-size: 1rem; } }
+  @media (max-width: 600px) {
+    .goal-block { flex-direction: column; gap: 0.15rem; }
+    .goal-category { flex: none; }
+  }
 {% endblock %}
 
 {% block content %}

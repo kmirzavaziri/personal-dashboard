@@ -91,7 +91,10 @@
   .modal-notes { color: var(--text); font-size: 0.87rem; line-height: 1.55; white-space: pre-wrap; }
   .modal-notes:empty { display: none; }
 
-  @media (max-width: 600px) { .grp { width: 78vw; } .board { gap: 1.4rem; } }
+  @media (max-width: 600px) {
+    .board { scroll-snap-type: x mandatory; scroll-padding-inline: 0.9rem; }
+    .grp { width: calc(100vw - 1.8rem); scroll-snap-align: start; }
+  }
 {% endblock %}
 
 {% macro card(t) %}
