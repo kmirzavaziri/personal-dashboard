@@ -103,6 +103,11 @@ def data_pull(services):
     return services.git.pull()
 
 
+def version(services):
+    config = services.config
+    return json.dumps({'sha': config.git_sha, 'branch': config.git_branch})
+
+
 def item_list(services, kind=None, category=None):
     return json.dumps(items.listing(kind, category), ensure_ascii=False)
 
@@ -221,6 +226,7 @@ TOOLS = [
     ('data_push', 'Commit and push all pending data changes to the data repo immediately (force flush).',
      {}, [], data_push),
     ('data_pull', 'Pull the latest data from the data repo into the server (fast-forward).', {}, [], data_pull),
+    ('version', 'Return the deployed code commit (sha, branch) — confirm a code deploy is live.', {}, [], version),
     ('item_list', 'List items as [{key,short_name,kind,status,category}], optionally by kind/category.',
      {'kind': _STR, 'category': _STR}, [], item_list),
     ('item_create', 'Create a new item file from a full data object (key, kind, fields).',

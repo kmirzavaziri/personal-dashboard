@@ -102,8 +102,9 @@ missing required keys — so a mismatched code/data pair crashes loading.
 Make the transition **order-independent** instead of trusting timing:
 
 - **Adding a field** → give it a **default** so old data (without it) still loads.
-  Deploy the **code first**, then migrate the data (Workflow B) — old server code
-  would reject data carrying the new key.
+  Deploy the **code first**, confirm it is live by calling the `version` MCP tool
+  until it returns the new commit sha, then migrate the data (Workflow B) — old
+  server code would reject data carrying the new key.
 - **Removing a field** → first ship a release that makes it optional-with-default
   and stops *reading* it; once no data carries it, a later release deletes the
   field.
@@ -117,11 +118,14 @@ Either direction, neither deploy order can crash on the other's data.
 - `data_push` — force the server to commit + push pending data now (Workflow B
   step 1). "Nothing to commit" ≠ durable.
 - `data_pull` — force the server to fast-forward pull (Workflow B step 4).
+- `version` — the deployed code commit (`sha`, `branch`). Use it to confirm a code
+  deploy is live before syncing data that depends on it (Workflow C).
 - `report` / `profile` / `*_list` / `item_get` — reads; safe anytime.
 - `check` (code CLI) — render pages locally to validate data without the server.
 
 ## Quick checklist (local edit → live)
 
+- [ ] code-coupled? `version` shows the new sha before touching data
 - [ ] `data_push` (flush server) — don't trust "nothing to commit"
 - [ ] `git fetch` → `git pull --rebase` (resolve conflicts onto server serialization)
 - [ ] edit → commit → `git push` (never `--force`)
