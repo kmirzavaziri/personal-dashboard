@@ -6,6 +6,7 @@ window.initStatusPopover = function (opts) {
   const buttonFont = opts.buttonFont || '0.82rem';
 
   const pop = document.createElement('div');
+  pop.addEventListener('click', e => e.stopPropagation());
   pop.style.cssText = 'position:fixed;z-index:500;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:0.35rem 0.5rem;display:none;box-shadow:0 4px 16px rgba(0,0,0,0.7);flex-direction:column;gap:0.4rem;';
   document.body.appendChild(pop);
 
@@ -74,7 +75,7 @@ window.initStatusPopover = function (opts) {
       btn.className = (buttonBase ? buttonBase + ' ' : '') + s.css;
       btn.style.cssText = 'background:none;border:none;font:inherit;font-size:' + buttonFont + ';cursor:pointer;text-align:left;padding:0.15rem 0.25rem;border-radius:2px;';
       if (val === cell.dataset.status) btn.style.fontWeight = 'bold';
-      btn.addEventListener('mousedown', e => { e.preventDefault(); commit(cell, val); });
+      btn.addEventListener('click', e => { e.stopPropagation(); commit(cell, val); });
       pop.appendChild(btn);
     });
     positionPop(cell);

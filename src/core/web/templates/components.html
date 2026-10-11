@@ -5,6 +5,9 @@
      there to retune globally. Add reusable components here, never per-page.
      ══════════════════════════════════════════════════════════════════════ */
 
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  a, button, summary, [role="checkbox"], .status-cell, .gear-status-cell { touch-action: manipulation; }
+
   /* ── Glass surfaces ─────────────────────────────────────────────────── */
   section, .panel {
     background: var(--glass-bg);
@@ -92,6 +95,9 @@
   tr:last-child td { border-bottom: none; }
   @media (hover: hover) { tr:hover td { background: rgba(255,255,255,0.04); } }
   .num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr:target td { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+  .thumb-col { width: 64px; padding: 0.2rem 0.3rem; }
+  .thumb-col img { width: 56px; height: 56px; object-fit: contain; border-radius: 3px; display: block; background: var(--strong); }
   .muted { color: var(--muted); }
   .total-row td { font-weight: bold; color: var(--strong); background: rgba(255,255,255,0.07); border-top: 1px solid rgba(255,255,255,0.12); }
   .grand-total-row td { font-size: 1rem; font-weight: bold; color: var(--strong); background: var(--surface); border-top: 2px solid var(--accent); }
@@ -171,10 +177,41 @@
 
   @media (max-width: 900px) {
     section, .panel { padding: 0.9rem 1rem; border-radius: var(--radius); }
-    table { display: block; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
+    table:not(.stacked) { display: block; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
     th, td { padding: 0.4rem 0.6rem; }
     .tooltip-box { max-width: calc(100vw - 2rem); white-space: normal; }
   }
+  /* ── Stacked table: rows become cards on phones (labels set by base.html) ── */
+  @media (max-width: 700px) {
+    table.stacked, table.stacked tbody { display: block; width: 100%; }
+    table.stacked thead { display: none; }
+    table.stacked tr {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 0.7rem;
+      padding: 0.6rem 0.15rem; border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    table.stacked tr:last-child { border-bottom: none; }
+    table.stacked td {
+      display: flex; align-items: baseline; gap: 0.4rem;
+      flex: 1 1 100%; min-width: 0; padding: 0.1rem 0; border: none; text-align: right;
+      overflow-wrap: anywhere;
+    }
+    table.stacked td::before {
+      content: attr(data-label); flex: none; margin-right: auto; padding-right: 0.6rem; text-align: left; color: var(--muted);
+      font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    table.stacked td.cell-title { display: block; flex: 1 1 0; text-align: left; color: var(--strong); font-weight: 600; }
+    table.stacked td.cell-bare { display: block; flex: 0 0 auto; width: auto; }
+    table.stacked td.cell-bare:empty { display: none; }
+    table.stacked td.cell-title::before, table.stacked td.cell-bare::before, table.stacked td[colspan]::before { content: none; }
+    table.stacked td[colspan] { display: block; flex: 1 1 auto; text-align: left; }
+    table.stacked td[colspan].num { text-align: right; }
+    table.stacked tr:has(td[colspan]) td { background: none; border: none; }
+    table.stacked tr.subtotal-row { background: rgba(255,255,255,0.03); color: var(--muted); font-style: italic; }
+    table.stacked tr.grand-total-row { background: var(--surface); border-top: 2px solid var(--accent); }
+    table.stacked .thumb-col img { width: 44px; height: 44px; }
+    table.stacked .tooltip-box { left: auto; right: 0; }
+  }
+
   @media (max-width: 600px) {
     h2 { font-size: 0.95rem; }
     th, td { padding: 0.35rem 0.5rem; }

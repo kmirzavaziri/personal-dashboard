@@ -38,6 +38,8 @@ def check(ctx: typer.Context, page: str = typer.Argument('all', help="Page to ch
     if page != 'all' and page not in _PAGES:
         raise SystemExit(f"Unknown page '{page}'. Choose from: all, {', '.join(_PAGES)}")
     services = ctx.obj
+    if not services.config.db.is_dir():
+        raise SystemExit(f'Data root not found: {services.config.db} — set DB_ROOT to your data repo\'s db/ directory')
     pages = list(_PAGES.items()) if page == 'all' else [(page, _PAGES[page])]
     ok = True
     for name, module_path in pages:

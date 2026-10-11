@@ -87,6 +87,34 @@
 
 <script>
   (function () {
+    document.querySelectorAll('table').forEach(function (table) {
+      var head = table.tHead && table.tHead.rows[table.tHead.rows.length - 1];
+      if (!head) return;
+      var labels = [];
+      Array.prototype.forEach.call(head.cells, function (th) {
+        for (var i = 0; i < th.colSpan; i++) labels.push(th.textContent.trim());
+      });
+      if (labels.filter(Boolean).length < 3) return;
+      var title = labels.findIndex(Boolean);
+      table.classList.add('stacked');
+      Array.prototype.forEach.call(table.tBodies, function (body) {
+        Array.prototype.forEach.call(body.rows, function (row) {
+          var col = 0;
+          Array.prototype.forEach.call(row.cells, function (td) {
+            if (td.colSpan > 1) { col += td.colSpan; return; }
+            if (col === title) td.classList.add('cell-title');
+            else if (labels[col]) td.dataset.label = labels[col];
+            else td.classList.add('cell-bare');
+            col++;
+          });
+        });
+      });
+    });
+  })();
+</script>
+
+<script>
+  (function () {
     if (matchMedia('(hover: hover)').matches) return;
     function closeAll() {
       document.querySelectorAll('.has-tooltip.tt-open').forEach(function (o) { o.classList.remove('tt-open'); });

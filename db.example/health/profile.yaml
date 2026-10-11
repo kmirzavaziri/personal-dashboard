@@ -29,9 +29,3 @@ supplement_strategy:
   - "Placeholder rule: prefer fewer, higher-quality supplements."
   - "Placeholder rule: optimise for price per effective dose."
 
-one_time_purchases:
-  - item: Sample blood panel
-    cost: "AED 400"
-    frequency: Every 6 months
-    notes: Placeholder one-time purchase.
-    link: "https://example.com"

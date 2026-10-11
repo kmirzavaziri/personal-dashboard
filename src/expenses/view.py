@@ -135,6 +135,8 @@ def render(services) -> str:
             'image':    item.image or '',
             'monthly':  ppm,
             'daily':    ppm / _DAYS_PER_MONTH,
+            'per_event': item.price_per_serving or 0,
+            'workday':  False,
         })
 
     recurring_raw = read_yaml(config.expenses_db / 'recurring.yaml') or []

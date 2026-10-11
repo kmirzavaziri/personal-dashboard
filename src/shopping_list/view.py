@@ -3,12 +3,11 @@ from pathlib import Path
 
 from core.item.item import Item
 from core.item.categories import edible_categories
-from core.item.schedule import build_pool, load_plan
+from core.item.schedule import PLAN_SLOTS, build_pool, load_plan
 from core.item.sourcing import store_pref_rank
 from core.web.templating import make_env, trim_number
 from core.item.nutrients import nutrient
 from core.store.registry import STORES
-from pkg.model.io import read_yaml
 
 HERE = Path(__file__).parent
 
@@ -39,22 +38,13 @@ _jinja.filters['nutrient_label'] = lambda k: nutrient(k).label
 _jinja.filters['nutrient_unit'] = lambda k: nutrient(k).unit
 
 
-_SLOT_LABELS: dict[str, str] = {
-    'breakfast_key':  'breakfast',
-    'lunch_key':      'lunch',
-    'dinner_key':     'dinner',
-    'snack_key':      'snack',
-    'night_snack_key': 'night',
-}
-
-
 def _build_refs(plan) -> dict[str, list[str]]:
     refs: dict[str, list[str]] = {}
-    for day in plan:
-        for slot, label in _SLOT_LABELS.items():
-            key = getattr(day, slot, '')
-            if key:
-                refs.setdefault(key, []).append(f'{day.day} · {label}')
+    for group in plan:
+        days = ' · '.join(group.days)
+        for slot in PLAN_SLOTS:
+            for key in dict.fromkeys(getattr(group.plan, slot)):
+                refs.setdefault(key, []).append(f'{days} · {slot}')
     return refs
 
 
@@ -74,13 +64,11 @@ def render(services) -> str:
         key=lambda kv: _store_sort_key(kv[1]),
     ))
     refs = _build_refs(load_plan(config))
-    profile = read_yaml(config.health_db / 'profile.yaml')
     gear = {item.key: item for item in Item.objects.filter(kind='durable')}
     template = _jinja.get_template('shopping.html')
     return template.render(
         pool=sorted_pool,
         refs=refs,
-        one_time_purchases=profile.get('one_time_purchases', []),
         gear=gear,
         categories=edible_categories(),
     )

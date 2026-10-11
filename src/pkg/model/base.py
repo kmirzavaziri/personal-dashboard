@@ -65,8 +65,10 @@ class Model(BaseModel):
 
     @classmethod
     def from_file(cls, path: Path) -> list[Self]:
+        if not path.exists():
+            raise FileNotFoundError(f'{cls.__name__} data file not found: {path}')
         raw = read_yaml(path)
-        rows = raw if isinstance(raw, list) else [raw or {}]
+        rows = raw if isinstance(raw, list) else ([raw] if raw else [])
         models = []
         for row in rows:
             model = cls.model_validate(row)

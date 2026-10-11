@@ -1,0 +1,9 @@
+# sample-milestone
+key: sample-milestone
+title: Sample milestone
+labels:
+- Personal
+notes: Placeholder record-only marker — a dated entry with no task. Dated work items link a task instead.
+order: 3
+date: '2026-09-20'
+milestone: true

@@ -111,6 +111,11 @@ Make the transition **order-independent** instead of trusting timing:
 
 Either direction, neither deploy order can crash on the other's data.
 
+**Keep the example data in step.** `db.example/` is what a fresh fork starts from.
+Any schema change updates it in the same commit, and it must pass
+`DB_ROOT=db.example check` alongside your real data — placeholders only, nothing
+from a real instance.
+
 ---
 
 ## Tools reference
