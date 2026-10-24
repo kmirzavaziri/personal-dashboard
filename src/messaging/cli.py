@@ -33,11 +33,8 @@ def _full_disk_access_hint() -> str:
 @relay_app.command(help='Install and start the background relay (runs at login, on new messages, and hourly).')
 def start(ctx: typer.Context, since: str = typer.Option(None, help=f'{_SINCE_HELP} (first start: default today)')):
     _state(since).save()
-    if relay.install(ctx.obj.config):
-        print(f'relay started — logs: {relay.LOG}')
-    else:
-        print(f'relay installed at {relay.PLIST}; it starts at your next login, or run this command from '
-              f'Terminal on this Mac to start it now (SSH sessions cannot start login items)')
+    relay.install(ctx.obj.config)
+    print(f'relay started — logs: {relay.LOG}')
 
 
 @relay_app.command(help='Stop and uninstall the background relay.')

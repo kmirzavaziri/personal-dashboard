@@ -95,6 +95,7 @@ def _launch_agent(config) -> dict:
             'DASHBOARD_API_TOKEN': config.dashboard_api_token or '',
         },
         'RunAtLoad': True,
+        'KeepAlive': {'SuccessfulExit': False},
         'StartInterval': _SYNC_INTERVAL_SECONDS,
         'WatchPaths': [str(imessage.CHAT_DB_WAL)],
         'ThrottleInterval': _THROTTLE_SECONDS,
@@ -103,7 +104,7 @@ def _launch_agent(config) -> dict:
     }
 
 
-def install(config) -> bool:
+def install(config) -> None:
     if not config.dashboard_api_url or not config.dashboard_api_token:
         raise SystemExit('Set DASHBOARD_API_URL and DASHBOARD_API_TOKEN before starting the relay')
     uninstall()
@@ -112,16 +113,20 @@ def install(config) -> bool:
     with PLIST.open('wb') as f:
         plistlib.dump(_launch_agent(config), f)
     PLIST.chmod(0o600)
-    return subprocess.run(['launchctl', 'bootstrap', _domain(), str(PLIST)], capture_output=True).returncode == 0
+    if subprocess.run(['launchctl', 'bootstrap', _domain(), str(PLIST)], capture_output=True).returncode == 0:
+        return
+    subprocess.run(['launchctl', 'load', '-w', str(PLIST)], check=True, capture_output=True)
 
 
 def uninstall() -> None:
-    subprocess.run(['launchctl', 'bootout', f'{_domain()}/{LABEL}'], capture_output=True)
+    if subprocess.run(['launchctl', 'bootout', f'{_domain()}/{LABEL}'], capture_output=True).returncode != 0 \
+            and PLIST.exists():
+        subprocess.run(['launchctl', 'unload', str(PLIST)], capture_output=True)
     PLIST.unlink(missing_ok=True)
 
 
 def is_running() -> bool:
-    return subprocess.run(['launchctl', 'print', f'{_domain()}/{LABEL}'], capture_output=True).returncode == 0
+    return LABEL in subprocess.run(['launchctl', 'list'], capture_output=True, text=True).stdout
 
 
 def interpreter() -> str:

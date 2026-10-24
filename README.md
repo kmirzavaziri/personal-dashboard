@@ -171,13 +171,13 @@ to the Mac), a Mac holds every SMS the phone received, even ones that arrived wh
 offline. The relay reads `~/Library/Messages/chat.db` and forwards texts from the senders listed in
 `db/messaging/config.yaml` (`relay.senders`), so personal chats never leave the Mac:
 ```bash
-export DASHBOARD_API_URL=https://api.<domain>/mcp DASHBOARD_API_TOKEN=<API_TOKEN>
+# DASHBOARD_API_URL=https://api.<domain>/mcp and DASHBOARD_API_TOKEN=<API_TOKEN>, as env vars or in ~/.config/dashboard/env
 dash messaging relay preview --since 2026-01-01   # counts per sender and month; sends nothing
-dash messaging relay start --since 2026-01-01     # background job: at login, on new messages, hourly
+dash messaging relay start --since 2026-01-01     # background job: at login, on new messages, hourly; retries failures
 dash messaging relay status                       # running?, progress, last result
 dash messaging relay stop
 ```
-Run `start` from Terminal on the Mac itself (an SSH session can install the job but not start it).
+`start` works from Terminal on the Mac or over SSH.
 macOS guards `chat.db`: on the first run `status` names the Python binary to add under *System
 Settings → Privacy & Security → Full Disk Access*.
 
