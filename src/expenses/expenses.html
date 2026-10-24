@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 
-{% block title %}Monthly Budget{% endblock %}
-{% block heading %}Monthly Budget{% endblock %}
-{% block max_width %}680px{% endblock %}
+{% block title %}Budget{% endblock %}
+{% block heading %}Budget{% endblock %}
+{% block max_width %}960px{% endblock %}
 
 {% block extra_css %}
   .thumb { width: 24px; height: 24px; object-fit: contain; vertical-align: middle; border-radius: 3px; background: var(--strong); margin-right: 5px; }
@@ -37,14 +37,24 @@
   .bnote.red    { color: var(--red, #cf7f78); }
   .bnote.yellow { color: #c79a2e; }
   .tx-amt { font-variant-numeric: tabular-nums; }
+  .tx-amt.inflow { color: var(--green, #6fb98f); }
+  .tx-note { width: 100%; min-width: 7rem; font: inherit; font-size: 0.78rem; color: var(--text); background: transparent; border: 1px solid transparent; border-radius: 3px; padding: 1px 4px; }
+  .tx-note:hover, .tx-note:focus { border-color: var(--border); outline: none; }
   .tx-cat { font-size: 0.76rem; color: var(--muted); background: transparent; border: 1px solid var(--border); border-radius: 3px; padding: 1px 4px; }
 {% endblock %}
 
 {% block content %}
 
+<nav role="tablist" data-tabs="budget">
+  <button role="tab" data-tab="progress">Progress</button>
+  <button role="tab" data-tab="cards">Cards</button>
+  <button role="tab" data-tab="plan">Budgets</button>
+  <button role="tab" data-tab="uncategorized">Uncategorized{% if uncategorized %} <span class="tag">{{ uncategorized | length }}</span>{% endif %}</button>
+</nav>
+
+<div role="tabpanel" data-tabs="budget" data-tab="progress">
 <section>
-  <details open>
-  <summary><h2>Budget vs Actual</h2></summary>
+  <h2>Budget vs actual</h2>
   <div class="period">{{ period_label }}</div>
   {% if budget_rows %}
   {% for r in budget_rows %}
@@ -60,15 +70,20 @@
   {% else %}
   <div class="muted">No transactions recorded yet this month.</div>
   {% endif %}
-  </details>
 </section>
+</div>
 
+<div role="tabpanel" data-tabs="budget" data-tab="cards" hidden>
+{% if card_sections %}
+<nav role="tablist" class="sub" data-tabs="card">
+  {% for c in card_sections %}<button role="tab" data-tab="card-{{ loop.index }}">{{ c.account }}</button>{% endfor %}
+</nav>
 {% for c in card_sections %}
-<section>
-  <details open>
-  <summary><h2>{{ c.account }}<span class="tag">AED {{ c.total | fmt }} · {{ c.count }} tx</span></h2></summary>
+<section role="tabpanel" data-tabs="card" data-tab="card-{{ loop.index }}" hidden>
+  <h2>{{ c.account }}<span class="tag">AED {{ c.total | fmt }} spent · {{ c.count }} transactions this month</span></h2>
+  {% if c.txns %}
   <table>
-    <thead><tr><th>When</th><th>Where</th><th>Category</th><th class="num">AED</th></tr></thead>
+    <thead><tr><th>When</th><th>Where</th><th>Category</th><th>Note</th><th class="num">AED</th></tr></thead>
     <tbody>
       {% for t in c.txns %}
       <tr>
@@ -77,22 +92,30 @@
         <td>
           <select class="tx-cat" data-id="{{ t.id }}">
             <option value="">—</option>
-            {% for c in categories %}<option value="{{ c }}"{% if c == t.category %} selected{% endif %}>{{ c }}</option>{% endfor %}
+            {% for cat in categories %}<option value="{{ cat }}"{% if cat == t.category %} selected{% endif %}>{{ cat }}</option>{% endfor %}
           </select>
         </td>
-        <td class="num tx-amt"{% if t.currency != 'AED' %} data-tip="{{ t.currency }} {{ t.orig_amount }}"{% endif %}>{{ t.amount | fmt }}</td>
+        <td><input class="tx-note" data-id="{{ t.id }}" value="{{ t.note }}" placeholder="Add a note" maxlength="140"></td>
+        <td class="num tx-amt{% if t.inflow %} inflow{% endif %}"{% if t.currency != 'AED' %} data-tip="{{ t.currency }} {{ t.orig_amount }}"{% endif %}>{% if t.inflow %}+{% endif %}{{ t.amount | fmt }}</td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
-  </details>
+  {% else %}
+  <div class="muted">No transactions this month.</div>
+  {% endif %}
 </section>
 {% endfor %}
+{% else %}
+<section><div class="muted">No transactions recorded yet this month.</div></section>
+{% endif %}
+</div>
 
+<div role="tabpanel" data-tabs="budget" data-tab="plan" hidden>
 {% for sec in account_sections %}
 <section>
   <details open>
-  <summary><h2>{{ sec.name }}</h2></summary>
+  <summary><h2>{{ sec.name | capitalize }}</h2></summary>
   <table>
     <thead>
       <tr>
@@ -129,7 +152,7 @@
       {% endif %}
       {% endfor %}
       <tr class="total-row">
-        <td colspan="2">{{ sec.name }} total</td>
+        <td colspan="2">{{ sec.name | capitalize }} total</td>
         {% if sec.tracking == "daily" %}
         <td class="num aed" data-tip="AED {{ sec.total | fmt }} / mo">AED {{ sec.daily_total | fmt1 }} / day</td>
         {% else %}
@@ -144,27 +167,7 @@
 
 <section>
   <details open>
-  <summary><h2>Summary</h2></summary>
-  <table>
-    <tbody>
-      {% for sec in account_sections %}
-      <tr class="muted">
-        <td>{{ sec.name }}</td>
-        <td class="num aed">AED {{ sec.total | fmt }} / mo</td>
-      </tr>
-      {% endfor %}
-      <tr class="grand-total-row">
-        <td>Total</td>
-        <td class="num aed">AED {{ grand_total | fmt }} / mo</td>
-      </tr>
-    </tbody>
-  </table>
-  </details>
-</section>
-
-<section>
-  <details open>
-  <summary><h2>By Category</h2></summary>
+  <summary><h2>By category</h2></summary>
   <table>
     <tbody>
       {% for category, total in by_category %}
@@ -181,11 +184,65 @@
   </table>
   </details>
 </section>
+</div>
+
+<div role="tabpanel" data-tabs="budget" data-tab="uncategorized" hidden>
+<section>
+  <h2>Uncategorized vendors</h2>
+  <div class="period">All-time spending with no category, biggest first. Picking a category labels every past and future transaction from that vendor.</div>
+  {% if uncategorized %}
+  <table>
+    <thead><tr><th>Vendor</th><th class="num">Transactions</th><th>Last</th><th class="num">AED</th><th>Category</th></tr></thead>
+    <tbody>
+      {% for v in uncategorized %}
+      <tr>
+        <td>{{ v.vendor }}</td>
+        <td class="num">{{ v.count }}</td>
+        <td class="muted">{{ v.last }}</td>
+        <td class="num tx-amt">{{ v.total | fmt }}</td>
+        <td>
+          <select class="vendor-cat" data-vendor="{{ v.vendor }}">
+            <option value="">—</option>
+            {% for cat in categories %}<option value="{{ cat }}">{{ cat }}</option>{% endfor %}
+          </select>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="muted">Every vendor has a category.</div>
+  {% endif %}
+</section>
+</div>
 
 {% endblock %}
 
 {% block scripts %}
 <script>
+  document.querySelectorAll('input.tx-note').forEach(function (input) {
+    var saved = input.value;
+    function save() {
+      if (input.value === saved) return;
+      fetch('/api/transaction/' + input.dataset.id + '/note', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note: input.value }),
+      }).then(function (r) { if (r.ok) saved = input.value; });
+    }
+    input.addEventListener('blur', save);
+    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') input.blur(); });
+  });
+  document.querySelectorAll('select.vendor-cat').forEach(function (sel) {
+    sel.addEventListener('change', function () {
+      if (!sel.value) return;
+      fetch('/api/vendor/category', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vendor: sel.dataset.vendor, category: sel.value }),
+      }).then(function (r) { if (r.ok) sel.closest('tr').remove(); });
+    });
+  });
   document.querySelectorAll('select.tx-cat').forEach(function (sel) {
     sel.addEventListener('change', function () {
       fetch('/api/transaction/' + sel.dataset.id + '/category', {

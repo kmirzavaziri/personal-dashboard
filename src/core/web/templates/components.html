@@ -37,11 +37,24 @@
   /* ── Section headings ───────────────────────────────────────────────── */
   h2 {
     font-size: 1rem; color: var(--strong); font-weight: 600;
-    margin: 0 0 0.8rem; text-transform: uppercase; letter-spacing: 0.07em;
+    margin: 0 0 0.8rem; letter-spacing: 0.01em;
   }
   h2:not(:first-child) { margin-top: 1.6rem; }
   h3 { font-size: 0.92rem; color: var(--strong); font-weight: 600; margin: 1.25rem 0 0.5rem; }
   h3:first-child { margin-top: 0; }
+
+  /* ── Tabs: role=tablist[data-tabs=<group>] + role=tabpanel[data-tabs=<group>][data-tab=<key>] ── */
+  [role="tablist"] { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0 0 1rem; }
+  [role="tab"] {
+    font: inherit; font-size: 0.84rem; color: var(--muted); cursor: pointer;
+    background: var(--glass-bg); border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm); padding: 0.45rem 0.85rem;
+    transition: color 0.14s, border-color 0.14s;
+  }
+  [role="tab"][aria-selected="true"] { color: var(--strong); border-color: var(--accent); }
+  @media (hover: hover) { [role="tab"]:hover { color: var(--strong); } }
+  [role="tablist"].sub { margin-bottom: 0.8rem; }
+  [role="tablist"].sub [role="tab"] { font-size: 0.78rem; padding: 0.3rem 0.65rem; }
 
   /* ── Collapsible section (details/summary as a card header) ─────────── */
   details > summary { list-style: none; cursor: pointer; user-select: none; }

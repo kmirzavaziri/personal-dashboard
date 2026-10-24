@@ -5,6 +5,8 @@ from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 
 import messaging.service as messaging
+import yaml
+
 from pkg.model.io import read_yaml
 from transactions import fx
 
@@ -20,6 +22,7 @@ _TOKENS = {
 _AMOUNT_HINT = re.compile(r'\b(?:[A-Z]{3} ?(?:\d[\d,]*)?\.\d{2}|\d[\d,]*\.\d{2} ?[A-Z]{3})\b')
 _TXN_HINT = re.compile(r'card|spent|withdrawal|purchase|available limit|avl bal', re.I)
 _LIVE_WINDOW = timedelta(days=1)
+_LOCATION_SUFFIX = re.compile(r',[^,]*$')
 
 
 def _dir(config):
@@ -129,22 +132,72 @@ def transactions(config, month=None):
     return _read_month(config, ts)
 
 
+def account_names(config) -> list[str]:
+    return list(dict.fromkeys(card['display'] for card in _cards(config)))
+
+
+def vendor_of(venue: str) -> str:
+    return ' '.join(_LOCATION_SUFFIX.sub('', venue or '').split())
+
+
+def _all_transactions(config) -> list[dict]:
+    return [row for path in sorted(_dir(config).glob('*.jsonl')) for row in _read_month(config, path.stem)]
+
+
+def uncategorized_vendors(config) -> list[dict]:
+    totals: dict[str, dict] = {}
+    for tx in _all_transactions(config):
+        if tx.get('category_override') or tx.get('category') or not counts_as_spend(config, tx):
+            continue
+        vendor = vendor_of(tx['venue'])
+        if not vendor:
+            continue
+        entry = totals.setdefault(vendor.casefold(), {'vendor': vendor, 'total': 0.0, 'count': 0, 'last': ''})
+        entry['total'] += tx.get('amount_aed') or 0
+        entry['count'] += 1
+        entry['last'] = max(entry['last'], tx['ts'][:10])
+    return sorted(totals.values(), key=lambda entry: -entry['total'])
+
+
+def categorize_vendor(config, vendor: str, category: str) -> int:
+    rules = [rule for rule in _autolabel(config) if rule.get('match', '').casefold() != vendor.casefold()]
+    rules.append({'match': vendor, 'category': category})
+    (_dir(config) / 'autolabel.yaml').write_text(yaml.safe_dump(rules, allow_unicode=True, sort_keys=False))
+    updated = 0
+    for path in _dir(config).glob('*.jsonl'):
+        rows = _read_month(config, path.stem)
+        matching = [row for row in rows if not row.get('category_override') and not row.get('category')
+                    and vendor_of(row['venue']).casefold() == vendor.casefold()]
+        for row in matching:
+            row['category'], row['category_source'] = category, 'auto'
+        if matching:
+            _write_month(path, rows)
+            updated += len(matching)
+    return updated
+
+
 def label_categories(config):
     return sorted({r.get('category', '') for r in _autolabel(config) if r.get('category')})
 
 
-def set_category(config, tx_id, category):
+def _update(config, tx_id, **fields) -> bool:
     for path in sorted(_dir(config).glob('*.jsonl'), reverse=True):
-        rows = [json.loads(line) for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
-        if not any(r.get('id') == tx_id for r in rows):
+        rows = _read_month(config, path.stem)
+        row = next((r for r in rows if r.get('id') == tx_id), None)
+        if row is None:
             continue
-        for r in rows:
-            if r.get('id') == tx_id:
-                r['category_override'] = category
-                r['category_source'] = 'manual' if category else r.get('category_source', '')
+        row.update(fields)
         _write_month(path, rows)
         return True
     return False
+
+
+def set_category(config, tx_id, category):
+    return _update(config, tx_id, category_override=category, category_source='manual' if category else 'auto')
+
+
+def set_note(config, tx_id, note):
+    return _update(config, tx_id, note=note)
 
 
 def _write_month(path, rows):
@@ -235,24 +288,23 @@ def receive(config, source: str, payloads: list) -> Counter:
     return outcome
 
 
-def _manual_categories(config) -> dict[str, str]:
+def _manual_edits(config) -> dict[str, dict]:
     return {
-        row['id']: row['category_override']
-        for path in _dir(config).glob('*.jsonl')
-        for row in _read_month(config, path.stem)
-        if row.get('category_source') == 'manual'
+        row['id']: {key: row[key] for key in ('category_override', 'category_source', 'note') if key in row}
+        for row in _all_transactions(config)
+        if row.get('category_source') == 'manual' or row.get('note')
     }
 
 
 def backfill(config, rebuild=False):
-    manual = _manual_categories(config) if rebuild else {}
+    manual = _manual_edits(config) if rebuild else {}
     if rebuild:
         for path in _dir(config).glob('*.jsonl'):
             path.unlink()
     results = [ingest(config, entry, notify=False)
                for entry in sorted(messaging.all_entries(config), key=lambda e: e.get('received_at', ''))]
-    for tx_id, category in manual.items():
-        set_category(config, tx_id, category)
+    for tx_id, edits in manual.items():
+        _update(config, tx_id, **edits)
     counts = Counter(r['action'] for r in results)
     lines = [f'{action}: {n}' for action, n in sorted(counts.items()) if action != 'none']
     lines += [f"alert (not sent): {r['message']}" for r in results if r['action'] == 'alert']

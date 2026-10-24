@@ -85,11 +85,11 @@ def _budget_actuals(config, cat_totals: dict[str, float], now: datetime) -> tupl
         })
     rows.sort(key=lambda r: ({'red': 0, 'yellow': 1, 'green': 2, 'none': 3}[r['status']], -r['actual']))
 
-    cards: dict[str, list[dict]] = {}
+    cards: dict[str, list[dict]] = {name: [] for name in tx_service.account_names(config)}
     for tx in month_txns:
         cards.setdefault(tx.get('account') or 'Unknown', []).append(tx)
     card_sections = []
-    for account, txs in sorted(cards.items()):
+    for account, txs in cards.items():
         recent = sorted(txs, key=lambda t: t.get('ts', ''), reverse=True)
         card_sections.append({
             'account': account,
@@ -99,12 +99,14 @@ def _budget_actuals(config, cat_totals: dict[str, float], now: datetime) -> tupl
                 'id': t.get('id', ''),
                 'when': (t.get('ts') or '')[:16].replace('T', ' '),
                 'venue': t.get('venue', ''),
-                'amount': _tx_aed(t),
+                'amount': abs(_tx_aed(t)),
+                'inflow': _tx_aed(t) < 0,
+                'note': t.get('note', ''),
                 'currency': (t.get('currency') or 'AED'),
                 'orig_amount': t.get('amount'),
                 'category': _tx_category(t),
                 'type': t.get('type', ''),
-            } for t in recent[:25]],
+            } for t in recent],
         })
     return rows, card_sections
 
@@ -218,4 +220,5 @@ def render(services) -> str:
         card_sections=card_sections,
         period_label=period_label,
         categories=categories,
+        uncategorized=tx_service.uncategorized_vendors(config),
     )

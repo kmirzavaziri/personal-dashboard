@@ -87,6 +87,23 @@
 
 <script>
   (function () {
+    document.querySelectorAll('[role="tablist"][data-tabs]').forEach(function (list) {
+      var group = list.dataset.tabs;
+      var tabs = Array.prototype.slice.call(list.querySelectorAll('[role="tab"]'));
+      function show(key) {
+        tabs.forEach(function (tab) { tab.setAttribute('aria-selected', String(tab.dataset.tab === key)); });
+        document.querySelectorAll('[role="tabpanel"][data-tabs="' + group + '"]').forEach(function (panel) {
+          panel.hidden = panel.dataset.tab !== key;
+        });
+      }
+      tabs.forEach(function (tab) { tab.addEventListener('click', function () { show(tab.dataset.tab); }); });
+      if (tabs.length) show(tabs[0].dataset.tab);
+    });
+  })();
+</script>
+
+<script>
+  (function () {
     document.querySelectorAll('table').forEach(function (table) {
       var head = table.tHead && table.tHead.rows[table.tHead.rows.length - 1];
       if (!head) return;
