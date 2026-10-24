@@ -200,6 +200,16 @@ def _period_summary(ledger, period, budgets: dict[str, float], current: bool) ->
     }
 
 
+def _average_period_spend(ledger, current) -> dict:
+    totals: dict[datetime, float] = {}
+    for entry in ledger.visible:
+        if entry.spend:
+            start = ledger.clock.period(entry.tx.at).start
+            totals[start] = totals.get(start, 0.0) + entry.tx.aed
+    complete = [total for start, total in sorted(totals.items())[1:] if start < current.start]
+    return {'amount': sum(complete) / len(complete) if complete else 0.0, 'months': len(complete)}
+
+
 def _env(ledger):
     tones = colors_for(c.name for c in ledger.categories)
     env = make_env(HERE)
@@ -239,6 +249,7 @@ def render(services) -> str:
         grand_daily=sum(s['daily_total'] for s in account_sections),
         by_category=sorted(budgets.items(), key=lambda kv: -kv[1]),
         current_period=_period_summary(ledger, period, budgets, current=True),
+        average=_average_period_spend(ledger, period),
         card_sections=_card_sections(config, period_entries),
         categories=ledger.categories,
         category_cards=_category_cards(ledger, period_entries),
