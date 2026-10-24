@@ -181,18 +181,22 @@ def _refunds_by_purchase(entries: list[Entry]) -> dict[str, list[Transaction]]:
     return refunds
 
 
+def _pairs_with(out: Entry, inc: Entry) -> bool:
+    return (inc.account != out.account and round(abs(inc.tx.aed), 2) == round(out.tx.aed, 2)
+            and abs(inc.tx.at - out.tx.at) <= _SELF_TRANSFER_WINDOW)
+
+
 def _self_transfers(entries: list[Entry], own_accounts: set[str], owner: dict) -> set[str]:
     markers = [text.casefold() for text in (owner.get('names') or []) + (owner.get('movements') or [])]
     to_owner = {e.tx.id for e in entries
                 if e.type in _MOVEMENT_TYPES and any(marker in e.tx.venue.casefold() for marker in markers)}
     outgoing = [e for e in entries if e.type == 'transfer' and e.tx.amount > 0 and e.account in own_accounts]
     incoming = [e for e in entries if e.type in _MOVEMENT_TYPES and e.tx.amount < 0 and e.account in own_accounts]
+    candidates = {out.tx.id: [inc for inc in incoming if _pairs_with(out, inc)] for out in outgoing}
     paired: set[str] = set()
-    for out in outgoing:
-        match = next((inc for inc in incoming
-                      if inc.tx.id not in paired and inc.account != out.account
-                      and round(abs(inc.tx.aed), 2) == round(out.tx.aed, 2)
-                      and abs(inc.tx.at - out.tx.at) <= _SELF_TRANSFER_WINDOW), None)
+    for out in sorted(outgoing, key=lambda o: (len(candidates[o.tx.id]), o.tx.at)):
+        match = min((inc for inc in candidates[out.tx.id] if inc.tx.id not in paired),
+                    key=lambda inc: abs(inc.tx.at - out.tx.at), default=None)
         if match is not None:
             paired |= {out.tx.id, match.tx.id}
     return paired | to_owner

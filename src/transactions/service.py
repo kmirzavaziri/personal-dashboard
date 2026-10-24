@@ -25,6 +25,7 @@ _LIVE_WINDOW = timedelta(days=1)
 _SAME_MOVEMENT_WINDOW = timedelta(days=1)
 _CHARGES_TOLERANCE = 5.0
 _UNKNOWN_ACCOUNT = 'Unknown'
+_INTERCHANGEABLE_TYPES = {'transfer', 'purchase'}
 
 
 def _dir(config):
@@ -54,6 +55,10 @@ def parse_text(text, patterns):
             continue
         fields = dict(pattern.get('set') or {})
         fields.update({k: v for k, v in m.groupdict().items() if v is not None})
+        if 'beneficiary' in fields:
+            fields['beneficiary'] = _person_name(fields['beneficiary'])
+        if '{' in fields.get('venue', ''):
+            fields['venue'] = fields['venue'].format_map(defaultdict(str, fields))
         amount = _num(fields.get('amount'))
         if amount is not None and pattern.get('negate'):
             amount = -amount
@@ -72,6 +77,11 @@ def parse_text(text, patterns):
             'enriches': int(pattern.get('enriches') or 0),
         }
     return None
+
+
+def _person_name(name: str) -> str:
+    name = ' '.join(name.split())
+    return name.title() if name.isupper() and '*' not in name else name
 
 
 def looks_like_transaction(text):
@@ -192,7 +202,8 @@ def _same_movement(store: TransactionStore, tx: Transaction) -> Transaction | No
     if exact is not None:
         return exact
     return next((row for row in rows
-                 if (row.type == tx.type or _UNKNOWN_ACCOUNT in (row.account, tx.account))
+                 if (row.type == tx.type
+                     or (_UNKNOWN_ACCOUNT in (row.account, tx.account) and {row.type, tx.type} <= _INTERCHANGEABLE_TYPES))
                  and (row.remaining is None or tx.remaining is None)
                  and abs(row.at - tx.at) <= _SAME_MOVEMENT_WINDOW
                  and _same_account_and_amount(row, tx)), None)
