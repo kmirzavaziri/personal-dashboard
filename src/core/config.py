@@ -3,6 +3,16 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
+USER_ENV_FILE = Path.home() / '.config' / 'dashboard' / 'env'
+
+
+def _user_env_file() -> dict[str, str]:
+    if not USER_ENV_FILE.exists():
+        return {}
+    pairs = (line.removeprefix('export ').split('=', 1) for line in USER_ENV_FILE.read_text().splitlines())
+    return {key.strip(): value.strip().strip('"\'') for key, value in (pair for pair in pairs if len(pair) == 2)}
+
+
 def _flag(value: str | None, default: bool) -> bool:
     if value is None:
         return default
@@ -44,7 +54,7 @@ class Config:
 
     @classmethod
     def default(cls) -> 'Config':
-        return cls.from_env()
+        return cls.from_env({**_user_env_file(), **os.environ})
 
     @classmethod
     def from_env(cls, env: dict | None = None) -> 'Config':
