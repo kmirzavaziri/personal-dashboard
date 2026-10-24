@@ -21,19 +21,19 @@
   .amount.inflow { color: var(--green); }
   .when { color: var(--muted); white-space: nowrap; font-size: 0.8rem; }
   .venue { color: var(--strong); }
-  .tx-table select { max-width: 11rem; }
+  .tx-table .dd { width: 11rem; max-width: 100%; }
   .tx-table .tx-note { width: 100%; min-width: 8rem; }
 
   .cat-new { display: flex; gap: 0.5rem; margin-bottom: 0.9rem; }
   .cat-new input { flex: 1; max-width: 22rem; }
   .cat-card .section-head { align-items: center; }
   input.cat-name {
-    font-family: var(--font-display); font-size: 1.05rem; font-weight: 500; color: var(--strong);
+    font-size: 0.95rem; font-weight: 600; color: var(--strong);
     height: 2rem; flex: 1; min-width: 8rem; max-width: 20rem;
   }
   .rules th { white-space: nowrap; }
   .rules td { padding-top: 0.25rem; padding-bottom: 0.25rem; }
-  .rules input, .rules select { width: 100%; }
+  .rules input, .rules .dd { width: 100%; }
   .rules .col-match { width: 38%; }
   .rules .col-slot { width: 21%; }
   .rules .col-type { width: 13%; }
@@ -44,7 +44,7 @@
   .save-state { font-size: 0.74rem; color: var(--faint); }
   .delete-choice { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.8rem; font-size: 0.84rem; }
   .delete-choice label { display: flex; align-items: center; gap: 0.5rem; }
-  .delete-choice select { margin-left: 1.45rem; max-width: 16rem; }
+  .delete-choice .dd { margin-left: 1.45rem; width: 16rem; max-width: calc(100% - 1.45rem); }
 {% endblock %}
 
 {% block content %}
@@ -74,7 +74,7 @@
     {% endfor %}
   </div>
   {% else %}
-  <div class="empty">No transactions recorded yet this month.</div>
+  <div class="empty">No transactions recorded yet this period.</div>
   {% endif %}
 </section>
 </div>
@@ -87,7 +87,7 @@
 <section role="tabpanel" data-tabs="card" data-tab="card-{{ loop.index }}" hidden>
   <div class="section-head">
     <h2>{{ c.account }}</h2>
-    <span class="muted">AED {{ c.total | fmt }} spent · {{ c.count }} this month</span>
+    <span class="muted">AED {{ c.total | fmt }} spent · {{ c.count }} this period</span>
   </div>
   {% if c.entries %}
   <table class="tx-table">
@@ -110,14 +110,13 @@
     </tbody>
   </table>
   {% else %}
-  <div class="empty">No transactions this month.</div>
+  <div class="empty">No transactions this period.</div>
   {% endif %}
 </section>
 {% endfor %}
 </div>
 
 <div role="tabpanel" data-tabs="budget" data-tab="categories" hidden>
-<div class="note">Rules label transactions live: editing or removing a rule relabels every transaction it touches. A rule matches when the vendor contains its text, or use <code>re:</code> for a regular expression. A time-specific rule beats an any-time rule, and exact text beats a pattern. Category and note set by hand on a transaction always win.</div>
 <form class="cat-new" id="cat-new">
   <input name="name" placeholder="New category name" maxlength="40" required>
   <button class="btn btn-primary" type="submit">Add category</button>
@@ -127,7 +126,7 @@
 <section class="cat-card" data-key="{{ cat.key }}">
   <div class="section-head">
     <input class="cat-name input-quiet" value="{{ cat.name }}" maxlength="40" aria-label="Category name">
-    <span class="muted">AED {{ card.month_total | fmt }} this month</span>
+    <span class="muted">AED {{ card.period_total | fmt }} this period</span>
     <button class="btn btn-ghost btn-sm cat-delete" type="button">Delete</button>
   </div>
   <table class="rules">
@@ -268,7 +267,6 @@
 <div role="tabpanel" data-tabs="budget" data-tab="uncategorized" hidden>
 <section>
   <div class="section-head"><h2>Uncategorized vendors</h2><span class="muted">All time, biggest first</span></div>
-  <div class="note">Picking a category adds a rule for that vendor, which labels every past and future transaction from it.</div>
   {% if uncategorized %}
   <table>
     <thead><tr><th>Vendor</th><th class="num">Count</th><th>Last</th><th class="num">AED</th><th>Category</th></tr></thead>
@@ -383,7 +381,7 @@
       if (first) target.value = first.value;
       dialog.showModal();
     }
-    target.addEventListener('focus', function () { dialog.querySelector('input[value="move"]').checked = true; });
+    target.addEventListener('change', function () { dialog.querySelector('input[value="move"]').checked = true; });
     dialog.addEventListener('close', function () {
       if (dialog.returnValue !== 'confirm' || !deleting) return;
       var move = dialog.querySelector('input[name="fate"]:checked').value === 'move';

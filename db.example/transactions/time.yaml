@@ -1,5 +1,6 @@
 timezone: UTC
 day_starts_at: 5
+period_starts_on: 1
 weekend:
 - sat
 - sun

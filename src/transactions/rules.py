@@ -1,4 +1,6 @@
 import re
+from calendar import monthrange
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -8,6 +10,37 @@ from pkg.model.base import Model
 from pkg.model.io import read_yaml
 
 _WEEKDAYS = ('mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun')
+
+
+def _shift_month(year: int, month: int, delta: int) -> tuple[int, int]:
+    index = year * 12 + month - 1 + delta
+    return index // 12, index % 12 + 1
+
+
+@dataclass(frozen=True)
+class Period:
+    start: datetime
+    end: datetime
+    now: datetime
+
+    @property
+    def length_days(self) -> int:
+        return (self.end - self.start).days
+
+    @property
+    def elapsed_days(self) -> int:
+        return (self.now - self.start).days + 1
+
+    @property
+    def fraction(self) -> float:
+        return self.elapsed_days / self.length_days
+
+    def day(self, number: int) -> datetime:
+        return self.start + timedelta(days=number - 1)
+
+    @property
+    def label(self) -> str:
+        return f'{self.start:%b %-d} – {self.day(self.length_days):%b %-d} · day {self.elapsed_days} of {self.length_days}'
 
 
 class Slot(BaseModel):
@@ -34,6 +67,7 @@ class Clock(BaseModel):
 
     timezone: str
     day_starts_at: int
+    period_starts_on: int
     weekend: list[str]
     slots: list[Slot]
 
@@ -43,6 +77,21 @@ class Clock(BaseModel):
 
     def local(self, at: datetime) -> datetime:
         return at.astimezone(ZoneInfo(self.timezone))
+
+    def period(self, at: datetime) -> 'Period':
+        local = self.local(at)
+        start = self._period_start(local.year, local.month, local.tzinfo)
+        if local < start:
+            start = self._period_start(*_shift_month(local.year, local.month, -1), local.tzinfo)
+        return Period(start, self._period_start(*_shift_month(start.year, start.month, 1), local.tzinfo), local)
+
+    def _period_start(self, year: int, month: int, tz) -> datetime:
+        return datetime(year, month, min(self.period_starts_on, monthrange(year, month)[1]), tzinfo=tz)
+
+    def month(self, month: str) -> tuple[datetime, datetime]:
+        year, number = map(int, month.split('-'))
+        tz = ZoneInfo(self.timezone)
+        return datetime(year, number, 1, tzinfo=tz), datetime(*_shift_month(year, number, 1), 1, tzinfo=tz)
 
     def slot_keys_at(self, at: datetime) -> set[str]:
         local = self.local(at)

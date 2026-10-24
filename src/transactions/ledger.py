@@ -1,7 +1,8 @@
 from collections import Counter, defaultdict
 from dataclasses import dataclass, replace
-from datetime import timedelta
-from functools import cached_property
+from datetime import datetime, timedelta
+from functools import cached_property, lru_cache
+from pathlib import Path
 
 from pkg.model.io import read_yaml
 from transactions.rules import Category, Clock, Rule
@@ -56,9 +57,7 @@ class Ledger:
 
     @classmethod
     def load(cls, config) -> 'Ledger':
-        types = {t['key']: t for t in read_yaml(config.db / 'transactions' / 'types.yaml') or []}
-        store = TransactionStore(config.db / 'transactions')
-        return cls(store.all(), Category.objects.all(), Clock.load(config.db), types)
+        return _load(config.db, _fingerprint(config.db / 'transactions'))
 
     def counts_as_spend(self, type_key: str) -> bool:
         kind = self._types.get(type_key)
@@ -71,8 +70,8 @@ class Ledger:
         hidden = set(self._pairs) | set(self._pairs.values())
         return [entry for entry in self.entries if entry.tx.id not in hidden]
 
-    def month(self, month: str) -> list[Entry]:
-        return [entry for entry in self.visible if f'{self.clock.local(entry.tx.at):%Y-%m}' == month]
+    def between(self, start: datetime, end: datetime) -> list[Entry]:
+        return [entry for entry in self.visible if start <= entry.tx.at < end]
 
     def rule_hits(self) -> Counter:
         return Counter((e.match.category.key, e.match.index) for e in self.visible if e.match and not e.tx.category_override)
@@ -128,3 +127,14 @@ class Ledger:
     def _with_refund(self, entry: Entry, by_id: dict[str, Transaction]) -> Entry:
         refund_id = self._pairs.get(entry.tx.id)
         return replace(entry, refund=by_id[refund_id]) if refund_id else entry
+
+
+def _fingerprint(directory: Path) -> tuple:
+    return tuple((path.name, stat.st_mtime_ns, stat.st_size)
+                 for path in sorted(directory.rglob('*')) if path.is_file() and (stat := path.stat()))
+
+
+@lru_cache(maxsize=2)
+def _load(db: Path, fingerprint: tuple) -> Ledger:
+    types = {t['key']: t for t in read_yaml(db / 'transactions' / 'types.yaml') or []}
+    return Ledger(TransactionStore(db / 'transactions').all(), Category.objects.all(), Clock.load(db), types)

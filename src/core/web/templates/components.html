@@ -6,12 +6,12 @@
 
   .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin: 0.4rem 0 1.1rem; }
   h1, .page-title {
-    font-family: var(--font-display); font-weight: 500; font-size: 1.65rem; line-height: 1.15;
+    font-weight: 600; font-size: 1.5rem; line-height: 1.15;
     color: var(--strong); letter-spacing: -0.01em; text-wrap: balance;
   }
   .page-sub { color: var(--muted); font-size: 0.85rem; margin-top: 0.2rem; }
   h2 {
-    font-family: var(--font-display); font-weight: 500; font-size: 1.08rem; line-height: 1.3;
+    font-weight: 600; font-size: 0.95rem; line-height: 1.35;
     color: var(--strong); margin: 0 0 0.7rem; text-wrap: balance;
   }
   h2:not(:first-child) { margin-top: 1.4rem; }
@@ -43,7 +43,7 @@
   .spacer { flex: 1; }
 
   .stat { display: flex; flex-direction: column; gap: 0.1rem; }
-  .stat-value { font-family: var(--font-display); font-size: 1.35rem; font-weight: 500; color: var(--strong); font-variant-numeric: tabular-nums; }
+  .stat-value { font-size: 1.3rem; font-weight: 600; color: var(--strong); font-variant-numeric: tabular-nums; }
   .stat-label { font-size: 0.75rem; color: var(--muted); }
 
   [role="tablist"] {
@@ -177,6 +177,43 @@
   }
   input.input-quiet:hover, select.input-quiet:hover, textarea.input-quiet:hover { border-color: var(--border-strong); }
   input.input-quiet:focus, select.input-quiet:focus, textarea.input-quiet:focus { background-color: var(--surface); border-color: var(--accent); }
+  .dd { position: relative; display: inline-flex; min-width: 0; vertical-align: middle; }
+  .dd > select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; }
+  .dd-trigger {
+    display: inline-flex; align-items: center; gap: 0.45rem; width: 100%; min-width: 0;
+    height: var(--control-h); padding: 0 0.55rem 0 0.65rem;
+    font: inherit; font-size: 0.82rem; color: var(--strong); text-align: left; cursor: pointer;
+    background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+    transition: border-color 0.14s, background 0.14s, box-shadow 0.14s;
+  }
+  .dd-trigger .dd-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dd-trigger .dd-label.placeholder { color: var(--muted); }
+  .dd-trigger svg { flex: none; color: var(--faint); transition: transform 0.15s; }
+  .dd-trigger[aria-expanded="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .dd-trigger[aria-expanded="true"] svg { transform: rotate(180deg); }
+  .dd-trigger:disabled { opacity: 0.5; cursor: default; }
+  .dd.quiet .dd-trigger { background: transparent; border-color: transparent; height: 1.75rem; padding-left: 0.4rem; }
+  @media (hover: hover) { .dd.quiet .dd-trigger:hover { border-color: var(--border-strong); } }
+  .dd.quiet .dd-trigger[aria-expanded="true"] { background: var(--surface); }
+  .dd-menu {
+    position: fixed; z-index: 1200; min-width: 10rem; max-width: min(22rem, calc(100vw - 1rem));
+    display: flex; flex-direction: column; padding: 0.3rem;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: var(--shadow-pop); animation: dd-in 0.12s ease-out;
+  }
+  @keyframes dd-in { from { opacity: 0; transform: translateY(-3px); } }
+  .dd-menu[hidden] { display: none; }
+  .dd-search { margin: 0 0 0.3rem; height: 1.85rem !important; font-size: 0.8rem !important; }
+  .dd-options { overflow-y: auto; overscroll-behavior: contain; max-height: 17rem; }
+  .dd-option {
+    display: flex; align-items: center; gap: 0.5rem; padding: 0.38rem 0.55rem;
+    font-size: 0.82rem; color: var(--text); border-radius: var(--radius-sm); cursor: pointer; user-select: none;
+  }
+  .dd-option .dd-check { width: 0.9rem; flex: none; color: var(--accent); visibility: hidden; }
+  .dd-option[aria-selected="true"] { color: var(--strong); font-weight: 500; }
+  .dd-option[aria-selected="true"] .dd-check { visibility: visible; }
+  .dd-option.active { background: var(--hover); color: var(--strong); }
+  .dd-empty { padding: 0.4rem 0.55rem; font-size: 0.78rem; color: var(--faint); }
   input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); width: 0.95rem; height: 0.95rem; }
   label.field { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.75rem; color: var(--muted); }
 

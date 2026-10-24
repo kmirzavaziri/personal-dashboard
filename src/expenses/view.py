@@ -1,5 +1,4 @@
 
-import calendar
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -41,11 +40,9 @@ def _budget_status(budget: float, actual: float, fraction: float) -> tuple[str, 
     return 'green', projected
 
 
-def _budget_rows(month_entries, cat_totals: dict[str, float], now: datetime) -> list[dict]:
-    days_in_month = calendar.monthrange(now.year, now.month)[1]
-    fraction = now.day / days_in_month
+def _budget_rows(entries, cat_totals: dict[str, float], period) -> list[dict]:
     actual_by_cat: dict[str, float] = {}
-    for entry in month_entries:
+    for entry in entries:
         if entry.spend:
             name = entry.category_name or 'Uncategorized'
             actual_by_cat[name] = actual_by_cat.get(name, 0.0) + entry.tx.aed
@@ -54,15 +51,15 @@ def _budget_rows(month_entries, cat_totals: dict[str, float], now: datetime) -> 
     for cat in set(cat_totals) | set(actual_by_cat):
         budget = cat_totals.get(cat, 0.0)
         actual = actual_by_cat.get(cat, 0.0)
-        status, projected = _budget_status(budget, actual, fraction)
+        status, projected = _budget_status(budget, actual, period.fraction)
         note = ''
         if status == 'red':
             note = f'over budget (AED {actual - budget:,.0f} above)'
         elif status == 'yellow':
-            daily_rate = actual / now.day if now.day else 0
+            daily_rate = actual / period.elapsed_days
             exhaust_day = budget / daily_rate if daily_rate else 0
-            if 0 < exhaust_day <= days_in_month:
-                note = f'on pace to exhaust by {now.replace(day=max(1, min(days_in_month, round(exhaust_day)))):%b %-d} (projected AED {projected:,.0f})'
+            if 0 < exhaust_day <= period.length_days:
+                note = f'on pace to exhaust by {period.day(max(1, round(exhaust_day))):%b %-d} (projected AED {projected:,.0f})'
             else:
                 note = f'projected AED {projected:,.0f}'
         rows.append({
@@ -77,9 +74,9 @@ def _budget_rows(month_entries, cat_totals: dict[str, float], now: datetime) -> 
     return rows
 
 
-def _card_sections(config, month_entries) -> list[dict]:
+def _card_sections(config, entries) -> list[dict]:
     cards: dict[str, list] = {name: [] for name in tx_service.account_names(config)}
-    for entry in month_entries:
+    for entry in entries:
         cards.setdefault(entry.tx.account or 'Unknown', []).append(entry)
     return [{
         'account': account,
@@ -89,15 +86,15 @@ def _card_sections(config, month_entries) -> list[dict]:
     } for account, entries in cards.items()]
 
 
-def _category_cards(ledger, month_entries) -> list[dict]:
+def _category_cards(ledger, entries) -> list[dict]:
     hits = ledger.rule_hits()
-    month_totals: dict[str, float] = {}
-    for entry in month_entries:
+    period_totals: dict[str, float] = {}
+    for entry in entries:
         if entry.category and entry.spend:
-            month_totals[entry.category.key] = month_totals.get(entry.category.key, 0.0) + entry.tx.aed
+            period_totals[entry.category.key] = period_totals.get(entry.category.key, 0.0) + entry.tx.aed
     return [{
         'category': category,
-        'month_total': month_totals.get(category.key, 0.0),
+        'period_total': period_totals.get(category.key, 0.0),
         'rules': [{'rule': rule, 'hits': hits[(category.key, index)]} for index, rule in enumerate(category.rules)],
     } for category in ledger.categories]
 
@@ -193,10 +190,8 @@ def render(services) -> str:
 
     ledger = Ledger.load(config)
     clock = ledger.clock
-    now = clock.local(datetime.now(timezone.utc))
-    month_entries = ledger.month(f'{now:%Y-%m}')
-    days_in_month = calendar.monthrange(now.year, now.month)[1]
-    period_label = f'{now:%B %Y} · day {now.day} of {days_in_month}'
+    period = clock.period(datetime.now(timezone.utc))
+    period_entries = ledger.between(period.start, period.end)
 
     env = make_env(HERE)
     env.filters['fmt']  = lambda v: f'{v:,.0f}'
@@ -209,11 +204,11 @@ def render(services) -> str:
         grand_total=grand_total,
         grand_daily=grand_daily,
         by_category=by_category,
-        budget_rows=_budget_rows(month_entries, cat_totals, now),
-        card_sections=_card_sections(config, month_entries),
-        period_label=period_label,
+        budget_rows=_budget_rows(period_entries, cat_totals, period),
+        card_sections=_card_sections(config, period_entries),
+        period_label=period.label,
         categories=ledger.categories,
-        category_cards=_category_cards(ledger, month_entries),
+        category_cards=_category_cards(ledger, period_entries),
         slots=clock.slots,
         types=tx_service.type_keys(config),
         uncategorized=ledger.uncategorized_vendors(),

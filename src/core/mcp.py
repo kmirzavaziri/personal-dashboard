@@ -195,7 +195,7 @@ def styling_move(services, key, status):
 
 def transactions_list(services, month=None):
     ledger = Ledger.load(services.config)
-    entries = ledger.month(month or f'{ledger.clock.local(datetime.now(timezone.utc)):%Y-%m}')
+    entries = ledger.between(*ledger.clock.month(month or f'{ledger.clock.local(datetime.now(timezone.utc)):%Y-%m}'))
     return json.dumps([
         {'id': e.tx.id, 'ts': e.tx.ts, 'account': e.tx.account, 'type': e.type, 'amount': e.tx.amount,
          'currency': e.tx.currency, 'amount_aed': e.tx.amount_aed, 'venue': e.tx.venue,

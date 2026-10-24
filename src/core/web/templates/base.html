@@ -28,7 +28,7 @@
     }
     .crumbs a { color: var(--muted); text-decoration: none; transition: color 0.15s ease; }
     .crumbs a:hover { color: var(--strong); }
-    .crumb-brand { font-family: var(--font-display); font-size: 0.98rem; font-weight: 500; color: var(--strong) !important; }
+    .crumb-brand { font-weight: 600; color: var(--strong) !important; }
     .crumb-sep { color: var(--faint); }
     .crumb-current { color: var(--strong); font-weight: 500; }
 
@@ -86,6 +86,177 @@
 <main class="{% block wrap %}{% endblock %}">
 {% block content %}{% endblock %}
 </main>
+
+<script>
+  (function () {
+    var CHEVRON = '<svg width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    var CHECK = '<svg class="dd-check" width="12" height="10" viewBox="0 0 12 10" aria-hidden="true"><path d="M1 5l3.5 3.5L11 1.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    var SEARCH_FROM = 9;
+    var valueProp = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
+    var indexProp = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'selectedIndex');
+    var menu = document.createElement('div');
+    menu.className = 'dd-menu';
+    menu.hidden = true;
+    menu.innerHTML = '<input class="dd-search" type="search" placeholder="Search…" aria-label="Filter options"><div class="dd-options" role="listbox"></div>';
+    var search = menu.querySelector('.dd-search');
+    var list = menu.querySelector('.dd-options');
+    var current = null;
+    var active = -1;
+
+    function label(select) {
+      var option = select.options[select.selectedIndex];
+      var el = select._dd.querySelector('.dd-label');
+      el.textContent = option ? option.text : '';
+      el.classList.toggle('placeholder', !option || option.value === '');
+    }
+
+    function enhance(select) {
+      if (select._dd || select.multiple || select.hasAttribute('data-native')) return;
+      var wrap = document.createElement('span');
+      wrap.className = 'dd' + (select.classList.contains('input-quiet') ? ' quiet' : '');
+      var trigger = document.createElement('button');
+      trigger.type = 'button';
+      trigger.className = 'dd-trigger';
+      trigger.setAttribute('aria-haspopup', 'listbox');
+      trigger.setAttribute('aria-expanded', 'false');
+      if (select.getAttribute('aria-label')) trigger.setAttribute('aria-label', select.getAttribute('aria-label'));
+      trigger.innerHTML = '<span class="dd-label"></span>' + CHEVRON;
+      trigger.disabled = select.disabled;
+      select.parentNode.insertBefore(wrap, select);
+      wrap.appendChild(select);
+      wrap.appendChild(trigger);
+      select.tabIndex = -1;
+      select.setAttribute("aria-hidden", "true");
+      select._dd = wrap;
+      Object.defineProperty(select, 'value', {
+        configurable: true,
+        get: function () { return valueProp.get.call(this); },
+        set: function (v) { valueProp.set.call(this, v); label(this); },
+      });
+      Object.defineProperty(select, 'selectedIndex', {
+        configurable: true,
+        get: function () { return indexProp.get.call(this); },
+        set: function (v) { indexProp.set.call(this, v); label(this); },
+      });
+      select.addEventListener('change', function () { label(select); });
+      trigger.addEventListener('click', function () { current === select ? close() : open(select); });
+      trigger.addEventListener('keydown', function (e) {
+        if (['ArrowDown', 'ArrowUp', 'Enter', ' '].indexOf(e.key) !== -1 && current !== select) { e.preventDefault(); open(select); }
+      });
+      label(select);
+    }
+
+    function options() { return Array.prototype.slice.call(list.querySelectorAll('.dd-option')); }
+
+    function render(filter) {
+      var needle = (filter || '').trim().toLowerCase();
+      list.innerHTML = '';
+      Array.prototype.forEach.call(current.options, function (option, index) {
+        if (option.hidden || option.disabled) return;
+        if (needle && option.text.toLowerCase().indexOf(needle) === -1) return;
+        var row = document.createElement('div');
+        row.className = 'dd-option';
+        row.setAttribute('role', 'option');
+        row.setAttribute('aria-selected', String(index === current.selectedIndex));
+        row.dataset.index = index;
+        row.innerHTML = CHECK;
+        row.appendChild(document.createTextNode(option.text));
+        list.appendChild(row);
+      });
+      if (!list.children.length) list.innerHTML = '<div class="dd-empty">No matches</div>';
+      var rows = options();
+      var selected = rows.findIndex(function (r) { return r.getAttribute('aria-selected') === 'true'; });
+      highlight(needle ? 0 : Math.max(selected, 0));
+    }
+
+    function highlight(index) {
+      var rows = options();
+      if (!rows.length) { active = -1; return; }
+      active = (index + rows.length) % rows.length;
+      rows.forEach(function (r, i) { r.classList.toggle('active', i === active); });
+      rows[active].scrollIntoView({ block: 'nearest' });
+    }
+
+    function place() {
+      var rect = current._dd.getBoundingClientRect();
+      menu.style.minWidth = Math.max(rect.width, 160) + 'px';
+      var below = window.innerHeight - rect.bottom;
+      var height = menu.offsetHeight;
+      menu.style.left = Math.min(rect.left, window.innerWidth - menu.offsetWidth - 8) + 'px';
+      menu.style.top = (below < height + 12 && rect.top > below ? rect.top - height - 4 : rect.bottom + 4) + 'px';
+    }
+
+    function open(select) {
+      close();
+      current = select;
+      select._dd.querySelector('.dd-trigger').setAttribute('aria-expanded', 'true');
+      if (!menu.parentNode) document.body.appendChild(menu);
+      search.hidden = select.options.length < SEARCH_FROM;
+      search.value = '';
+      render('');
+      menu.hidden = false;
+      place();
+      (search.hidden ? list : search).focus({ preventScroll: true });
+    }
+
+    function close(refocus) {
+      if (!current) return;
+      var trigger = current._dd.querySelector('.dd-trigger');
+      trigger.setAttribute('aria-expanded', 'false');
+      menu.hidden = true;
+      if (refocus) trigger.focus();
+      current = null;
+    }
+
+    function choose(row) {
+      var select = current;
+      var index = Number(row.dataset.index);
+      var changed = index !== select.selectedIndex;
+      select.selectedIndex = index;
+      close(true);
+      if (changed) select.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    list.tabIndex = -1;
+    list.addEventListener('mousedown', function (e) { e.preventDefault(); });
+    list.addEventListener('click', function (e) {
+      var row = e.target.closest('.dd-option');
+      if (row) choose(row);
+    });
+    list.addEventListener('mousemove', function (e) {
+      var row = e.target.closest('.dd-option');
+      if (row) highlight(options().indexOf(row));
+    });
+    search.addEventListener('input', function () { render(search.value); });
+    menu.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); highlight(active + 1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); highlight(active - 1); }
+      else if (e.key === 'Enter') { e.preventDefault(); var rows = options(); if (rows[active]) choose(rows[active]); }
+      else if (e.key === 'Escape' || e.key === 'Tab') { e.preventDefault(); close(true); }
+      else if (search.hidden && e.key.length === 1) {
+        var rows = options();
+        var hit = rows.findIndex(function (r) { return r.textContent.trim().toLowerCase().indexOf(e.key.toLowerCase()) === 0; });
+        if (hit !== -1) highlight(hit);
+      }
+    });
+    document.addEventListener('mousedown', function (e) {
+      if (current && !menu.contains(e.target) && !current._dd.contains(e.target)) close();
+    });
+    window.addEventListener('resize', function () { close(); });
+    document.addEventListener('scroll', function (e) { if (current && !menu.contains(e.target)) close(); }, true);
+
+    document.querySelectorAll('select').forEach(enhance);
+    new MutationObserver(function (records) {
+      records.forEach(function (record) {
+        record.addedNodes.forEach(function (node) {
+          if (node.nodeType !== 1) return;
+          if (node.matches('select')) enhance(node);
+          node.querySelectorAll && node.querySelectorAll('select').forEach(enhance);
+        });
+      });
+    }).observe(document.body, { childList: true, subtree: true });
+  })();
+</script>
 
 <script>
   (function () {

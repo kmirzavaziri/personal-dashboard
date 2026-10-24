@@ -31,7 +31,7 @@ cp -r db.example db && dash server up
 - `transactions/` — message parsing rules: `patterns.yaml` (regex per message
   template, `action: record | alert | ignore`), `cards.yaml` (last4/name →
   account display), `categories/` (one file per category with its rules: vendor text or `re:` pattern, optional
-  time `slot`, default `note`, and `type` override), `time.yaml` (timezone, when the day starts, weekend days and
+  time `slot`, default `note`, and `type` override), `time.yaml` (timezone, when the day starts, the day of the month a budget period starts, weekend days and
   the time slots rules can target), `fx.yaml` (pegged rates), `types.yaml` (transaction types and which count as
   spending). Categories, notes and refunds are derived live from these rules; a transaction stores only its
   manual `category_override` and `note`.
