@@ -5,26 +5,25 @@ weekend:
 - sat
 - sun
 slots:
-- key: weekday_morning
-  label: Weekday morning · 5–10
-  days: weekday
-  start: 5
-  end: 10
-- key: weekday_midday
-  label: Weekday midday · 10–14
-  days: weekday
-  start: 10
-  end: 14
-- key: weekday_afternoon
-  label: Weekday afternoon · 14–18
-  days: weekday
-  start: 14
-  end: 18
-- key: weekday_evening
-  label: Weekday evening · 18–5
-  days: weekday
-  start: 18
-  end: 5
-- key: weekend
-  label: Weekend
-  days: weekend
+- key: workday_morning
+  label: Workday morning · 5–10
+  short: AM
+  windows:
+  - days: weekday
+    start: 5
+    end: 10
+- key: working_hours
+  label: Working hours · 10–18
+  short: Work
+  windows:
+  - days: weekday
+    start: 10
+    end: 18
+- key: off_hours
+  label: Off hours · evenings and weekends
+  short: 'Off'
+  windows:
+  - days: weekday
+    start: 18
+    end: 5
+  - days: weekend

@@ -143,8 +143,9 @@
       var option = select.options[select.selectedIndex];
       var el = select._dd.querySelector('.dd-label');
       if (select.multiple) {
-        var chosen = Array.prototype.map.call(select.selectedOptions, function (o) { return o.text; });
-        el.textContent = !chosen.length ? (select.dataset.placeholder || 'None') : chosen.length <= 2 ? chosen.join(', ') : chosen.length + ' selected';
+        var chosen = Array.prototype.map.call(select.selectedOptions, function (o) { return o.dataset.short || o.text; });
+        var compact = Array.prototype.every.call(select.selectedOptions, function (o) { return o.dataset.short; });
+        el.textContent = !chosen.length ? (select.dataset.placeholder || 'None') : (compact || chosen.length <= 2) ? chosen.join(', ') : chosen.length + ' selected';
         el.classList.toggle('placeholder', !chosen.length);
         return;
       }
@@ -305,7 +306,11 @@
       if (current && !menu.contains(e.target) && !current._dd.contains(e.target)) close();
     });
     window.addEventListener('resize', function () { close(); });
-    document.addEventListener('scroll', function (e) { if (current && !menu.contains(e.target)) close(); }, true);
+    document.addEventListener('scroll', function (e) {
+      if (!current || menu.contains(e.target)) return;
+      var rect = current._dd.getBoundingClientRect();
+      if (rect.bottom < 0 || rect.top > window.innerHeight) close(); else place();
+    }, true);
 
     document.addEventListener('change', function (e) {
       var select = e.target;
@@ -343,8 +348,9 @@
       var memory = 'tab:' + location.pathname + ':' + group;
       tabs.forEach(function (tab) {
         tab.addEventListener('click', function () {
-          show(tab.dataset.tab);
-          try { sessionStorage.setItem(memory, tab.dataset.tab); } catch (e) {}
+          var key = list.dataset.deselect && tab.getAttribute('aria-selected') === 'true' ? list.dataset.deselect : tab.dataset.tab;
+          show(key);
+          try { sessionStorage.setItem(memory, key); } catch (e) {}
         });
       });
       var remembered;

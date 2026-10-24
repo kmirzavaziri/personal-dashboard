@@ -47,11 +47,9 @@ class Period:
         return f'{self.range_label} · day {self.elapsed_days} of {self.length_days}'
 
 
-class Slot(BaseModel):
+class Window(BaseModel):
     model_config = ConfigDict(extra='forbid')
 
-    key: str
-    label: str
     days: str
     start: int | None = None
     end: int | None = None
@@ -64,6 +62,18 @@ class Slot(BaseModel):
         if self.start < self.end:
             return self.start <= hour < self.end
         return hour >= self.start or hour < self.end
+
+
+class Slot(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+    key: str
+    label: str
+    short: str
+    windows: list[Window]
+
+    def contains(self, day: str, hour: int, weekend: list[str]) -> bool:
+        return any(window.contains(day, hour, weekend) for window in self.windows)
 
 
 class Clock(BaseModel):

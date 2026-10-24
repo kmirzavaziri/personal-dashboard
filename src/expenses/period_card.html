@@ -16,7 +16,7 @@
         <span class="name"><span class="dot" style="--tone: {{ tone(r.category) }}"></span>{{ r.category }}</span>
         <span class="amount {{ r.status }}">{{ r.actual | fmt }}{% if r.budget > 0 %}<span class="muted"> / {{ r.budget | fmt }}</span>{% endif %}</span>
       </div>
-      <div class="bar thin toned" style="--tone: {{ tone(r.category) }}"><span style="width: {{ r.pct }}%"></span></div>
+      {% if r.budget > 0 %}<div class="bar thin toned" style="--tone: {{ tone(r.category) }}"><span style="width: {{ r.pct }}%"></span></div>{% endif %}
       {% if p.current and r.note %}<div class="bnote {{ r.status }}">{{ r.note }}</div>{% endif %}
     </div>
     {% endfor %}

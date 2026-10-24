@@ -14,6 +14,8 @@ HERE = Path(__file__).parent
 
 _DAYS_PER_MONTH = 365.25 / 12
 
+_MISC = 'Misc.'
+
 _WORKDAYS_PER_MONTH = _DAYS_PER_MONTH * 5 / 7
 
 _FREQ_TO_MONTHLY = {
@@ -48,9 +50,11 @@ def _budget_rows(entries, cat_totals: dict[str, float], period) -> list[dict]:
             name = entry.category_name or 'Uncategorized'
             actual_by_cat[name] = actual_by_cat.get(name, 0.0) + entry.tx.aed
 
+    budgeted = {cat for cat, budget in cat_totals.items() if budget > 0}
+    misc = sum(actual for cat, actual in actual_by_cat.items() if cat not in budgeted)
     rows = []
-    for cat in set(cat_totals) | set(actual_by_cat):
-        budget = cat_totals.get(cat, 0.0)
+    for cat in budgeted:
+        budget = cat_totals[cat]
         actual = actual_by_cat.get(cat, 0.0)
         status, projected = _budget_status(budget, actual, period.fraction)
         note = ''
@@ -71,7 +75,9 @@ def _budget_rows(entries, cat_totals: dict[str, float], period) -> list[dict]:
             'status': status,
             'note': note,
         })
-    rows.sort(key=lambda r: (r['category'] == 'Uncategorized', {'red': 0, 'yellow': 1, 'green': 2, 'none': 3}[r['status']], -r['actual']))
+    rows.sort(key=lambda r: ({'red': 0, 'yellow': 1, 'green': 2, 'none': 3}[r['status']], -r['actual']))
+    if misc:
+        rows.append({'category': _MISC, 'budget': 0.0, 'actual': misc, 'pct': 0, 'status': 'none', 'note': ''})
     return rows
 
 
@@ -260,7 +266,7 @@ def render_card_periods(services, account: str, before: str, count: int) -> str:
     periods = []
     period = ledger.clock.period(datetime.fromisoformat(before) - timedelta(seconds=1))
     while len(periods) < count and earliest is not None and period.end > earliest:
-        entries = sorted((e for e in ledger.between(period.start, period.end) if e.account == account),
+        entries = sorted((e for e in ledger.between(period.start, period.end) if not account or e.account == account),
                          key=lambda e: e.tx.ts, reverse=True)
         if entries:
             periods.append({
@@ -271,7 +277,8 @@ def render_card_periods(services, account: str, before: str, count: int) -> str:
             })
         period = ledger.clock.previous(period)
     more = earliest is not None and period.end > earliest
-    return _env(ledger).get_template('card_periods.html').render(periods=periods, more=more, categories=ledger.categories)
+    return _env(ledger).get_template('card_periods.html').render(
+        periods=periods, more=more, categories=ledger.categories, show_account=not account)
 
 
 def _matches_query(entry, terms: list[str]) -> bool:
@@ -310,6 +317,11 @@ def render(services) -> str:
         current_period=_period_summary(ledger, period, budgets, current=True),
         average=average,
         card_sections=_card_sections(config, period_entries),
+        all_cards={
+            'entries': sorted(period_entries, key=lambda e: e.tx.ts, reverse=True),
+            'total': sum(e.tx.aed for e in period_entries if e.spend),
+            'count': len(period_entries),
+        },
         categories=ledger.categories,
         category_cards=_category_cards(ledger, period_entries, category_averages, rule_averages),
         slots=clock.slots,
