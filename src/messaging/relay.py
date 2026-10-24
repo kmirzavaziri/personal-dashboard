@@ -113,9 +113,9 @@ def install(config) -> None:
     with PLIST.open('wb') as f:
         plistlib.dump(_launch_agent(config), f)
     PLIST.chmod(0o600)
-    if subprocess.run(['launchctl', 'bootstrap', _domain(), str(PLIST)], capture_output=True).returncode == 0:
-        return
-    subprocess.run(['launchctl', 'load', '-w', str(PLIST)], check=True, capture_output=True)
+    if subprocess.run(['launchctl', 'bootstrap', _domain(), str(PLIST)], capture_output=True).returncode != 0:
+        subprocess.run(['launchctl', 'load', '-w', str(PLIST)], check=True, capture_output=True)
+    subprocess.run(['launchctl', 'kickstart', f'{_domain()}/{LABEL}'], check=True, capture_output=True)
 
 
 def uninstall() -> None:
