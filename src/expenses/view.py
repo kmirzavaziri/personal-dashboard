@@ -1,10 +1,11 @@
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import transactions.service as tx_service
 from transactions.ledger import Ledger
 from core.item.schedule import build_pool
+from core.labels import colors_for
 from core.web.templating import make_env
 from expenses.reference import category_account, category_display, expense_accounts
 from pkg.model.io import read_yaml
@@ -99,10 +100,9 @@ def _category_cards(ledger, entries) -> list[dict]:
     } for category in ledger.categories]
 
 
-def render(services) -> str:
-    config = services.config
-    pool = build_pool(config)
 
+def _planned_accounts(config) -> dict[str, list[dict]]:
+    pool = build_pool(config)
     accounts: dict[str, list[dict]] = {a.key: [] for a in expense_accounts()}
 
     for key, item in sorted(pool.items(), key=lambda kv: kv[1].short_name):
@@ -128,15 +128,11 @@ def render(services) -> str:
             'workday':  False,
         })
 
-    recurring_raw = read_yaml(config.expenses_db / 'recurring.yaml') or []
-    for entry in recurring_raw:
+    for entry in read_yaml(config.expenses_db / 'recurring.yaml') or []:
         cost = entry.get('cost_aed', 0) or 0
         freq = entry.get('frequency', 'monthly')
-        account = entry.get('account', 'other')
-        if account not in accounts:
-            accounts[account] = []
         monthly = _to_monthly(cost, freq)
-        accounts[account].append({
+        accounts.setdefault(entry.get('account', 'other'), []).append({
             'name':      entry.get('name', ''),
             'category':  entry.get('category', ''),
             'store':     entry.get('store', ''),
@@ -147,66 +143,103 @@ def render(services) -> str:
             'per_event': cost,
             'workday':   freq == 'workday',
         })
+    return accounts
 
-    def _aggregate_by_store_category(rows: list[dict]) -> list[dict]:
-        totals: dict[tuple[str, str], float] = {}
+
+def _category_budgets(accounts: dict[str, list[dict]]) -> dict[str, float]:
+    totals: dict[str, float] = {}
+    for rows in accounts.values():
         for r in rows:
-            key = (r['store'], r['category'])
-            totals[key] = totals.get(key, 0.0) + r['monthly']
-        return [
-            {'store': store, 'category': category, 'monthly': total}
-            for (store, category), total in sorted(
-                totals.items(), key=lambda kv: (kv[0][1], kv[0][0])
-            )
-        ]
+            cat = r.get('category') or 'Other'
+            totals[cat] = totals.get(cat, 0.0) + r['monthly']
+    return totals
 
-    account_sections = []
+
+def _aggregate_by_store_category(rows: list[dict]) -> list[dict]:
+    totals: dict[tuple[str, str], float] = {}
+    for r in rows:
+        key = (r['store'], r['category'])
+        totals[key] = totals.get(key, 0.0) + r['monthly']
+    return [
+        {'store': store, 'category': category, 'monthly': total}
+        for (store, category), total in sorted(totals.items(), key=lambda kv: (kv[0][1], kv[0][0]))
+    ]
+
+
+def _account_sections(accounts: dict[str, list[dict]]) -> list[dict]:
+    sections = []
     for account in expense_accounts():
         raw = accounts.get(account.key, [])
         if not raw:
             continue
-        tracking = account.tracking
-        if tracking == 'monthly':
-            display_rows = _aggregate_by_store_category(raw)
-        else:
-            display_rows = raw
-        account_sections.append({
+        sections.append({
             'name':        account.key,
-            'tracking':    tracking,
-            'rows':        display_rows,
+            'tracking':    account.tracking,
+            'rows':        _aggregate_by_store_category(raw) if account.tracking == 'monthly' else raw,
             'total':       sum(r['monthly'] for r in raw),
-            'daily_total': sum(r['daily']   for r in raw),
+            'daily_total': sum(r['daily'] for r in raw),
         })
+    return sections
 
-    grand_total = sum(s['total'] for s in account_sections)
-    grand_daily = sum(s['daily_total'] for s in account_sections)
 
-    cat_totals: dict[str, float] = {}
-    for rows in accounts.values():
-        for r in rows:
-            cat = r.get('category') or 'Other'
-            cat_totals[cat] = cat_totals.get(cat, 0.0) + r['monthly']
-    by_category = sorted(cat_totals.items(), key=lambda kv: -kv[1])
+def _period_summary(ledger, period, budgets: dict[str, float], current: bool) -> dict:
+    rows = _budget_rows(ledger.between(period.start, period.end), budgets, period)
+    actual = sum(r['actual'] for r in rows)
+    budget = sum(budgets.values())
+    status, _ = _budget_status(budget, actual, period.fraction)
+    return {
+        'name': f'{period.day(period.length_days):%B %Y}',
+        'range': period.label if current else period.range_label,
+        'start': period.start.isoformat(),
+        'current': current,
+        'actual': actual,
+        'budget': budget,
+        'pct': min(actual / budget * 100, 100) if budget > 0 else 0,
+        'status': status,
+        'rows': rows,
+    }
 
+
+def _env(ledger):
+    tones = colors_for(c.name for c in ledger.categories)
+    env = make_env(HERE)
+    env.globals['tone'] = lambda name: tones.get(name, 'var(--faint)')
+    env.filters['fmt'] = lambda v: f'{v:,.0f}'
+    env.filters['fmt1'] = lambda v: f'{v:.1f}'
+    return env
+
+
+def render_previous_periods(services, before: str, count: int) -> str:
+    config = services.config
+    ledger = Ledger.load(config)
+    budgets = _category_budgets(_planned_accounts(config))
+    earliest = ledger.earliest
+    summaries = []
+    period = ledger.clock.period(datetime.fromisoformat(before) - timedelta(seconds=1))
+    while len(summaries) < count and earliest is not None and period.end > earliest:
+        summaries.append(_period_summary(ledger, period, budgets, current=False))
+        period = ledger.clock.previous(period)
+    more = earliest is not None and period.end > earliest
+    return _env(ledger).get_template('periods.html').render(periods=summaries, more=more)
+
+
+def render(services) -> str:
+    config = services.config
+    accounts = _planned_accounts(config)
+    account_sections = _account_sections(accounts)
+    budgets = _category_budgets(accounts)
     ledger = Ledger.load(config)
     clock = ledger.clock
     period = clock.period(datetime.now(timezone.utc))
     period_entries = ledger.between(period.start, period.end)
 
-    env = make_env(HERE)
-    env.filters['fmt']  = lambda v: f'{v:,.0f}'
-    env.filters['fmt1'] = lambda v: f'{v:.1f}'
-    env.filters['when'] = lambda ts: clock.local(datetime.fromisoformat(ts)).strftime('%a %b %-d · %H:%M')
-
-    tmpl = env.get_template('expenses.html')
-    return tmpl.render(
+    return _env(ledger).get_template('expenses.html').render(
         account_sections=account_sections,
-        grand_total=grand_total,
-        grand_daily=grand_daily,
-        by_category=by_category,
-        budget_rows=_budget_rows(period_entries, cat_totals, period),
+        grand_total=sum(s['total'] for s in account_sections),
+        grand_daily=sum(s['daily_total'] for s in account_sections),
+        by_category=sorted(budgets.items(), key=lambda kv: -kv[1]),
+        current_period=_period_summary(ledger, period, budgets, current=True),
         card_sections=_card_sections(config, period_entries),
-        period_label=period.label,
         categories=ledger.categories,
         category_cards=_category_cards(ledger, period_entries),
         slots=clock.slots,

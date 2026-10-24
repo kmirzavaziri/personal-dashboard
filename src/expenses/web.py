@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 from pydantic import ValidationError
 
 import transactions.service as tx_service
-from expenses.view import render
+from expenses.view import render, render_previous_periods
 from pkg.model.base import DoesNotExist
 
 
@@ -29,6 +29,10 @@ def make_expenses_bp(services) -> Blueprint:
     @bp.get('/expenses')
     def page():
         return render(services)
+
+    @bp.get('/expenses/periods')
+    def previous_periods():
+        return render_previous_periods(services, request.args['before'], int(request.args.get('count', 3)))
 
     @bp.post('/api/transaction/<tx_id>/category')
     def set_transaction_category(tx_id):

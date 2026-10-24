@@ -70,6 +70,10 @@ class Ledger:
         hidden = set(self._pairs) | set(self._pairs.values())
         return [entry for entry in self.entries if entry.tx.id not in hidden]
 
+    @property
+    def earliest(self) -> datetime | None:
+        return self.entries[0].tx.at if self.entries else None
+
     def between(self, start: datetime, end: datetime) -> list[Entry]:
         return [entry for entry in self.visible if start <= entry.tx.at < end]
 

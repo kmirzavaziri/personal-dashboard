@@ -89,6 +89,42 @@
 
 <script>
   (function () {
+    var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    var DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    function pad(n) { return String(n).padStart(2, '0'); }
+    function startOfDay(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+    function human(at, dateOnly, now) {
+      var minutes = Math.floor((now - at) / 60000);
+      var days = Math.round((startOfDay(now) - startOfDay(at)) / 86400000);
+      var clock = pad(at.getHours()) + ':' + pad(at.getMinutes());
+      var date = MONTHS[at.getMonth()] + ' ' + at.getDate() + (at.getFullYear() !== now.getFullYear() ? ', ' + at.getFullYear() : '');
+      if (dateOnly) return days === 0 ? 'Today' : days === 1 ? 'Yesterday' : days < 7 ? DAYS[at.getDay()] : date;
+      if (minutes < 1 && minutes > -1) return 'Now';
+      if (minutes >= 1 && minutes < 60) return minutes + 'm ago';
+      if (days === 0 && minutes < 360) return Math.floor(minutes / 60) + 'h ago';
+      if (days === 0) return clock;
+      if (days === 1) return 'Yesterday ' + clock;
+      if (days < 7 && days > 0) return DAYS[at.getDay()] + ' ' + clock;
+      return date + ', ' + clock;
+    }
+    window.humanizeTimes = function (root) {
+      var now = new Date();
+      (root || document).querySelectorAll('time[data-human]').forEach(function (el) {
+        var raw = el.getAttribute('datetime');
+        var dateOnly = el.dataset.human === 'date';
+        var at = dateOnly ? new Date(raw + 'T12:00:00') : new Date(raw);
+        if (isNaN(at)) return;
+        el.textContent = human(at, dateOnly, now);
+        if (!el.title) el.title = at.toLocaleString();
+      });
+    };
+    humanizeTimes();
+    setInterval(humanizeTimes, 60000);
+  })();
+</script>
+
+<script>
+  (function () {
     var CHEVRON = '<svg width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     var CHECK = '<svg class="dd-check" width="12" height="10" viewBox="0 0 12 10" aria-hidden="true"><path d="M1 5l3.5 3.5L11 1.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     var SEARCH_FROM = 9;
@@ -108,19 +144,21 @@
       var el = select._dd.querySelector('.dd-label');
       el.textContent = option ? option.text : '';
       el.classList.toggle('placeholder', !option || option.value === '');
+      if (select._dd.classList.contains('tone')) select._dd.style.setProperty('--tone', (option && option.dataset.tone) || 'var(--faint)');
     }
 
     function enhance(select) {
       if (select._dd || select.multiple || select.hasAttribute('data-native')) return;
       var wrap = document.createElement('span');
-      wrap.className = 'dd' + (select.classList.contains('input-quiet') ? ' quiet' : '');
+      var toned = select.classList.contains('tone');
+      wrap.className = 'dd' + (select.classList.contains('input-quiet') ? ' quiet' : '') + (toned ? ' tone' : '');
       var trigger = document.createElement('button');
       trigger.type = 'button';
       trigger.className = 'dd-trigger';
       trigger.setAttribute('aria-haspopup', 'listbox');
       trigger.setAttribute('aria-expanded', 'false');
       if (select.getAttribute('aria-label')) trigger.setAttribute('aria-label', select.getAttribute('aria-label'));
-      trigger.innerHTML = '<span class="dd-label"></span>' + CHEVRON;
+      trigger.innerHTML = (toned ? '<span class="dd-dot"></span>' : '') + '<span class="dd-label"></span>' + CHEVRON;
       trigger.disabled = select.disabled;
       select.parentNode.insertBefore(wrap, select);
       wrap.appendChild(select);
@@ -138,6 +176,7 @@
         get: function () { return indexProp.get.call(this); },
         set: function (v) { indexProp.set.call(this, v); label(this); },
       });
+      select.dataset.saved = select.value;
       select.addEventListener('change', function () { label(select); });
       trigger.addEventListener('click', function () { current === select ? close() : open(select); });
       trigger.addEventListener('keydown', function (e) {
@@ -160,6 +199,12 @@
         row.setAttribute('aria-selected', String(index === current.selectedIndex));
         row.dataset.index = index;
         row.innerHTML = CHECK;
+        if (option.dataset.tone) {
+          var dot = document.createElement('span');
+          dot.className = 'dd-dot';
+          dot.style.setProperty('--tone', option.dataset.tone);
+          row.appendChild(dot);
+        }
         row.appendChild(document.createTextNode(option.text));
         list.appendChild(row);
       });
@@ -244,6 +289,15 @@
     });
     window.addEventListener('resize', function () { close(); });
     document.addEventListener('scroll', function (e) { if (current && !menu.contains(e.target)) close(); }, true);
+
+    document.addEventListener('change', function (e) {
+      var select = e.target;
+      if (!select.matches || !select.matches('select[data-status-endpoint]')) return;
+      var previous = select.dataset.saved;
+      window.api(select.dataset.statusEndpoint + '/' + encodeURIComponent(select.dataset.key) + '/status', 'POST', { status: select.value })
+        .then(function () { select.dataset.saved = select.value; window.toast('Status: ' + select.options[select.selectedIndex].text); })
+        .catch(function () { select.value = previous; });
+    });
 
     document.querySelectorAll('select').forEach(enhance);
     new MutationObserver(function (records) {

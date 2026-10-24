@@ -5,34 +5,34 @@ from dataclasses import dataclass
 class Status:
     value: str
     label: str
-    css: str
+    tone: str
 
 
 STATUSES: dict[str, tuple[Status, ...]] = {
     'edible': (
-        Status('OK', 'OK', 'status-ok'),
-        Status('Low', 'Low', 'status-low'),
-        Status('Out', 'Out', 'status-out'),
-        Status('Basket', 'Basket', 'status-basket'),
-        Status('Ordered', 'Ordered', 'status-ordered'),
-        Status('', '—', 'muted'),
+        Status('OK', 'OK', 'var(--green)'),
+        Status('Low', 'Low', 'var(--yellow)'),
+        Status('Out', 'Out', 'var(--red)'),
+        Status('Basket', 'Basket', 'var(--accent)'),
+        Status('Ordered', 'Ordered', 'var(--c-mauve)'),
+        Status('', 'None', 'var(--faint)'),
     ),
     'durable': (
-        Status('pending', 'Pending', 'status-pending'),
-        Status('basket', 'Basket', 'status-basket'),
-        Status('ordered', 'Ordered', 'status-ordered'),
-        Status('owned', 'Owned', 'status-owned'),
-        Status('', '—', 'muted'),
+        Status('pending', 'Pending', 'var(--red)'),
+        Status('basket', 'Basket', 'var(--accent)'),
+        Status('ordered', 'Ordered', 'var(--c-mauve)'),
+        Status('owned', 'Owned', 'var(--green)'),
+        Status('', 'None', 'var(--faint)'),
     ),
     'clothing': (
-        Status('candidate', 'Candidate', 'card-tag-candidate'),
-        Status('deferred', 'Deferred', 'card-tag-deferred'),
-        Status('next_batch', 'Next batch', 'card-tag-next_batch'),
-        Status('unavailable', 'Out of my size', 'card-tag-unavailable'),
-        Status('pending', 'Pending', 'card-tag-pending'),
-        Status('basket', 'Basket', 'card-tag-basket'),
-        Status('ordered', 'Ordered', 'card-tag-ordered'),
-        Status('owned', 'Owned', 'card-tag-owned'),
+        Status('candidate', 'Candidate', 'var(--muted)'),
+        Status('deferred', 'Deferred', 'var(--c-teal)'),
+        Status('next_batch', 'Next batch', 'var(--c-clay)'),
+        Status('unavailable', 'Out of my size', 'var(--yellow)'),
+        Status('pending', 'Pending', 'var(--red)'),
+        Status('basket', 'Basket', 'var(--accent)'),
+        Status('ordered', 'Ordered', 'var(--c-mauve)'),
+        Status('owned', 'Owned', 'var(--green)'),
     ),
 }
 
@@ -41,5 +41,5 @@ def status_values(kind: str) -> tuple[str, ...]:
     return tuple(s.value for s in STATUSES[kind])
 
 
-def status_config(kind: str) -> dict[str, dict[str, str]]:
-    return {s.value: {'label': s.label, 'css': s.css} for s in STATUSES[kind]}
+def statuses(kind: str) -> tuple[Status, ...]:
+    return STATUSES[kind]

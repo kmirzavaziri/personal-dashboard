@@ -29,7 +29,7 @@ class Period:
 
     @property
     def elapsed_days(self) -> int:
-        return (self.now - self.start).days + 1
+        return min((self.now - self.start).days + 1, self.length_days)
 
     @property
     def fraction(self) -> float:
@@ -39,8 +39,12 @@ class Period:
         return self.start + timedelta(days=number - 1)
 
     @property
+    def range_label(self) -> str:
+        return f'{self.start:%b %-d} – {self.day(self.length_days):%b %-d}'
+
+    @property
     def label(self) -> str:
-        return f'{self.start:%b %-d} – {self.day(self.length_days):%b %-d} · day {self.elapsed_days} of {self.length_days}'
+        return f'{self.range_label} · day {self.elapsed_days} of {self.length_days}'
 
 
 class Slot(BaseModel):
@@ -84,6 +88,9 @@ class Clock(BaseModel):
         if local < start:
             start = self._period_start(*_shift_month(local.year, local.month, -1), local.tzinfo)
         return Period(start, self._period_start(*_shift_month(start.year, start.month, 1), local.tzinfo), local)
+
+    def previous(self, period: 'Period') -> 'Period':
+        return self.period(period.start - timedelta(seconds=1))
 
     def _period_start(self, year: int, month: int, tz) -> datetime:
         return datetime(year, month, min(self.period_starts_on, monthrange(year, month)[1]), tzinfo=tz)

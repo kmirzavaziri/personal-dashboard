@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "status_select.html" as st %}
 
 {% block title %}Styling{% endblock %}
 {% block heading %}Styling{% endblock %}
@@ -38,17 +39,6 @@
   }
   .card:hover .card-del, .card-del:focus-visible { opacity: 1; }
   @media (hover: hover) { .card-del:hover { border-color: var(--red); color: var(--red); background: var(--surface); } }
-  .card-tag { --tag: var(--muted); color: var(--tag); background: color-mix(in srgb, var(--tag) 14%, transparent); }
-  .styling-status-tag { cursor: pointer; }
-  .card-tag-owned { --tag: var(--green); }
-  .card-tag-pending { --tag: var(--red); }
-  .card-tag-basket { --tag: var(--accent); }
-  .card-tag-ordered { --tag: var(--c-mauve); }
-  .card-tag-candidate { --tag: var(--muted); }
-  .card-tag-deferred { --tag: var(--c-teal); }
-  .card-tag-next_batch { --tag: var(--c-clay); }
-  .card-tag-unavailable { --tag: var(--yellow); }
-  .status-pop .card-tag { background: none; }
   .size-ok  { color: var(--green); background: color-mix(in srgb, var(--green) 12%, transparent); }
   .size-no  { color: var(--red); background: color-mix(in srgb, var(--red) 12%, transparent); }
   .flags, .badges { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.25rem; }
@@ -89,8 +79,7 @@
     <div class="card-store">{{ item.store_display }}</div>
     {% if item.notes %}<div class="card-store">{{ item.notes }}</div>{% endif %}
     <div class="badges">
-      <span class="badge card-tag card-tag-{{ item.status }} styling-status-tag"
-            data-key="{{ item.key }}" data-status="{{ item.status }}">{{ item.status }}</span>
+      {{ st.status_select('clothing', '/api/styling', item.key, item.status) }}
       {% if item.metadata.clothing.size_ok is not none %}
         {% if item.metadata.clothing.size_ok %}<span class="badge size-ok">Size ✓</span>
         {% else %}<span class="badge size-no">Size ✗</span>{% endif %}
@@ -185,14 +174,7 @@
 {% endblock %}
 
 {% block scripts %}
-{% include "status_popover.html" %}
 <script>
-  initStatusPopover({
-    selector: '.styling-status-tag', endpoint: '/api/styling', mode: 'self',
-    selfBase: 'badge card-tag styling-status-tag', buttonBase: 'card-tag', buttonFont: '0.8rem',
-    statuses: {{ status_config('clothing') | tojson }},
-  });
-
   (function () {
     const sel = document.getElementById('decided-group');
     if (!sel) return;

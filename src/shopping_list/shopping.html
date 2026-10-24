@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "status_select.html" as st %}
 {% import "macros.html" as m %}
 
 {% block title %}Shopping list{% endblock %}
@@ -95,7 +96,7 @@
         {%- if item.metadata.edible.category == 'meal' -%}
           <span class="muted">—</span>
         {%- else -%}
-          <span class="status-cell" data-key="{{ item.key }}" data-status="{{ item.status or '' }}"></span>
+          {{ st.status_select('edible', '/api/item', item.key, item.status) }}
         {%- endif -%}
       </td>
       <td class="nowrap">
@@ -142,7 +143,7 @@
       <td class="thumb-col">{%- if item.image -%}<img src="{{ item.image }}" alt="">{%- endif -%}</td>
       <td>{{ item.short_name }}</td>
       <td class="num">{% if item.price %}{{ item.price | fmt_price }}{% else %}—{% endif %}</td>
-      <td class="gear-status-cell" data-key="{{ key }}" data-status="{{ item.status or '' }}"></td>
+      <td>{{ st.status_select('durable', '/api/gear', key, item.status) }}</td>
       <td>
         {%- if item.url -%}
         <a href="{{ item.url }}" target="_blank" rel="noopener" class="link">{{ item.source_title }}</a>
@@ -159,9 +160,4 @@
 {% endblock %}
 
 {% block scripts %}
-{% include "status_popover.html" %}
-<script>
-  initStatusPopover({selector: '.status-cell', endpoint: '/api/item', mode: 'inner', statuses: {{ status_config('edible') | tojson }}});
-  initStatusPopover({selector: '.gear-status-cell', endpoint: '/api/gear', mode: 'inner', statuses: {{ status_config('durable') | tojson }}});
-</script>
 {% endblock %}

@@ -1,0 +1,1 @@
+{% macro status_select(kind, endpoint, key, value) %}<select class="tone" data-status-endpoint="{{ endpoint }}" data-key="{{ key }}" aria-label="Status">{% for s in statuses(kind) %}<option value="{{ s.value }}" data-tone="{{ s.tone }}"{% if s.value == (value or '') %} selected{% endif %}>{{ s.label }}</option>{% endfor %}</select>{% endmacro %}

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "period_card.html" as pc %}
 
 {% block title %}Budget{% endblock %}
 {% block heading %}Budget{% endblock %}
@@ -10,7 +11,18 @@
   a.item-link { color: inherit; text-decoration: none; }
   a.item-link:hover { color: var(--accent); }
 
-  .budget-list { display: flex; flex-direction: column; gap: 0.9rem; }
+  .budget-list { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1.1rem; }
+  .period-total { font-size: 1.15rem; font-weight: 600; color: var(--strong); margin-bottom: 0.45rem; }
+  .period-total .muted { font-size: 0.85rem; font-weight: 400; }
+  .bar.thin { height: 4px; }
+  .bar.toned > span { background: var(--tone); }
+  .dot { display: inline-block; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--tone); margin-right: 0.5rem; vertical-align: 0.05em; }
+  .dot.lg { width: 0.6rem; height: 0.6rem; margin-right: 0; }
+  .amount.red { color: var(--red); }
+  .amount.yellow { color: var(--yellow); }
+  .cat-card .section-head { gap: 0.4rem; }
+  .periods-actions { display: flex; justify-content: center; padding: 0.4rem 0 1rem; }
+  .periods-actions[hidden] { display: none; }
   .budget-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; font-size: 0.86rem; margin-bottom: 0.3rem; }
   .budget-head .name { color: var(--strong); font-weight: 500; }
   .bnote { font-size: 0.74rem; margin-top: 0.3rem; color: var(--muted); }
@@ -21,7 +33,7 @@
   .amount.inflow { color: var(--green); }
   .when { color: var(--muted); white-space: nowrap; font-size: 0.8rem; }
   .venue { color: var(--strong); }
-  .tx-table .dd { width: 11rem; max-width: 100%; }
+
   .tx-table .tx-note { width: 100%; min-width: 8rem; }
 
   .cat-new { display: flex; gap: 0.5rem; margin-bottom: 0.9rem; }
@@ -58,25 +70,9 @@
 </nav>
 
 <div role="tabpanel" data-tabs="budget" data-tab="progress">
-<section>
-  <div class="section-head"><h2>Budget vs actual</h2><span class="muted">{{ period_label }}</span></div>
-  {% if budget_rows %}
-  <div class="budget-list">
-    {% for r in budget_rows %}
-    <div>
-      <div class="budget-head">
-        <span class="name">{{ r.category }}</span>
-        <span class="amount">AED {{ r.actual | fmt }}{% if r.budget > 0 %} <span class="muted">of {{ r.budget | fmt }}</span>{% else %} <span class="muted">· no budget</span>{% endif %}</span>
-      </div>
-      <div class="bar {{ r.status }}"><span style="width: {{ r.pct }}%"></span></div>
-      {% if r.note %}<div class="bnote {{ r.status }}">{{ r.note }}</div>{% endif %}
-    </div>
-    {% endfor %}
-  </div>
-  {% else %}
-  <div class="empty">No transactions recorded yet this period.</div>
-  {% endif %}
-</section>
+{{ pc.period_card(current_period) }}
+<div id="previous-periods"></div>
+<div class="periods-actions"><button class="btn btn-ghost" id="load-periods" type="button" data-before="{{ current_period.start }}">Previous months</button></div>
 </div>
 
 <div role="tabpanel" data-tabs="budget" data-tab="cards" hidden>
@@ -87,7 +83,7 @@
 <section role="tabpanel" data-tabs="card" data-tab="card-{{ loop.index }}" hidden>
   <div class="section-head">
     <h2>{{ c.account }}</h2>
-    <span class="muted">AED {{ c.total | fmt }} spent · {{ c.count }} this period</span>
+    {% if c.count %}<span class="muted amount">AED {{ c.total | fmt }} · {{ c.count }}</span>{% endif %}
   </div>
   {% if c.entries %}
   <table class="tx-table">
@@ -95,15 +91,15 @@
     <tbody>
       {% for e in c.entries %}
       <tr>
-        <td class="when">{{ e.tx.ts | when }}</td>
+        <td class="when"><time data-human datetime="{{ e.tx.ts }}">{{ e.tx.ts[:16] }}</time></td>
         <td class="venue">{{ e.tx.venue or e.type | replace('_', ' ') | capitalize }}</td>
         <td>
-          <select class="tx-cat input-quiet" data-id="{{ e.tx.id }}">
-            <option value="">Auto{% if e.match %} · {{ e.match.category.name }}{% endif %}</option>
-            {% for cat in categories %}<option value="{{ cat.key }}"{% if cat.key == e.tx.category_override %} selected{% endif %}>{{ cat.name }}</option>{% endfor %}
+          <select class="tx-cat tone" data-id="{{ e.tx.id }}" aria-label="Category">
+            <option value="" data-tone="{{ tone(e.match.category.name) if e.match else 'var(--faint)' }}">{% if e.match %}{{ e.match.category.name }} · auto{% else %}None{% endif %}</option>
+            {% for cat in categories %}<option value="{{ cat.key }}" data-tone="{{ tone(cat.name) }}"{% if cat.key == e.tx.category_override %} selected{% endif %}>{{ cat.name }}</option>{% endfor %}
           </select>
         </td>
-        <td><input class="tx-note input-quiet" data-id="{{ e.tx.id }}" value="{{ e.tx.note }}" placeholder="{{ e.default_note or 'Add a note' }}" maxlength="140"></td>
+        <td><input class="tx-note input-quiet" data-id="{{ e.tx.id }}" value="{{ e.tx.note }}" placeholder="{{ e.default_note or 'Note' }}" maxlength="140"></td>
         <td class="num amount{% if e.is_inflow %} inflow{% endif %}"{% if e.tx.currency and e.tx.currency != 'AED' %} data-tip="{{ e.tx.currency }} {{ e.tx.amount | abs }}"{% endif %}>{% if e.is_inflow %}+{% endif %}{{ e.tx.aed | abs | fmt }}</td>
       </tr>
       {% endfor %}
@@ -118,19 +114,20 @@
 
 <div role="tabpanel" data-tabs="budget" data-tab="categories" hidden>
 <form class="cat-new" id="cat-new">
-  <input name="name" placeholder="New category name" maxlength="40" required>
-  <button class="btn btn-primary" type="submit">Add category</button>
+  <input name="name" placeholder="New category" maxlength="40" required>
+  <button class="btn btn-primary" type="submit">Add</button>
 </form>
 {% for card in category_cards %}
 {% set cat = card.category %}
 <section class="cat-card" data-key="{{ cat.key }}">
   <div class="section-head">
+    <span class="dot lg" style="--tone: {{ tone(cat.name) }}"></span>
     <input class="cat-name input-quiet" value="{{ cat.name }}" maxlength="40" aria-label="Category name">
-    <span class="muted">AED {{ card.period_total | fmt }} this period</span>
-    <button class="btn btn-ghost btn-sm cat-delete" type="button">Delete</button>
+    <span class="muted amount">AED {{ card.period_total | fmt }}</span>
+    <button class="btn btn-ghost btn-sm btn-icon cat-delete" type="button" aria-label="Delete category" title="Delete category"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>
   </div>
   <table class="rules">
-    <thead><tr><th class="col-match">Vendor contains</th><th class="col-slot">When</th><th>Default note</th><th class="col-type">Counts as</th><th class="col-hits num">Hits</th><th class="col-x"></th></tr></thead>
+    <thead><tr><th class="col-match">Match</th><th class="col-slot">When</th><th>Note</th><th class="col-type">Counts as</th><th class="col-hits num">Hits</th><th class="col-x"></th></tr></thead>
     <tbody>
       {% for r in card.rules %}
       <tr class="rule">
@@ -183,17 +180,16 @@
 <dialog class="modal" id="delete-dialog">
   <form method="dialog">
     <h2>Delete <span id="delete-name"></span>?</h2>
-    <div class="muted">Its transactions need somewhere to go.</div>
     <div class="delete-choice">
-      <label><input type="radio" name="fate" value="move" checked> Move its rules and transactions to</label>
+      <label><input type="radio" name="fate" value="move" checked> Move to</label>
       <select id="delete-target">
         {% for cat in categories %}<option value="{{ cat.key }}">{{ cat.name }}</option>{% endfor %}
       </select>
-      <label><input type="radio" name="fate" value="drop"> Drop its rules and leave transactions uncategorized</label>
+      <label><input type="radio" name="fate" value="drop"> Leave uncategorized</label>
     </div>
     <div class="modal-actions">
       <button class="btn" value="cancel">Cancel</button>
-      <button class="btn btn-danger" value="confirm">Delete category</button>
+      <button class="btn btn-danger" value="confirm">Delete</button>
     </div>
   </form>
 </dialog>
@@ -266,7 +262,7 @@
 
 <div role="tabpanel" data-tabs="budget" data-tab="uncategorized" hidden>
 <section>
-  <div class="section-head"><h2>Uncategorized vendors</h2><span class="muted">All time, biggest first</span></div>
+  <div class="section-head"><h2>Uncategorized vendors</h2></div>
   {% if uncategorized %}
   <table>
     <thead><tr><th>Vendor</th><th class="num">Count</th><th>Last</th><th class="num">AED</th><th>Category</th></tr></thead>
@@ -275,12 +271,12 @@
       <tr>
         <td class="venue">{{ v.vendor }}</td>
         <td class="num muted">{{ v.count }}</td>
-        <td class="when">{{ v.last }}</td>
+        <td class="when"><time data-human="date" datetime="{{ v.last }}">{{ v.last }}</time></td>
         <td class="num amount">{{ v.total | fmt }}</td>
         <td>
-          <select class="vendor-cat input-quiet" data-vendor="{{ v.vendor }}">
-            <option value="">Choose…</option>
-            {% for cat in categories %}<option value="{{ cat.key }}">{{ cat.name }}</option>{% endfor %}
+          <select class="vendor-cat tone" data-vendor="{{ v.vendor }}" aria-label="Category">
+            <option value="">Choose</option>
+            {% for cat in categories %}<option value="{{ cat.key }}" data-tone="{{ tone(cat.name) }}">{{ cat.name }}</option>{% endfor %}
           </select>
         </td>
       </tr>
@@ -298,12 +294,41 @@
 {% block scripts %}
 <script>
   (function () {
+    var button = document.getElementById('load-periods');
+    var holder = document.getElementById('previous-periods');
+    var loading = false;
+    var sentinel = new IntersectionObserver(function (seen) {
+      if (seen.some(function (e) { return e.isIntersecting; })) load();
+    }, { rootMargin: '400px' });
+    function load() {
+      if (loading || !button.dataset.before) return;
+      loading = true;
+      button.disabled = true;
+      fetch('/expenses/periods?before=' + encodeURIComponent(button.dataset.before) + '&count=3')
+        .then(function (r) { return r.text(); })
+        .then(function (html) {
+          var chunk = document.createElement('div');
+          chunk.className = 'fade-in';
+          chunk.innerHTML = html;
+          var cards = chunk.querySelectorAll('.period-card');
+          var more = chunk.querySelector('.periods-more').dataset.more === 'true';
+          holder.appendChild(chunk);
+          if (cards.length) button.dataset.before = cards[cards.length - 1].dataset.start;
+          if (!more) { button.dataset.before = ''; button.parentNode.hidden = true; sentinel.disconnect(); }
+          else sentinel.observe(button);
+        })
+        .finally(function () { loading = false; button.disabled = false; });
+    }
+    button.addEventListener('click', load);
+  })();
+
+  (function () {
     document.querySelectorAll('input.tx-note').forEach(function (input) {
       var saved = input.value;
       function save() {
         if (input.value === saved) return;
         api('/api/transaction/' + input.dataset.id + '/note', 'POST', { note: input.value })
-          .then(function () { saved = input.value; toast('Note saved'); });
+          .then(function () { saved = input.value; toast('Saved'); });
       }
       input.addEventListener('blur', save);
       input.addEventListener('keydown', function (e) { if (e.key === 'Enter') input.blur(); });
@@ -350,7 +375,7 @@
       var state = card.querySelector('.save-state');
       state.textContent = 'Saving…';
       api('/api/categories/' + card.dataset.key, 'PUT', collect(card))
-        .then(function () { state.textContent = 'Saved · reload to refresh hits and totals'; })
+        .then(function () { state.textContent = 'Saved'; })
         .catch(function () { state.textContent = 'Not saved'; });
     }
 
