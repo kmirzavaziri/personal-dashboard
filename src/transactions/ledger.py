@@ -10,6 +10,8 @@ from transactions.transaction import Transaction, TransactionStore
 
 _REFUND_WINDOW = timedelta(days=120)
 _FX_REFUND_TOLERANCE = 0.05
+_SELF_TRANSFER_WINDOW = timedelta(days=3)
+_MOVEMENT_TYPES = {'transfer', 'income'}
 
 
 @dataclass(frozen=True)
@@ -28,6 +30,7 @@ class Entry:
     type: str
     spend: bool
     refunds: tuple[Transaction, ...] = ()
+    self_transfer: bool = False
 
     @property
     def aed(self) -> float:
@@ -65,7 +68,9 @@ class Ledger:
         resolved = [self._resolve(tx) for tx in sorted(transactions, key=lambda t: t.at)]
         refunds = _refunds_by_purchase(resolved)
         self._hidden = {tx.id for txs in refunds.values() for tx in txs}
-        self.entries = [replace(entry, refunds=tuple(refunds.get(entry.tx.id, ()))) for entry in resolved]
+        own = _self_transfers(resolved, set(self._accounts.values()))
+        self.entries = [replace(entry, refunds=tuple(refunds.get(entry.tx.id, ())), self_transfer=entry.tx.id in own)
+                        for entry in resolved]
         self._hidden |= {entry.tx.id for entry in self.entries if entry.refunds and not entry.partially_refunded}
 
     @classmethod
@@ -168,6 +173,20 @@ def _refunds_by_purchase(entries: list[Entry]) -> dict[str, list[Transaction]]:
         if purchase in full:
             open_purchases[entry.account].remove(purchase)
     return refunds
+
+
+def _self_transfers(entries: list[Entry], own_accounts: set[str]) -> set[str]:
+    outgoing = [e for e in entries if e.type == 'transfer' and e.tx.amount > 0 and e.account in own_accounts]
+    incoming = [e for e in entries if e.type in _MOVEMENT_TYPES and e.tx.amount < 0 and e.account in own_accounts]
+    paired: set[str] = set()
+    for out in outgoing:
+        match = next((inc for inc in incoming
+                      if inc.tx.id not in paired and inc.account != out.account
+                      and round(abs(inc.tx.aed), 2) == round(out.tx.aed, 2)
+                      and abs(inc.tx.at - out.tx.at) <= _SELF_TRANSFER_WINDOW), None)
+        if match is not None:
+            paired |= {out.tx.id, match.tx.id}
+    return paired
 
 
 def _fingerprint(directory: Path) -> tuple:

@@ -1,12 +1,15 @@
 import json
+import re
 import urllib.request
 from datetime import datetime, timedelta, timezone
+from html.parser import HTMLParser
 from urllib.error import URLError
 
 from pkg.model.io import read_yaml
 
 _TELEGRAM_API = 'https://api.telegram.org/bot{token}/sendMessage'
 _DUPLICATE_WINDOW = timedelta(days=2)
+_HTML_DOCUMENT = re.compile(r'\s*(<!doctype html|<html)', re.I)
 
 
 def _inbox_dir(config):
@@ -21,8 +24,37 @@ def relay_senders(config) -> list[str]:
     return list((_config(config).get('relay') or {}).get('senders') or [])
 
 
+class _VisibleText(HTMLParser):
+    _HIDDEN = {'style', 'script', 'head', 'title'}
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+        self._hidden = 0
+
+    def handle_starttag(self, tag, attrs):
+        if tag in self._HIDDEN:
+            self._hidden += 1
+
+    def handle_endtag(self, tag):
+        if tag in self._HIDDEN and self._hidden:
+            self._hidden -= 1
+
+    def handle_data(self, data):
+        if not self._hidden:
+            self.parts.append(data)
+
+
+def _visible_text(markup: str) -> str:
+    parser = _VisibleText()
+    parser.feed(markup)
+    return ' '.join(parser.parts)
+
+
 def text_of(payload) -> str:
     text = payload.get('text', '') if isinstance(payload, dict) else str(payload or '')
+    if _HTML_DOCUMENT.match(text):
+        text = _visible_text(text)
     return ' '.join(text.split())
 
 
