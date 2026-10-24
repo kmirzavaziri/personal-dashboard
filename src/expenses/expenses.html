@@ -1,9 +1,10 @@
 {% extends "base.html" %}
 {% import "period_card.html" as pc %}
+{% import "tx_table.html" as tt %}
 
 {% block title %}Budget{% endblock %}
 {% block heading %}Budget{% endblock %}
-{% block max_width %}980px{% endblock %}
+{% block max_width %}1180px{% endblock %}
 
 {% block extra_css %}
   .thumb { width: 22px; height: 22px; object-fit: contain; vertical-align: middle; border-radius: 5px; background: #fff; margin-right: 6px; }
@@ -22,7 +23,8 @@
   .dot.lg { width: 0.6rem; height: 0.6rem; margin-right: 0; }
   .amount.red { color: var(--red); }
   .amount.yellow { color: var(--yellow); }
-  .cat-card .section-head { gap: 0.4rem; }
+  .cat-head { display: flex; align-items: center; gap: 0.4rem; }
+  .cat-stats { font-size: 0.78rem; color: var(--strong); margin: 0 0 0.45rem 1.05rem; }
   .periods-actions { display: flex; justify-content: center; padding: 0.4rem 0 1rem; }
   .periods-actions[hidden] { display: none; }
   .budget-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; font-size: 0.86rem; margin-bottom: 0.3rem; }
@@ -37,24 +39,27 @@
   .venue { color: var(--strong); }
 
   .tx-table .tx-note { width: 100%; min-width: 8rem; }
+  .card-period { margin-top: 1.4rem; }
+  .card-period .section-head { margin-bottom: 0.3rem; }
+  .card-period h3 { margin: 0; }
 
   .cat-new { display: flex; gap: 0.5rem; margin-bottom: 0.9rem; }
   .cat-new input { flex: 1; max-width: 22rem; }
-  .cat-card .section-head { align-items: center; }
   input.cat-name {
     font-size: 0.95rem; font-weight: 600; color: var(--strong);
-    height: 2rem; flex: 1; min-width: 8rem; max-width: 20rem;
+    height: 1.9rem; flex: 1; min-width: 6rem; margin-left: -0.15rem;
   }
-  .rules th { white-space: nowrap; }
-  .rules td { padding-top: 0.25rem; padding-bottom: 0.25rem; }
-  .rules input, .rules .dd { width: 100%; }
-  .rules .col-match { width: 38%; }
-  .rules .col-slot { width: 21%; }
-  .rules .col-type { width: 13%; }
-  .rules .col-hits { width: 3.5rem; }
-  .rules .col-x { width: 2rem; }
-  .rules input.match { font-family: var(--font-mono); font-size: 0.76rem; }
-  .cat-foot { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.5rem; }
+  .cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 0.7rem; align-items: start; }
+  .cat-grid > section { margin: 0; padding: 0.75rem 0.8rem 0.6rem; }
+  .rules { display: flex; flex-direction: column; }
+  .rule { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 0 0.2rem; padding: 0.3rem 0; border-top: 1px solid var(--border); }
+  .rule input.match { font-family: var(--font-mono); font-size: 0.74rem; width: 100%; }
+  .rule .hits { font-size: 0.72rem; font-variant-numeric: tabular-nums; min-width: 1.5rem; text-align: right; }
+  .rule-meta { grid-column: 1 / -1; display: flex; gap: 0.15rem; align-items: center; }
+  .rule-meta .dd { flex: none; }
+  .rule-meta .dd-trigger { font-size: 0.74rem; color: var(--muted); }
+  .rule-meta .rule-note { flex: 1; min-width: 0; font-size: 0.74rem; }
+  .cat-foot { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.2rem; }
   .save-state { font-size: 0.74rem; color: var(--faint); }
   .delete-choice { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.8rem; font-size: 0.84rem; }
   .delete-choice label { display: flex; align-items: center; gap: 0.5rem; }
@@ -75,7 +80,7 @@
 {% if average.months %}<div class="average" title="Average over {{ average.months }} completed months"><span class="muted">Monthly average</span> <span class="amount">AED {{ average.amount | fmt }}</span></div>{% endif %}
 {{ pc.period_card(current_period) }}
 <div id="previous-periods"></div>
-<div class="periods-actions"><button class="btn btn-ghost" id="load-periods" type="button" data-before="{{ current_period.start }}">Previous months</button></div>
+<div class="periods-actions"><button class="btn btn-ghost load-more" type="button" data-url="/expenses/periods?count=3" data-before="{{ current_period.start }}">Previous months</button></div>
 </div>
 
 <div role="tabpanel" data-tabs="budget" data-tab="cards" hidden>
@@ -89,97 +94,60 @@
     {% if c.count %}<span class="muted amount">AED {{ c.total | fmt }} · {{ c.count }}</span>{% endif %}
   </div>
   {% if c.entries %}
-  <table class="tx-table">
-    <thead><tr><th>When</th><th>Where</th><th>Category</th><th>Note</th><th class="num">AED</th></tr></thead>
-    <tbody>
-      {% for e in c.entries %}
-      <tr>
-        <td class="when"><time data-human datetime="{{ e.tx.ts }}">{{ e.tx.ts[:16] }}</time></td>
-        <td class="venue">{{ e.tx.venue or e.type | replace('_', ' ') | capitalize }}</td>
-        <td>
-          <select class="tx-cat tone" data-id="{{ e.tx.id }}" aria-label="Category">
-            <option value="" data-tone="{{ tone(e.match.category.name) if e.match else 'var(--faint)' }}">{% if e.match %}{{ e.match.category.name }} · auto{% else %}None{% endif %}</option>
-            {% for cat in categories %}<option value="{{ cat.key }}" data-tone="{{ tone(cat.name) }}"{% if cat.key == e.tx.category_override %} selected{% endif %}>{{ cat.name }}</option>{% endfor %}
-          </select>
-        </td>
-        <td><input class="tx-note input-quiet" data-id="{{ e.tx.id }}" value="{{ e.tx.note }}" placeholder="{{ e.default_note or 'Note' }}" maxlength="140"></td>
-        <td class="num amount{% if e.is_inflow %} inflow{% endif %}"{% if e.tx.currency and e.tx.currency != 'AED' %} data-tip="{{ e.tx.currency }} {{ e.tx.amount | abs }}"{% endif %}>{% if e.is_inflow %}+{% endif %}{{ e.tx.aed | abs | fmt }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  {{ tt.tx_table(c.entries, categories) }}
   {% else %}
   <div class="empty">No transactions this period.</div>
   {% endif %}
+  <div class="card-history"></div>
+  <div class="periods-actions"><button class="btn btn-ghost load-more" type="button" data-url="/expenses/cards/periods?account={{ c.account | urlencode }}" data-before="{{ current_period.start }}">Previous months</button></div>
 </section>
 {% endfor %}
 </div>
 
 <div role="tabpanel" data-tabs="budget" data-tab="categories" hidden>
+{% macro rule_row(rule, hits) %}
+  <div class="rule">
+    <input class="match input-quiet" value="{{ rule.match if rule else '' }}" placeholder="Vendor text or re:pattern" aria-label="Match">
+    <span class="hits muted" title="Matching transactions">{{ hits if rule else '' }}</span>
+    <button class="btn btn-ghost btn-sm btn-icon rule-remove" type="button" aria-label="Remove rule">×</button>
+    <div class="rule-meta">
+      <select class="slot input-quiet" aria-label="When">
+        <option value="">Any time</option>
+        {% for s in slots %}<option value="{{ s.key }}"{% if rule and s.key == rule.slot %} selected{% endif %}>{{ s.label }}</option>{% endfor %}
+      </select>
+      <select class="type input-quiet" aria-label="Counts as">
+        <option value="">As parsed</option>
+        {% for t in types %}<option value="{{ t }}"{% if rule and t == rule.type %} selected{% endif %}>{{ t | replace('_', ' ') | capitalize }}</option>{% endfor %}
+      </select>
+      <input class="rule-note input-quiet" value="{{ rule.note if rule else '' }}" placeholder="Note" maxlength="80" aria-label="Default note">
+    </div>
+  </div>
+{% endmacro %}
 <form class="cat-new" id="cat-new">
   <input name="name" placeholder="New category" maxlength="40" required>
   <button class="btn btn-primary" type="submit">Add</button>
 </form>
+<div class="cat-grid">
 {% for card in category_cards %}
 {% set cat = card.category %}
 <section class="cat-card" data-key="{{ cat.key }}">
-  <div class="section-head">
+  <div class="cat-head">
     <span class="dot lg" style="--tone: {{ tone(cat.name) }}"></span>
     <input class="cat-name input-quiet" value="{{ cat.name }}" maxlength="40" aria-label="Category name">
-    <span class="muted amount">AED {{ card.period_total | fmt }}</span>
     <button class="btn btn-ghost btn-sm btn-icon cat-delete" type="button" aria-label="Delete category" title="Delete category"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>
   </div>
-  <table class="rules">
-    <thead><tr><th class="col-match">Match</th><th class="col-slot">When</th><th>Note</th><th class="col-type">Counts as</th><th class="col-hits num">Hits</th><th class="col-x"></th></tr></thead>
-    <tbody>
-      {% for r in card.rules %}
-      <tr class="rule">
-        <td><input class="match input-quiet" value="{{ r.rule.match }}" placeholder="e.g. STARBUCKS or re:CAFE|COFFEE"></td>
-        <td>
-          <select class="slot input-quiet">
-            <option value="">Any time</option>
-            {% for s in slots %}<option value="{{ s.key }}"{% if s.key == r.rule.slot %} selected{% endif %}>{{ s.label }}</option>{% endfor %}
-          </select>
-        </td>
-        <td><input class="rule-note input-quiet" value="{{ r.rule.note }}" placeholder="—" maxlength="80"></td>
-        <td>
-          <select class="type input-quiet">
-            <option value="">As parsed</option>
-            {% for t in types %}<option value="{{ t }}"{% if t == r.rule.type %} selected{% endif %}>{{ t | replace('_', ' ') | capitalize }}</option>{% endfor %}
-          </select>
-        </td>
-        <td class="num muted">{{ r.hits }}</td>
-        <td><button class="btn btn-ghost btn-sm btn-icon rule-remove" type="button" aria-label="Remove rule">×</button></td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="cat-stats"><span class="amount">AED {{ card.period_total | fmt }}</span> <span class="muted">this month · avg {{ card.average | fmt }}</span></div>
+  <div class="rules">
+    {% for r in card.rules %}{{ rule_row(r.rule, r.hits) }}{% endfor %}
+  </div>
   <div class="cat-foot">
-    <button class="btn btn-sm rule-add" type="button">Add rule</button>
+    <button class="btn btn-ghost btn-sm rule-add" type="button">+ Rule</button>
     <span class="save-state"></span>
   </div>
 </section>
 {% endfor %}
-<template id="rule-row">
-  <tr class="rule">
-    <td><input class="match input-quiet" placeholder="e.g. STARBUCKS or re:CAFE|COFFEE"></td>
-    <td>
-      <select class="slot input-quiet">
-        <option value="">Any time</option>
-        {% for s in slots %}<option value="{{ s.key }}">{{ s.label }}</option>{% endfor %}
-      </select>
-    </td>
-    <td><input class="rule-note input-quiet" placeholder="—" maxlength="80"></td>
-    <td>
-      <select class="type input-quiet">
-        <option value="">As parsed</option>
-        {% for t in types %}<option value="{{ t }}">{{ t | replace('_', ' ') | capitalize }}</option>{% endfor %}
-      </select>
-    </td>
-    <td class="num muted">–</td>
-    <td><button class="btn btn-ghost btn-sm btn-icon rule-remove" type="button" aria-label="Remove rule">×</button></td>
-  </tr>
-</template>
+</div>
+<template id="rule-row">{{ rule_row(none, 0) }}</template>
 <dialog class="modal" id="delete-dialog">
   <form method="dialog">
     <h2>Delete <span id="delete-name"></span>?</h2>
@@ -297,51 +265,53 @@
 {% block scripts %}
 <script>
   (function () {
-    var button = document.getElementById('load-periods');
-    var holder = document.getElementById('previous-periods');
-    var loading = false;
     var sentinel = new IntersectionObserver(function (seen) {
-      if (seen.some(function (e) { return e.isIntersecting; })) load();
+      seen.forEach(function (e) { if (e.isIntersecting) load(e.target); });
     }, { rootMargin: '400px' });
-    function load() {
-      if (loading || !button.dataset.before) return;
-      loading = true;
+    function load(button) {
+      if (button.dataset.loading || !button.dataset.before) return;
+      button.dataset.loading = '1';
       button.disabled = true;
-      fetch('/expenses/periods?before=' + encodeURIComponent(button.dataset.before) + '&count=3')
+      var holder = button.closest('.periods-actions').previousElementSibling;
+      fetch(button.dataset.url + '&before=' + encodeURIComponent(button.dataset.before))
         .then(function (r) { return r.text(); })
         .then(function (html) {
           var chunk = document.createElement('div');
           chunk.className = 'fade-in';
           chunk.innerHTML = html;
-          var cards = chunk.querySelectorAll('.period-card');
-          var more = chunk.querySelector('.periods-more').dataset.more === 'true';
+          var periods = chunk.querySelectorAll('[data-start]');
+          var more = chunk.querySelector('.lazy-more').dataset.more === 'true';
           holder.appendChild(chunk);
-          if (cards.length) button.dataset.before = cards[cards.length - 1].dataset.start;
-          if (!more) { button.dataset.before = ''; button.parentNode.hidden = true; sentinel.disconnect(); }
+          humanizeTimes(chunk);
+          if (periods.length) button.dataset.before = periods[periods.length - 1].dataset.start;
+          if (!more) { button.dataset.before = ''; button.closest('.periods-actions').hidden = true; sentinel.unobserve(button); }
           else sentinel.observe(button);
         })
-        .finally(function () { loading = false; button.disabled = false; });
+        .finally(function () { delete button.dataset.loading; button.disabled = false; });
     }
-    button.addEventListener('click', load);
+    document.querySelectorAll('.load-more').forEach(function (button) {
+      button.addEventListener('click', function () { load(button); });
+    });
   })();
 
   (function () {
-    document.querySelectorAll('input.tx-note').forEach(function (input) {
-      var saved = input.value;
-      function save() {
-        if (input.value === saved) return;
-        api('/api/transaction/' + input.dataset.id + '/note', 'POST', { note: input.value })
-          .then(function () { saved = input.value; toast('Saved'); });
-      }
-      input.addEventListener('blur', save);
-      input.addEventListener('keydown', function (e) { if (e.key === 'Enter') input.blur(); });
+    document.addEventListener('focusin', function (e) {
+      if (e.target.matches('input.tx-note') && e.target.dataset.saved === undefined) e.target.dataset.saved = e.target.value;
     });
-
-    document.querySelectorAll('select.tx-cat').forEach(function (sel) {
-      sel.addEventListener('change', function () {
-        api('/api/transaction/' + sel.dataset.id + '/category', 'POST', { category: sel.value })
-          .then(function () { toast(sel.value ? 'Category set' : 'Back to automatic'); });
-      });
+    document.addEventListener('focusout', function (e) {
+      var input = e.target;
+      if (!input.matches('input.tx-note') || input.value === input.dataset.saved) return;
+      api('/api/transaction/' + input.dataset.id + '/note', 'POST', { note: input.value })
+        .then(function () { input.dataset.saved = input.value; toast('Saved'); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && e.target.matches('input.tx-note')) e.target.blur();
+    });
+    document.addEventListener('change', function (e) {
+      var sel = e.target;
+      if (!sel.matches('select.tx-cat')) return;
+      api('/api/transaction/' + sel.dataset.id + '/category', 'POST', { category: sel.value })
+        .then(function () { toast(sel.value ? 'Category set' : 'Back to automatic'); });
     });
 
     document.querySelectorAll('select.vendor-cat').forEach(function (sel) {
@@ -363,7 +333,7 @@
     function collect(card) {
       return {
         name: card.querySelector('.cat-name').value.trim(),
-        rules: Array.prototype.map.call(card.querySelectorAll('tr.rule'), function (row) {
+        rules: Array.prototype.map.call(card.querySelectorAll('.rule'), function (row) {
           return {
             match: row.querySelector('.match').value.trim(),
             slot: row.querySelector('.slot').value,
@@ -388,10 +358,10 @@
       card.addEventListener('change', function (e) { if (e.target.matches('input, select')) soon(); });
       card.addEventListener('keydown', function (e) { if (e.key === 'Enter' && e.target.matches('input')) e.target.blur(); });
       card.addEventListener('click', function (e) {
-        if (e.target.closest('.rule-remove')) { e.target.closest('tr').remove(); save(card); }
+        if (e.target.closest('.rule-remove')) { e.target.closest('.rule').remove(); save(card); }
         if (e.target.closest('.rule-add')) {
           var row = document.getElementById('rule-row').content.firstElementChild.cloneNode(true);
-          card.querySelector('.rules tbody').appendChild(row);
+          card.querySelector('.rules').appendChild(row);
           row.querySelector('.match').focus();
         }
         if (e.target.closest('.cat-delete')) openDelete(card);

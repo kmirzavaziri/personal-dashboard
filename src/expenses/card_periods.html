@@ -1,0 +1,8 @@
+{% import "tx_table.html" as tt %}
+{% for p in periods %}
+<div class="card-period" data-start="{{ p.start }}">
+  <div class="section-head"><h3>{{ p.name }}</h3><span class="muted amount">AED {{ p.total | fmt }} · {{ p.entries | length }}</span></div>
+  {{ tt.tx_table(p.entries, categories) }}
+</div>
+{% endfor %}
+<div class="lazy-more" data-more="{{ 'true' if more else 'false' }}"></div>

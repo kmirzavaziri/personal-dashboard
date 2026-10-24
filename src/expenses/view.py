@@ -87,7 +87,7 @@ def _card_sections(config, entries) -> list[dict]:
     } for account, entries in cards.items()]
 
 
-def _category_cards(ledger, entries) -> list[dict]:
+def _category_cards(ledger, entries, averages: dict[str, float]) -> list[dict]:
     hits = ledger.rule_hits()
     period_totals: dict[str, float] = {}
     for entry in entries:
@@ -96,6 +96,7 @@ def _category_cards(ledger, entries) -> list[dict]:
     return [{
         'category': category,
         'period_total': period_totals.get(category.key, 0.0),
+        'average': averages.get(category.key, 0.0),
         'rules': [{'rule': rule, 'hits': hits[(category.key, index)]} for index, rule in enumerate(category.rules)],
     } for category in ledger.categories]
 
@@ -200,14 +201,24 @@ def _period_summary(ledger, period, budgets: dict[str, float], current: bool) ->
     }
 
 
-def _average_period_spend(ledger, current) -> dict:
+def _monthly_averages(ledger, current) -> tuple[dict, dict[str, float]]:
     totals: dict[datetime, float] = {}
+    by_category: dict[str, dict[datetime, float]] = {}
     for entry in ledger.visible:
-        if entry.spend:
-            start = ledger.clock.period(entry.tx.at).start
-            totals[start] = totals.get(start, 0.0) + entry.tx.aed
-    complete = [total for start, total in sorted(totals.items())[1:] if start < current.start]
-    return {'amount': sum(complete) / len(complete) if complete else 0.0, 'months': len(complete)}
+        if not entry.spend:
+            continue
+        start = ledger.clock.period(entry.tx.at).start
+        totals[start] = totals.get(start, 0.0) + entry.tx.aed
+        if entry.category:
+            months = by_category.setdefault(entry.category.key, {})
+            months[start] = months.get(start, 0.0) + entry.tx.aed
+    complete = [start for start in sorted(totals)[1:] if start < current.start]
+    overall = sum(totals[start] for start in complete)
+    count = len(complete) or 1
+    return (
+        {'amount': overall / count, 'months': len(complete)},
+        {key: sum(months.get(start, 0.0) for start in complete) / count for key, months in by_category.items()},
+    )
 
 
 def _env(ledger):
@@ -233,6 +244,26 @@ def render_previous_periods(services, before: str, count: int) -> str:
     return _env(ledger).get_template('periods.html').render(periods=summaries, more=more)
 
 
+def render_card_periods(services, account: str, before: str, count: int) -> str:
+    ledger = Ledger.load(services.config)
+    earliest = ledger.earliest
+    periods = []
+    period = ledger.clock.period(datetime.fromisoformat(before) - timedelta(seconds=1))
+    while len(periods) < count and earliest is not None and period.end > earliest:
+        entries = sorted((e for e in ledger.between(period.start, period.end) if e.account == account),
+                         key=lambda e: e.tx.ts, reverse=True)
+        if entries:
+            periods.append({
+                'name': f'{period.day(period.length_days):%B %Y}',
+                'start': period.start.isoformat(),
+                'total': sum(e.tx.aed for e in entries if e.spend),
+                'entries': entries,
+            })
+        period = ledger.clock.previous(period)
+    more = earliest is not None and period.end > earliest
+    return _env(ledger).get_template('card_periods.html').render(periods=periods, more=more, categories=ledger.categories)
+
+
 def render(services) -> str:
     config = services.config
     accounts = _planned_accounts(config)
@@ -242,6 +273,7 @@ def render(services) -> str:
     clock = ledger.clock
     period = clock.period(datetime.now(timezone.utc))
     period_entries = ledger.between(period.start, period.end)
+    average, category_averages = _monthly_averages(ledger, period)
 
     return _env(ledger).get_template('expenses.html').render(
         account_sections=account_sections,
@@ -249,10 +281,10 @@ def render(services) -> str:
         grand_daily=sum(s['daily_total'] for s in account_sections),
         by_category=sorted(budgets.items(), key=lambda kv: -kv[1]),
         current_period=_period_summary(ledger, period, budgets, current=True),
-        average=_average_period_spend(ledger, period),
+        average=average,
         card_sections=_card_sections(config, period_entries),
         categories=ledger.categories,
-        category_cards=_category_cards(ledger, period_entries),
+        category_cards=_category_cards(ledger, period_entries, category_averages),
         slots=clock.slots,
         types=tx_service.type_keys(config),
         uncategorized=ledger.uncategorized_vendors(),

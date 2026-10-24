@@ -1,0 +1,21 @@
+{% macro tx_table(entries, categories) %}
+  <table class="tx-table">
+    <thead><tr><th>When</th><th>Where</th><th>Category</th><th>Note</th><th class="num">AED</th></tr></thead>
+    <tbody>
+      {% for e in entries %}
+      <tr>
+        <td class="when"><time data-human datetime="{{ e.tx.ts }}">{{ e.tx.ts[:16] }}</time></td>
+        <td class="venue">{{ e.tx.venue or e.type | replace('_', ' ') | capitalize }}</td>
+        <td>
+          <select class="tx-cat tone" data-id="{{ e.tx.id }}" aria-label="Category">
+            <option value="" data-tone="{{ tone(e.match.category.name) if e.match else 'var(--faint)' }}">{% if e.match %}{{ e.match.category.name }} · auto{% else %}None{% endif %}</option>
+            {% for cat in categories %}<option value="{{ cat.key }}" data-tone="{{ tone(cat.name) }}"{% if cat.key == e.tx.category_override %} selected{% endif %}>{{ cat.name }}</option>{% endfor %}
+          </select>
+        </td>
+        <td><input class="tx-note input-quiet" data-id="{{ e.tx.id }}" value="{{ e.tx.note }}" placeholder="{{ e.default_note or 'Note' }}" maxlength="140"></td>
+        <td class="num amount{% if e.is_inflow %} inflow{% endif %}"{% if e.tx.currency and e.tx.currency != 'AED' %} data-tip="{{ e.tx.currency }} {{ e.tx.amount | abs }}"{% endif %}>{% if e.is_inflow %}+{% endif %}{{ e.tx.aed | abs | fmt }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endmacro %}

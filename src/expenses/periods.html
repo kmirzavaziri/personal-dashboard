@@ -1,3 +1,3 @@
 {% import "period_card.html" as pc %}
 {% for p in periods %}{{ pc.period_card(p) }}{% endfor %}
-<div class="periods-more" data-more="{{ 'true' if more else 'false' }}"></div>
+<div class="lazy-more" data-more="{{ 'true' if more else 'false' }}"></div>
