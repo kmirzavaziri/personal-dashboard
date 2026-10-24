@@ -2,8 +2,8 @@
 key: coffee
 name: Coffee
 rules:
-- match: re:COFFEE|CAFE
-- match: re:COFFEE|CAFE
+- match: STARBUCKS
+- match: STARBUCKS
   slots:
   - off_hours
   note: weekend treat

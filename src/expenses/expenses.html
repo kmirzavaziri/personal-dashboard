@@ -64,7 +64,8 @@
   .rules::-webkit-scrollbar { width: 6px; }
   .rules::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
   .rule { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 0 0.2rem; padding: 0.15rem 0; border-top: 1px solid var(--border); }
-  .rule input.match { font-family: var(--font-mono); font-size: 0.74rem; width: 100%; height: 1.25rem; padding: 0 0.25rem; }
+  .rule .dd:has(select.match) { width: 100%; min-width: 0; }
+  .rule .dd:has(select.match) .dd-trigger { font-size: 0.78rem; color: var(--strong); height: 1.4rem; padding: 0 0.3rem; }
   .rule .rule-remove { height: 1.2rem; width: 1.2rem; }
   .rules [data-tip]::after { bottom: auto; top: 50%; right: calc(100% + 6px); transform: translateY(-50%); }
   .rule .hits { font-size: 0.72rem; font-variant-numeric: tabular-nums; min-width: 1.5rem; text-align: right; }
@@ -136,7 +137,9 @@
 <div role="tabpanel" data-tabs="budget" data-tab="categories" hidden>
 {% macro rule_row(rule, hits, average, months) %}
   <div class="rule">
-    <input class="match input-quiet" value="{{ rule.match if rule else '' }}" placeholder="Vendor text or re:pattern" aria-label="Match">
+    <select class="match input-quiet" data-options-from="vendor-options" data-placeholder="Pick a vendor" aria-label="Vendor">
+      {% if rule %}<option value="{{ rule.match }}" selected>{{ type_labels.get(rule.match, rule.match) }}</option>{% else %}<option value="" selected>Pick a vendor</option>{% endif %}
+    </select>
     <span class="hits muted"{% if rule %} data-tip="Total {{ (average * months) | fmt }} over {{ months }} months"{% endif %}>{% if rule %}{{ dh }}{{ average | compact }}/mo<span class="faint"> · {{ hits }} tx</span>{% endif %}</span>
     <button class="btn btn-ghost btn-sm btn-icon rule-remove" type="button" aria-label="Remove rule">×</button>
     <div class="rule-meta">
@@ -175,6 +178,10 @@
 </section>
 {% endfor %}
 </div>
+<template id="vendor-options">
+  {% for t in types %}<option value="{{ t }}">Any {{ t | replace('_', ' ') }}</option>{% endfor %}
+  {% for v in vendors %}<option value="{{ v }}">{{ v }}</option>{% endfor %}
+</template>
 <template id="rule-row">{{ rule_row(none, 0, 0, 0) }}</template>
 <dialog class="modal" id="delete-dialog">
   <form method="dialog">
@@ -439,7 +446,7 @@
         if (e.target.closest('.rule-add')) {
           var row = document.getElementById('rule-row').content.firstElementChild.cloneNode(true);
           card.querySelector('.rules').appendChild(row);
-          row.querySelector('.match').focus();
+          var trigger = row.querySelector('.dd-trigger'); if (trigger) trigger.click();
         }
         if (e.target.closest('.cat-delete')) openDelete(card);
       });

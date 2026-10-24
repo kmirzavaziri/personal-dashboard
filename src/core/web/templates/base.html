@@ -238,8 +238,25 @@
       menu.style.top = (below < height + 12 && rect.top > below ? rect.top - height - 4 : rect.bottom + 4) + 'px';
     }
 
+    function loadOptions(select) {
+      var source = select.dataset.optionsFrom && document.getElementById(select.dataset.optionsFrom);
+      if (!source || select._optionsLoaded) return;
+      var chosen = select.value;
+      var known = false;
+      select.innerHTML = '';
+      Array.prototype.forEach.call(source.content.children, function (option) {
+        var copy = option.cloneNode(true);
+        known = known || copy.value === chosen;
+        select.appendChild(copy);
+      });
+      if (chosen && !known) select.insertBefore(new Option(chosen, chosen), select.firstChild);
+      select.value = chosen;
+      select._optionsLoaded = true;
+    }
+
     function open(select) {
       close();
+      loadOptions(select);
       current = select;
       select._dd.querySelector('.dd-trigger').setAttribute('aria-expanded', 'true');
       var host = select.closest('dialog[open]') || document.body;
@@ -250,6 +267,7 @@
       render('');
       menu.hidden = false;
       place();
+      highlight(active);
       (search.hidden ? list : search).focus({ preventScroll: true });
     }
 

@@ -2,4 +2,5 @@
 key: food
 name: Food
 rules:
-- match: 're:RESTAURANT|PIZZA|BURGER|SUPERMARKET'
+- match: talabat.com
+- match: cash_withdrawal

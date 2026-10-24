@@ -103,6 +103,10 @@ class Ledger:
     def rule_hits(self) -> Counter:
         return Counter((e.match.category.key, e.match.index) for e in self.visible if e.match and not e.tx.category_override)
 
+    def vendors(self) -> list[str]:
+        counts = Counter(entry.tx.vendor for entry in self.visible if entry.tx.vendor)
+        return [vendor for vendor, _ in counts.most_common()]
+
     def uncategorized_vendors(self) -> list[dict]:
         totals: dict[str, dict] = {}
         for entry in self.visible:
@@ -121,7 +125,7 @@ class Ledger:
             Match(category, rule, index)
             for category in self.categories
             for index, rule in enumerate(category.rules)
-            if rule.matches(tx.rule_haystack, slots_now)
+            if rule.matches(tx.vendor, tx.type, slots_now)
         ]
         return max(candidates, key=lambda m: m.rule.precedence, default=None)
 

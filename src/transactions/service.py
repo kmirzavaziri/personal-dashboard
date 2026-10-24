@@ -284,11 +284,6 @@ def save_category(config, key: str, name: str, rules: list[dict]) -> Category:
                 raise ValueError(f'unknown time slot {slot!r}')
         if rule.type and rule.type not in types:
             raise ValueError(f'unknown transaction type {rule.type!r}')
-        if rule.is_pattern:
-            try:
-                re.compile(rule.match[3:])
-            except re.error as error:
-                raise ValueError(f'invalid pattern {rule.match!r}: {error}') from error
     category.name = name.strip() or category.name
     category.rules = parsed
     category.save()

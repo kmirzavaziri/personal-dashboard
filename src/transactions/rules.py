@@ -128,19 +128,13 @@ class Rule(BaseModel):
     type: str = ''
 
     @property
-    def is_pattern(self) -> bool:
-        return self.match.startswith('re:')
+    def precedence(self) -> bool:
+        return bool(self.slots)
 
-    @property
-    def precedence(self) -> tuple[bool, bool]:
-        return bool(self.slots), not self.is_pattern
-
-    def matches(self, haystack: str, slots_now: set[str]) -> bool:
+    def matches(self, vendor: str, type_key: str, slots_now: set[str]) -> bool:
         if self.slots and not slots_now.intersection(self.slots):
             return False
-        if self.is_pattern:
-            return re.search(self.match[3:], haystack, re.I) is not None
-        return self.match.casefold() in haystack.casefold()
+        return self.match.casefold() in (vendor.casefold(), type_key.casefold())
 
 
 class Category(Model):

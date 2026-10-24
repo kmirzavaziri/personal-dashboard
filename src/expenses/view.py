@@ -330,5 +330,7 @@ def render(services) -> str:
         category_cards=_category_cards(ledger, period_entries, category_averages, rule_averages),
         slots=clock.slots,
         types=tx_service.type_keys(config),
+        vendors=ledger.vendors(),
+        type_labels={key: f"Any {key.replace('_', ' ')}" for key in tx_service.type_keys(config)},
         uncategorized=ledger.uncategorized_vendors(),
     )

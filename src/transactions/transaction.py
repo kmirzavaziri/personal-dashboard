@@ -46,10 +46,6 @@ class Transaction(BaseModel):
     def signature(self) -> str:
         return f'{self.last4 or self.account}|{self.amount:.2f}|{self.ts[:10]}|{self.remaining}'
 
-    @property
-    def rule_haystack(self) -> str:
-        return f'{self.venue} {self.type}'
-
 
 class TransactionStore:
     def __init__(self, directory: Path):
