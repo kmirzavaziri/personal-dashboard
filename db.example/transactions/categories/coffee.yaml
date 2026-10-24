@@ -4,5 +4,6 @@ name: Coffee
 rules:
 - match: 're:COFFEE|CAFE'
 - match: 're:COFFEE|CAFE'
-  slot: weekend
+  slots:
+  - weekend
   note: weekend treat

@@ -51,10 +51,10 @@ class GitData:
     def _push(self) -> str:
         if self._git('push', 'origin', self.branch).returncode == 0:
             return 'pushed'
-        merge = self._git('pull', '--no-rebase', '--no-edit', 'origin', self.branch)
+        merge = self._git('pull', '--no-rebase', '--no-edit', '-X', 'ours', 'origin', self.branch)
         if merge.returncode != 0:
             self._git('merge', '--abort')
-            return f'push FAILED, merge with origin failed: {merge.stderr.strip()[-300:]}'
+            return f'push FAILED, merge with origin failed: {(merge.stdout + merge.stderr).strip()[-400:]}'
         push = self._git('push', 'origin', self.branch)
         if push.returncode != 0:
             return f'push FAILED after merging origin: {push.stderr.strip()[-300:]}'

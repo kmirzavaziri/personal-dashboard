@@ -72,7 +72,7 @@
 {% block content %}
 
 <nav role="tablist" data-tabs="budget">
-  <button role="tab" data-tab="progress">Progress</button>
+  <button role="tab" data-tab="progress">Spending</button>
   <button role="tab" data-tab="cards">Cards</button>
   <button role="tab" data-tab="categories">Categories<span class="count">{{ categories | length }}</span></button>
   <button role="tab" data-tab="plan">Budgets</button>
@@ -114,9 +114,8 @@
     <span class="hits muted" title="Monthly average · matching transactions">{% if rule %}{{ dh }}{{ average | compact }}/mo<span class="faint"> · {{ hits }} tx</span>{% endif %}</span>
     <button class="btn btn-ghost btn-sm btn-icon rule-remove" type="button" aria-label="Remove rule">×</button>
     <div class="rule-meta">
-      <select class="slot input-quiet" aria-label="When">
-        <option value="">Any time</option>
-        {% for s in slots %}<option value="{{ s.key }}"{% if rule and s.key == rule.slot %} selected{% endif %}>{{ s.label }}</option>{% endfor %}
+      <select class="slot input-quiet" multiple data-placeholder="Any time" aria-label="When">
+        {% for s in slots %}<option value="{{ s.key }}"{% if rule and s.key in rule.slots %} selected{% endif %}>{{ s.label }}</option>{% endfor %}
       </select>
       <select class="type input-quiet" aria-label="Counts as">
         <option value="">As parsed</option>
@@ -339,7 +338,7 @@
         rules: Array.prototype.map.call(card.querySelectorAll('.rule'), function (row) {
           return {
             match: row.querySelector('.match').value.trim(),
-            slot: row.querySelector('.slot').value,
+            slots: Array.prototype.map.call(row.querySelector('.slot').selectedOptions, function (o) { return o.value; }),
             note: row.querySelector('.rule-note').value.trim(),
             type: row.querySelector('.type').value,
           };

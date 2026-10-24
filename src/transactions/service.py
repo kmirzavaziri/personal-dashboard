@@ -232,8 +232,9 @@ def save_category(config, key: str, name: str, rules: list[dict]) -> Category:
     for rule in parsed:
         if not rule.match.strip():
             raise ValueError('every rule needs a match')
-        if rule.slot and clock.slot(rule.slot) is None:
-            raise ValueError(f'unknown time slot {rule.slot!r}')
+        for slot in rule.slots:
+            if clock.slot(slot) is None:
+                raise ValueError(f'unknown time slot {slot!r}')
         if rule.type and rule.type not in types:
             raise ValueError(f'unknown transaction type {rule.type!r}')
         if rule.is_pattern:
@@ -267,7 +268,7 @@ def delete_category(config, key: str, move_to: str = '') -> int:
 
 def categorize_vendor(vendor: str, category_key: str) -> Category:
     category = Category.objects.get(key=category_key)
-    if not any(rule.match.casefold() == vendor.casefold() and not rule.slot for rule in category.rules):
+    if not any(rule.match.casefold() == vendor.casefold() and not rule.slots for rule in category.rules):
         category.rules = category.rules + [Rule(match=vendor)]
         category.save()
     return category

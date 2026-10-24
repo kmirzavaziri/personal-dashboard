@@ -71,7 +71,7 @@ def _budget_rows(entries, cat_totals: dict[str, float], period) -> list[dict]:
             'status': status,
             'note': note,
         })
-    rows.sort(key=lambda r: ({'red': 0, 'yellow': 1, 'green': 2, 'none': 3}[r['status']], -r['actual']))
+    rows.sort(key=lambda r: (r['category'] == 'Uncategorized', {'red': 0, 'yellow': 1, 'green': 2, 'none': 3}[r['status']], -r['actual']))
     return rows
 
 

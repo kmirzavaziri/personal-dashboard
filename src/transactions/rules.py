@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
 from pkg.model.base import Model
 from pkg.model.io import read_yaml
@@ -113,9 +113,17 @@ class Rule(BaseModel):
     model_config = ConfigDict(extra='forbid')
 
     match: str
-    slot: str = ''
+    slots: list[str] = []
     note: str = ''
     type: str = ''
+
+    @model_validator(mode='before')
+    @classmethod
+    def _single_slot(cls, data):
+        if isinstance(data, dict) and 'slot' in data:
+            data = {**data, 'slots': [data['slot']] if data['slot'] else []}
+            data.pop('slot')
+        return data
 
     @property
     def is_pattern(self) -> bool:
@@ -123,10 +131,10 @@ class Rule(BaseModel):
 
     @property
     def precedence(self) -> tuple[bool, bool]:
-        return bool(self.slot), not self.is_pattern
+        return bool(self.slots), not self.is_pattern
 
     def matches(self, haystack: str, slots_now: set[str]) -> bool:
-        if self.slot and self.slot not in slots_now:
+        if self.slots and not slots_now.intersection(self.slots):
             return False
         if self.is_pattern:
             return re.search(self.match[3:], haystack, re.I) is not None
