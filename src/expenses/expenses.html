@@ -110,7 +110,7 @@
 {% macro rule_row(rule, hits, average) %}
   <div class="rule">
     <input class="match input-quiet" value="{{ rule.match if rule else '' }}" placeholder="Vendor text or re:pattern" aria-label="Match">
-    <span class="hits muted" title="Matching transactions · average per month">{% if rule %}{{ hits }}<span class="faint"> · {{ dh }}{{ average | compact }}</span>{% endif %}</span>
+    <span class="hits muted" title="Monthly average · matching transactions">{% if rule %}{{ dh }}{{ average | compact }}/mo<span class="faint"> · {{ hits }} tx</span>{% endif %}</span>
     <button class="btn btn-ghost btn-sm btn-icon rule-remove" type="button" aria-label="Remove rule">×</button>
     <div class="rule-meta">
       <select class="slot input-quiet" aria-label="When">
@@ -136,7 +136,7 @@
   <div class="cat-head">
     <span class="dot lg" style="--tone: {{ tone(cat.name) }}"></span>
     <input class="cat-name input-quiet" value="{{ cat.name }}" maxlength="40" aria-label="Category name">
-    <span class="cat-stat" title="This month · monthly average">{{ dh }}{{ card.period_total | compact }}<span class="faint"> / {{ card.average | compact }}</span></span>
+    <span class="cat-stat" title="Monthly average">{{ dh }}{{ card.average | compact }}/mo</span>
     <button class="btn btn-ghost btn-sm btn-icon cat-delete" type="button" aria-label="Delete category" title="Delete category"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>
   </div>
   <div class="rules">
