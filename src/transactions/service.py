@@ -250,22 +250,22 @@ def save_category(config, key: str, name: str, rules: list[dict]) -> Category:
     return category
 
 
-def delete_category(config, key: str, move_to: str = '') -> int:
+def delete_category(config, key: str, move_rules_to: str = '') -> int:
     category = Category.objects.get(key=key)
-    if move_to:
-        target = Category.objects.get(key=move_to)
+    if move_rules_to:
+        target = Category.objects.get(key=move_rules_to)
         target.rules = target.rules + category.rules
         target.save()
 
-    def reassign(tx: Transaction) -> bool:
+    def release(tx: Transaction) -> bool:
         if tx.category_override != key:
             return False
-        tx.category_override = move_to
+        tx.category_override = ''
         return True
 
-    moved = _store(config).update_each(reassign)
+    released = _store(config).update_each(release)
     category.delete()
-    return moved
+    return released
 
 
 def categorize_vendor(vendor: str, category_key: str) -> Category:

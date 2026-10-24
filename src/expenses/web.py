@@ -79,7 +79,7 @@ def make_expenses_bp(services) -> Blueprint:
 
     @bp.delete('/api/categories/<key>')
     def delete_category(key):
-        moved = tx_service.delete_category(services.config, key, body().get('move_to', ''))
-        return changed({'deleted': key, 'reassigned': moved})
+        released = tx_service.delete_category(services.config, key, body().get('move_rules_to', ''))
+        return changed({'deleted': key, 'released': released})
 
     return bp

@@ -179,11 +179,11 @@
   <form method="dialog">
     <h2>Delete <span id="delete-name"></span>?</h2>
     <div class="delete-choice">
-      <label><input type="radio" name="fate" value="move" checked> Move to</label>
+      <label><input type="radio" name="fate" value="move" checked> Move its rules to</label>
       <select id="delete-target">
         {% for cat in categories %}<option value="{{ cat.key }}">{{ cat.name }}</option>{% endfor %}
       </select>
-      <label><input type="radio" name="fate" value="drop"> Leave uncategorized</label>
+      <label><input type="radio" name="fate" value="drop"> Drop its rules</label>
     </div>
     <div class="modal-actions">
       <button class="btn" value="cancel">Cancel</button>
@@ -459,7 +459,7 @@
     dialog.addEventListener('close', function () {
       if (dialog.returnValue !== 'confirm' || !deleting) return;
       var move = dialog.querySelector('input[name="fate"]:checked').value === 'move';
-      api('/api/categories/' + deleting.dataset.key, 'DELETE', { move_to: move ? target.value : '' })
+      api('/api/categories/' + deleting.dataset.key, 'DELETE', { move_rules_to: move ? target.value : '' })
         .then(function () { location.reload(); });
     });
   })();
