@@ -191,7 +191,8 @@ def _same_movement(store: TransactionStore, tx: Transaction) -> Transaction | No
     if exact is not None:
         return exact
     return next((row for row in rows
-                 if (row.remaining is None or tx.remaining is None)
+                 if row.type == tx.type
+                 and (row.remaining is None or tx.remaining is None)
                  and abs(row.at - tx.at) <= _SAME_MOVEMENT_WINDOW
                  and _same_account_and_amount(row, tx)), None)
 
