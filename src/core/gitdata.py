@@ -23,7 +23,7 @@ class GitData:
 
     def pull(self) -> str:
         with self._lock:
-            result = self._git('pull', '--ff-only', 'origin', self.branch)
+            result = self._git('pull', '--no-rebase', '--no-edit', 'origin', self.branch)
             return (result.stdout + result.stderr).strip()[-400:] or 'up to date'
 
     def mark_dirty(self) -> None:
@@ -39,11 +39,23 @@ class GitData:
             self._timer = None
             self._git('add', '-A')
             status = self._git('status', '--porcelain').stdout.strip()
-            if not status:
+            if status:
+                self._git('commit', '-m', f'data: {datetime.now():%Y-%m-%d %H:%M:%S}')
+            elif not self._unpushed():
                 return 'nothing to commit'
-            count = len(status.splitlines())
-            self._git('commit', '-m', f'data: {datetime.now():%Y-%m-%d %H:%M:%S}')
-            push = self._git('push', 'origin', self.branch)
-            if push.returncode != 0:
-                return f'committed {count} file(s), push FAILED: {push.stderr.strip()[-300:]}'
-            return f'pushed {count} file(s)'
+            return self._push()
+
+    def _unpushed(self) -> bool:
+        return self._git('rev-list', '--count', f'origin/{self.branch}..HEAD').stdout.strip() not in ('', '0')
+
+    def _push(self) -> str:
+        if self._git('push', 'origin', self.branch).returncode == 0:
+            return 'pushed'
+        merge = self._git('pull', '--no-rebase', '--no-edit', 'origin', self.branch)
+        if merge.returncode != 0:
+            self._git('merge', '--abort')
+            return f'push FAILED, merge with origin failed: {merge.stderr.strip()[-300:]}'
+        push = self._git('push', 'origin', self.branch)
+        if push.returncode != 0:
+            return f'push FAILED after merging origin: {push.stderr.strip()[-300:]}'
+        return 'merged origin and pushed'
