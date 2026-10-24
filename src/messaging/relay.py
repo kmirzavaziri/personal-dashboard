@@ -1,6 +1,7 @@
 import json
 import os
 import plistlib
+import shutil
 import subprocess
 import sys
 from collections import Counter
@@ -19,6 +20,7 @@ _BATCH_SIZE = 50
 _SYNC_INTERVAL_SECONDS = 3600
 _THROTTLE_SECONDS = 60
 _SENDERS_MAX_AGE = timedelta(hours=1)
+INTERPRETER = Path(sys.prefix) / 'bin' / 'dashboard-relay-python'
 
 
 @dataclass
@@ -89,7 +91,7 @@ def _domain() -> str:
 def _launch_agent(config) -> dict:
     return {
         'Label': LABEL,
-        'ProgramArguments': [sys.executable, str(config.main), 'messaging', 'relay', 'sync'],
+        'ProgramArguments': [str(INTERPRETER), str(config.main), 'messaging', 'relay', 'sync'],
         'EnvironmentVariables': {
             'DASHBOARD_API_URL': config.dashboard_api_url,
             'DASHBOARD_API_TOKEN': config.dashboard_api_token or '',
@@ -108,6 +110,7 @@ def install(config) -> None:
     if not config.dashboard_api_url or not config.dashboard_api_token:
         raise SystemExit('Set DASHBOARD_API_URL and DASHBOARD_API_TOKEN before starting the relay')
     uninstall()
+    shutil.copy2(os.path.realpath(sys.executable), INTERPRETER)
     PLIST.parent.mkdir(parents=True, exist_ok=True)
     LOG.parent.mkdir(parents=True, exist_ok=True)
     with PLIST.open('wb') as f:
@@ -123,11 +126,10 @@ def uninstall() -> None:
             and PLIST.exists():
         subprocess.run(['launchctl', 'unload', str(PLIST)], capture_output=True)
     PLIST.unlink(missing_ok=True)
+    INTERPRETER.unlink(missing_ok=True)
 
 
 def is_running() -> bool:
     return LABEL in subprocess.run(['launchctl', 'list'], capture_output=True, text=True).stdout
 
 
-def interpreter() -> str:
-    return os.path.realpath(sys.executable)

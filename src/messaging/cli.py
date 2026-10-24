@@ -26,8 +26,9 @@ def _state(since: str | None) -> relay.RelayState:
 
 
 def _full_disk_access_hint() -> str:
-    return (f'macOS blocked reading Messages. Grant Full Disk Access to {relay.interpreter()} in '
-            f'System Settings → Privacy & Security → Full Disk Access, then run: dash messaging relay sync')
+    return (f'macOS blocked reading Messages. Grant Full Disk Access to {relay.INTERPRETER} (a copy of Python used '
+            f'only by the relay) in System Settings → Privacy & Security → Full Disk Access; the relay retries '
+            f'within a minute')
 
 
 @relay_app.command(help='Install and start the background relay (runs at login, on new messages, and hourly).')

@@ -178,8 +178,14 @@ dash messaging relay status                       # running?, progress, last res
 dash messaging relay stop
 ```
 `start` works from Terminal on the Mac or over SSH.
-macOS guards `chat.db`: on the first run `status` names the Python binary to add under *System
-Settings → Privacy & Security → Full Disk Access*.
+The relay is opt-in: nothing reads Messages until you run `start`, and only senders listed in
+`relay.senders` are forwarded. macOS guards `chat.db`, so the background job needs Full Disk Access
+once, granted at the Mac itself. `start` puts a private copy of Python at
+`.venv/bin/dashboard-relay-python`, used by nothing but the relay, so the grant covers only it, not
+every Python script on the Mac. In *System Settings → Privacy & Security → Full Disk Access* click
+**+**, press **Cmd+Shift+G**, paste that path (`status` prints it after a failed run), **Open**, and
+switch it on; the relay retries every minute. After a Homebrew Python upgrade, run `start` again and
+re-allow the new copy.
 
 **Starting from an iPhone backup.** No Mac history yet? Make an unencrypted local backup in Finder
 (select the iPhone → *Back up all of the data … to this Mac*, *Encrypt local backup* off) and
