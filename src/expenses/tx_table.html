@@ -1,10 +1,11 @@
-{% macro tx_table(entries, categories) %}
+{% macro tx_table(entries, categories, show_account=false) %}
   <table class="tx-table">
-    <thead><tr><th>When</th><th>Where</th><th>Category</th><th>Note</th><th class="num">{{ dh }}</th></tr></thead>
+    <thead><tr><th>When</th>{% if show_account %}<th>Card</th>{% endif %}<th>Where</th><th>Category</th><th>Note</th><th class="num">{{ dh }}</th></tr></thead>
     <tbody>
       {% for e in entries %}
       <tr>
         <td class="when"><time data-human datetime="{{ e.tx.ts }}">{{ e.tx.ts[:16] }}</time></td>
+        {% if show_account %}<td class="muted card-col">{{ e.account }}</td>{% endif %}
         <td class="venue">{{ e.tx.venue or e.type | replace('_', ' ') | capitalize }}</td>
         <td>
           <select class="tx-cat tone" data-id="{{ e.tx.id }}" aria-label="Category">

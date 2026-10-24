@@ -274,6 +274,23 @@ def render_card_periods(services, account: str, before: str, count: int) -> str:
     return _env(ledger).get_template('card_periods.html').render(periods=periods, more=more, categories=ledger.categories)
 
 
+def _matches_query(entry, terms: list[str]) -> bool:
+    haystack = ' '.join((entry.tx.venue, entry.note, entry.category_name, entry.account, entry.type,
+                         f'{abs(entry.tx.aed):.2f}', f'{abs(entry.tx.amount):.2f}')).casefold()
+    return all(term in haystack for term in terms)
+
+
+def render_search(services, query: str, limit: int) -> str:
+    ledger = Ledger.load(services.config)
+    terms = query.casefold().split()
+    hits = [e for e in reversed(ledger.visible) if _matches_query(e, terms)] if terms else []
+    entries = hits[:limit]
+    return _env(ledger).get_template('search_results.html').render(
+        entries=entries, truncated=len(hits) > limit, categories=ledger.categories,
+        total=sum(e.tx.aed for e in hits if e.spend),
+    )
+
+
 def render(services) -> str:
     config = services.config
     accounts = _planned_accounts(config)

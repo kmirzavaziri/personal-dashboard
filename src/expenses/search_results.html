@@ -1,0 +1,7 @@
+{% import "tx_table.html" as tt %}
+{% if entries %}
+<div class="search-meta muted">{{ entries | length }}{% if truncated %}+{% endif %} · {{ dh }}{{ total | fmt }}</div>
+{{ tt.tx_table(entries, categories, show_account=true) }}
+{% else %}
+<div class="empty">No matches.</div>
+{% endif %}

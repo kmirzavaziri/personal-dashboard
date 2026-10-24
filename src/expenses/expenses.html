@@ -40,6 +40,9 @@
 
   .tx-table .tx-note { width: 100%; min-width: 8rem; }
   .card-period { margin-top: 1.4rem; }
+  .search-input { width: 100%; margin-bottom: 0.6rem; }
+  .search-meta { font-size: 0.76rem; margin: 0 0 0.3rem 0.2rem; }
+  .card-col { font-size: 0.78rem; white-space: nowrap; }
   .card-period .section-head { margin-bottom: 0.3rem; }
   .card-period h3 { margin: 0; }
 
@@ -74,6 +77,7 @@
 <nav role="tablist" data-tabs="budget">
   <button role="tab" data-tab="progress">Spending</button>
   <button role="tab" data-tab="cards">Cards</button>
+  <button role="tab" data-tab="search">Search</button>
   <button role="tab" data-tab="categories">Categories<span class="count">{{ categories | length }}</span></button>
   <button role="tab" data-tab="plan">Budgets</button>
   <button role="tab" data-tab="uncategorized">Uncategorized{% if uncategorized %}<span class="count">{{ uncategorized | length }}</span>{% endif %}</button>
@@ -105,6 +109,13 @@
   <div class="periods-actions"><button class="btn btn-ghost load-more" type="button" data-url="/expenses/cards/periods?account={{ c.account | urlencode }}" data-before="{{ current_period.start }}">Previous months</button></div>
 </section>
 {% endfor %}
+</div>
+
+<div role="tabpanel" data-tabs="budget" data-tab="search" hidden>
+<section>
+  <input class="search-input" id="tx-search" type="search" placeholder="Vendor, note, category, card or amount" autocomplete="off" aria-label="Search transactions">
+  <div id="search-results"></div>
+</section>
 </div>
 
 <div role="tabpanel" data-tabs="budget" data-tab="categories" hidden>
@@ -266,6 +277,26 @@
 
 {% block scripts %}
 <script>
+  (function () {
+    var input = document.getElementById('tx-search');
+    var results = document.getElementById('search-results');
+    var timer, latest = 0;
+    function run() {
+      var query = input.value.trim();
+      var ticket = ++latest;
+      if (!query) { results.innerHTML = ''; return; }
+      fetch('/expenses/search?q=' + encodeURIComponent(query))
+        .then(function (r) { return r.text(); })
+        .then(function (html) {
+          if (ticket !== latest) return;
+          results.innerHTML = html;
+          humanizeTimes(results);
+        });
+    }
+    input.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(run, 250); });
+    document.querySelector('[role="tab"][data-tab="search"]').addEventListener('click', function () { setTimeout(function () { input.focus(); }, 50); });
+  })();
+
   (function () {
     var sentinel = new IntersectionObserver(function (seen) {
       seen.forEach(function (e) { if (e.isIntersecting) load(e.target); });

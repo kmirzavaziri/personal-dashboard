@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 from pydantic import ValidationError
 
 import transactions.service as tx_service
-from expenses.view import render, render_card_periods, render_previous_periods
+from expenses.view import render, render_card_periods, render_previous_periods, render_search
 from pkg.model.base import DoesNotExist
 
 
@@ -33,6 +33,10 @@ def make_expenses_bp(services) -> Blueprint:
     @bp.get('/expenses/periods')
     def previous_periods():
         return render_previous_periods(services, request.args['before'], int(request.args.get('count', 3)))
+
+    @bp.get('/expenses/search')
+    def search():
+        return render_search(services, request.args.get('q', ''), int(request.args.get('limit', 200)))
 
     @bp.get('/expenses/cards/periods')
     def card_periods():
