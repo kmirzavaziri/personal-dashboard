@@ -105,10 +105,10 @@
 </div>
 
 <div role="tabpanel" data-tabs="budget" data-tab="categories" hidden>
-{% macro rule_row(rule, hits) %}
+{% macro rule_row(rule, hits, average) %}
   <div class="rule">
     <input class="match input-quiet" value="{{ rule.match if rule else '' }}" placeholder="Vendor text or re:pattern" aria-label="Match">
-    <span class="hits muted" title="Matching transactions">{{ hits if rule else '' }}</span>
+    <span class="hits muted" title="Matching transactions · average per month">{% if rule %}{{ hits }} · {{ average | fmt }}/mo{% endif %}</span>
     <button class="btn btn-ghost btn-sm btn-icon rule-remove" type="button" aria-label="Remove rule">×</button>
     <div class="rule-meta">
       <select class="slot input-quiet" aria-label="When">
@@ -138,7 +138,7 @@
   </div>
   <div class="cat-stats"><span class="amount">AED {{ card.period_total | fmt }}</span> <span class="muted">this month · avg {{ card.average | fmt }}</span></div>
   <div class="rules">
-    {% for r in card.rules %}{{ rule_row(r.rule, r.hits) }}{% endfor %}
+    {% for r in card.rules %}{{ rule_row(r.rule, r.hits, r.average) }}{% endfor %}
   </div>
   <div class="cat-foot">
     <button class="btn btn-ghost btn-sm rule-add" type="button">+ Rule</button>
@@ -147,7 +147,7 @@
 </section>
 {% endfor %}
 </div>
-<template id="rule-row">{{ rule_row(none, 0) }}</template>
+<template id="rule-row">{{ rule_row(none, 0, 0) }}</template>
 <dialog class="modal" id="delete-dialog">
   <form method="dialog">
     <h2>Delete <span id="delete-name"></span>?</h2>

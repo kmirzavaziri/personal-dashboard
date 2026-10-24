@@ -87,7 +87,7 @@ def _card_sections(config, entries) -> list[dict]:
     } for account, entries in cards.items()]
 
 
-def _category_cards(ledger, entries, averages: dict[str, float]) -> list[dict]:
+def _category_cards(ledger, entries, averages: dict[str, float], rule_averages: dict) -> list[dict]:
     hits = ledger.rule_hits()
     period_totals: dict[str, float] = {}
     for entry in entries:
@@ -97,7 +97,8 @@ def _category_cards(ledger, entries, averages: dict[str, float]) -> list[dict]:
         'category': category,
         'period_total': period_totals.get(category.key, 0.0),
         'average': averages.get(category.key, 0.0),
-        'rules': [{'rule': rule, 'hits': hits[(category.key, index)]} for index, rule in enumerate(category.rules)],
+        'rules': [{'rule': rule, 'hits': hits[(category.key, index)], 'average': rule_averages.get((category.key, index), 0.0)}
+                  for index, rule in enumerate(category.rules)],
     } for category in ledger.categories]
 
 
@@ -201,9 +202,10 @@ def _period_summary(ledger, period, budgets: dict[str, float], current: bool) ->
     }
 
 
-def _monthly_averages(ledger, current) -> tuple[dict, dict[str, float]]:
+def _monthly_averages(ledger, current) -> tuple[dict, dict, dict]:
     totals: dict[datetime, float] = {}
     by_category: dict[str, dict[datetime, float]] = {}
+    by_rule: dict[tuple[str, int], dict[datetime, float]] = {}
     for entry in ledger.visible:
         if not entry.spend:
             continue
@@ -212,12 +214,19 @@ def _monthly_averages(ledger, current) -> tuple[dict, dict[str, float]]:
         if entry.category:
             months = by_category.setdefault(entry.category.key, {})
             months[start] = months.get(start, 0.0) + entry.tx.aed
+        if entry.match and not entry.tx.category_override:
+            months = by_rule.setdefault((entry.match.category.key, entry.match.index), {})
+            months[start] = months.get(start, 0.0) + entry.tx.aed
     complete = [start for start in sorted(totals)[1:] if start < current.start]
-    overall = sum(totals[start] for start in complete)
     count = len(complete) or 1
+
+    def average(months: dict[datetime, float]) -> float:
+        return sum(months.get(start, 0.0) for start in complete) / count
+
     return (
-        {'amount': overall / count, 'months': len(complete)},
-        {key: sum(months.get(start, 0.0) for start in complete) / count for key, months in by_category.items()},
+        {'amount': average(totals), 'months': len(complete)},
+        {key: average(months) for key, months in by_category.items()},
+        {key: average(months) for key, months in by_rule.items()},
     )
 
 
@@ -273,7 +282,7 @@ def render(services) -> str:
     clock = ledger.clock
     period = clock.period(datetime.now(timezone.utc))
     period_entries = ledger.between(period.start, period.end)
-    average, category_averages = _monthly_averages(ledger, period)
+    average, category_averages, rule_averages = _monthly_averages(ledger, period)
 
     return _env(ledger).get_template('expenses.html').render(
         account_sections=account_sections,
@@ -284,7 +293,7 @@ def render(services) -> str:
         average=average,
         card_sections=_card_sections(config, period_entries),
         categories=ledger.categories,
-        category_cards=_category_cards(ledger, period_entries, category_averages),
+        category_cards=_category_cards(ledger, period_entries, category_averages, rule_averages),
         slots=clock.slots,
         types=tx_service.type_keys(config),
         uncategorized=ledger.uncategorized_vendors(),
