@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict
 
 from pkg.model.base import Model
 from pkg.model.io import read_yaml
@@ -116,14 +116,6 @@ class Rule(BaseModel):
     slots: list[str] = []
     note: str = ''
     type: str = ''
-
-    @model_validator(mode='before')
-    @classmethod
-    def _single_slot(cls, data):
-        if isinstance(data, dict) and 'slot' in data:
-            data = {**data, 'slots': [data['slot']] if data['slot'] else []}
-            data.pop('slot')
-        return data
 
     @property
     def is_pattern(self) -> bool:
