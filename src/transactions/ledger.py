@@ -53,6 +53,11 @@ class Entry:
         return self.tx.aed < 0
 
     @property
+    def labelable(self) -> bool:
+        outgoing_transfer = self.type == 'transfer' and not self.self_transfer
+        return (self.spend or outgoing_transfer) and not self.is_inflow
+
+    @property
     def partially_refunded(self) -> bool:
         return bool(self.refunds) and abs(self.aed) > 0.005
 
@@ -101,7 +106,7 @@ class Ledger:
         totals: dict[str, dict] = {}
         for entry in self.visible:
             vendor = entry.tx.vendor
-            if entry.category or not entry.spend or entry.is_inflow or not vendor:
+            if entry.category or not entry.labelable or not vendor:
                 continue
             row = totals.setdefault(vendor.casefold(), {'vendor': vendor, 'total': 0.0, 'count': 0, 'last': ''})
             row['total'] += entry.aed
