@@ -118,6 +118,8 @@ def ingest(config, entry, notify=True):
             messaging.send(config, 'notifications', message)
         return {'action': 'alert', 'message': message}
     tx = _record(config, entry, text, parsed, account)
+    if tx and parsed['alert'] and notify:
+        messaging.send(config, 'notifications', _alert_text(parsed, account))
     return {'action': 'record', 'tx': tx} if tx else {'action': 'duplicate', 'pattern': parsed['pattern']}
 
 

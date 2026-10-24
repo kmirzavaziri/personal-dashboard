@@ -9,6 +9,7 @@ from transactions.rules import Category, Clock, Rule
 from transactions.transaction import Transaction, TransactionStore
 
 _REFUND_WINDOW = timedelta(days=120)
+_FX_REFUND_TOLERANCE = 0.05
 
 
 @dataclass(frozen=True)
@@ -26,7 +27,11 @@ class Entry:
     match: Match | None
     type: str
     spend: bool
-    refund: Transaction | None = None
+    refunds: tuple[Transaction, ...] = ()
+
+    @property
+    def aed(self) -> float:
+        return self.tx.aed + sum(refund.aed for refund in self.refunds)
 
     @property
     def note(self) -> str:
@@ -44,6 +49,10 @@ class Entry:
     def is_inflow(self) -> bool:
         return self.tx.aed < 0
 
+    @property
+    def partially_refunded(self) -> bool:
+        return bool(self.refunds) and abs(self.aed) > 0.005
+
 
 class Ledger:
     def __init__(self, transactions: list[Transaction], categories: list[Category], clock: Clock,
@@ -54,9 +63,10 @@ class Ledger:
         self._types = types
         self._accounts = {card['last4']: card['display'] for card in cards if card.get('last4')}
         resolved = [self._resolve(tx) for tx in sorted(transactions, key=lambda t: t.at)]
-        self._pairs = self._refund_pairs(resolved)
-        by_id = {entry.tx.id: entry.tx for entry in resolved}
-        self.entries = [self._with_refund(entry, by_id) for entry in resolved]
+        refunds = _refunds_by_purchase(resolved)
+        self._hidden = {tx.id for txs in refunds.values() for tx in txs}
+        self.entries = [replace(entry, refunds=tuple(refunds.get(entry.tx.id, ()))) for entry in resolved]
+        self._hidden |= {entry.tx.id for entry in self.entries if entry.refunds and not entry.partially_refunded}
 
     @classmethod
     def load(cls, config) -> 'Ledger':
@@ -70,8 +80,7 @@ class Ledger:
 
     @cached_property
     def visible(self) -> list[Entry]:
-        hidden = set(self._pairs) | set(self._pairs.values())
-        return [entry for entry in self.entries if entry.tx.id not in hidden]
+        return [entry for entry in self.entries if entry.tx.id not in self._hidden]
 
     @property
     def earliest(self) -> datetime | None:
@@ -87,10 +96,10 @@ class Ledger:
         totals: dict[str, dict] = {}
         for entry in self.visible:
             vendor = entry.tx.vendor
-            if entry.category or not entry.spend or not vendor:
+            if entry.category or not entry.spend or entry.is_inflow or not vendor:
                 continue
             row = totals.setdefault(vendor.casefold(), {'vendor': vendor, 'total': 0.0, 'count': 0, 'last': ''})
-            row['total'] += entry.tx.aed
+            row['total'] += entry.aed
             row['count'] += 1
             row['last'] = max(row['last'], entry.tx.ts[:10])
         return sorted(totals.values(), key=lambda row: -row['total'])
@@ -115,26 +124,50 @@ class Ledger:
         account = self._accounts.get(tx.last4 or '', tx.account)
         return Entry(tx=tx, account=account, category=category, match=match, type=kind, spend=self.counts_as_spend(kind))
 
-    @staticmethod
-    def _refund_pairs(entries: list[Entry]) -> dict[str, str]:
-        open_purchases: dict[tuple, list[Entry]] = defaultdict(list)
-        pairs: dict[str, str] = {}
-        for entry in entries:
-            key = (entry.account, entry.tx.currency, round(abs(entry.tx.amount), 2))
-            if entry.type == 'refund':
-                candidates = [p for p in open_purchases[key] if entry.tx.at - p.tx.at <= _REFUND_WINDOW]
-                same_vendor = [p for p in candidates if p.tx.vendor.casefold() == entry.tx.vendor.casefold()]
-                purchase = (same_vendor or candidates or [None])[-1]
-                if purchase is not None:
-                    open_purchases[key].remove(purchase)
-                    pairs[purchase.tx.id] = entry.tx.id
-            elif entry.spend and entry.tx.amount > 0:
-                open_purchases[key].append(entry)
-        return pairs
 
-    def _with_refund(self, entry: Entry, by_id: dict[str, Transaction]) -> Entry:
-        refund_id = self._pairs.get(entry.tx.id)
-        return replace(entry, refund=by_id[refund_id]) if refund_id else entry
+
+def _within_window(refund: Entry, purchase: Entry) -> bool:
+    return purchase.tx.at <= refund.tx.at and refund.tx.at - purchase.tx.at <= _REFUND_WINDOW
+
+
+def _fully_refunds(refund: Entry, purchase: Entry) -> bool:
+    if purchase.tx.currency == refund.tx.currency:
+        return round(abs(purchase.tx.amount), 2) == round(abs(refund.tx.amount), 2)
+    return abs(abs(purchase.tx.aed) - abs(refund.tx.aed)) <= abs(purchase.tx.aed) * _FX_REFUND_TOLERANCE
+
+
+def _vendor_stem(vendor: str) -> str:
+    first = vendor.split()[0] if vendor.split() else ''
+    return ''.join(ch for ch in first.casefold() if ch.isalnum())
+
+
+def _same_vendor(refund: Entry, purchase: Entry) -> bool:
+    stem = _vendor_stem(refund.tx.vendor)
+    return len(stem) >= 3 and _vendor_stem(purchase.tx.vendor).startswith(stem)
+
+
+def _refunds_by_purchase(entries: list[Entry]) -> dict[str, list[Transaction]]:
+    open_purchases: dict[str, list[Entry]] = defaultdict(list)
+    remaining: dict[str, float] = {}
+    refunds: dict[str, list[Transaction]] = defaultdict(list)
+    for entry in entries:
+        if entry.type != 'refund':
+            if entry.spend and entry.tx.amount > 0:
+                open_purchases[entry.account].append(entry)
+                remaining[entry.tx.id] = entry.tx.aed
+            continue
+        candidates = [p for p in open_purchases[entry.account] if _within_window(entry, p)]
+        full = [p for p in candidates if _fully_refunds(entry, p)]
+        partial = [p for p in candidates if _same_vendor(entry, p) and remaining[p.tx.id] > abs(entry.tx.aed)]
+        preferred = [p for p in full if _same_vendor(entry, p)] or full or partial
+        if not preferred:
+            continue
+        purchase = preferred[-1]
+        refunds[purchase.tx.id].append(entry.tx)
+        remaining[purchase.tx.id] -= abs(entry.tx.aed)
+        if purchase in full:
+            open_purchases[entry.account].remove(purchase)
+    return refunds
 
 
 def _fingerprint(directory: Path) -> tuple:

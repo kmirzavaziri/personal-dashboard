@@ -35,6 +35,8 @@
 
   .amount { font-variant-numeric: tabular-nums; white-space: nowrap; }
   .amount.inflow { color: var(--green); }
+  .refund-mark { margin-left: 0.25rem; color: var(--green); font-size: 0.72rem; }
+  .amount.declined { color: var(--faint); text-decoration: line-through; }
   .when { color: var(--muted); white-space: nowrap; font-size: 0.8rem; }
   .venue { color: var(--strong); }
 
@@ -255,13 +257,20 @@
 
 <div role="tabpanel" data-tabs="budget" data-tab="uncategorized" hidden>
 <section>
-  <div class="section-head"><h2>Uncategorized vendors</h2></div>
+  <div class="section-head">
+    <h2>Uncategorized vendors</h2>
+    <select id="vendor-sort" class="input-quiet" aria-label="Sort vendors">
+      <option value="total">Highest spend</option>
+      <option value="count">Most frequent</option>
+      <option value="last">Most recent</option>
+    </select>
+  </div>
   {% if uncategorized %}
   <table>
     <thead><tr><th>Vendor</th><th class="num">Count</th><th>Last</th><th class="num">{{ dh }}</th><th>Category</th></tr></thead>
     <tbody>
       {% for v in uncategorized %}
-      <tr>
+      <tr data-total="{{ v.total }}" data-count="{{ v.count }}" data-last="{{ v.last }}">
         <td class="venue">{{ v.vendor }}</td>
         <td class="num muted">{{ v.count }}</td>
         <td class="when"><time data-human="date" datetime="{{ v.last }}">{{ v.last }}</time></td>
@@ -364,6 +373,18 @@
       if (!sel.matches('select.tx-cat')) return;
       api('/api/transaction/' + sel.dataset.id + '/category', 'POST', { category: sel.value })
         .then(function () { toast(sel.value ? 'Category set' : 'Back to automatic'); });
+    });
+
+    var vendorSort = document.getElementById('vendor-sort');
+    if (vendorSort) vendorSort.addEventListener('change', function () {
+      var key = vendorSort.value;
+      var body = vendorSort.closest('section').querySelector('tbody');
+      Array.prototype.slice.call(body.rows)
+        .sort(function (a, b) {
+          var x = a.dataset[key], y = b.dataset[key];
+          return key === 'last' ? y.localeCompare(x) : Number(y) - Number(x);
+        })
+        .forEach(function (row) { body.appendChild(row); });
     });
 
     document.querySelectorAll('select.vendor-cat').forEach(function (sel) {

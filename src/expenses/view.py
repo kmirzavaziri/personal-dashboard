@@ -48,7 +48,7 @@ def _budget_rows(entries, cat_totals: dict[str, float], period) -> list[dict]:
     for entry in entries:
         if entry.spend:
             name = entry.category_name or 'Uncategorized'
-            actual_by_cat[name] = actual_by_cat.get(name, 0.0) + entry.tx.aed
+            actual_by_cat[name] = actual_by_cat.get(name, 0.0) + entry.aed
 
     budgeted = {cat for cat, budget in cat_totals.items() if budget > 0}
     misc = sum(actual for cat, actual in actual_by_cat.items() if cat not in budgeted)
@@ -87,7 +87,7 @@ def _card_sections(config, entries) -> list[dict]:
         cards.setdefault(entry.account or 'Unknown', []).append(entry)
     return [{
         'account': account,
-        'total': sum(e.tx.aed for e in entries if e.spend),
+        'total': sum(e.aed for e in entries if e.spend),
         'count': len(entries),
         'entries': sorted(entries, key=lambda e: e.tx.ts, reverse=True),
     } for account, entries in cards.items()]
@@ -98,7 +98,7 @@ def _category_cards(ledger, entries, averages: dict[str, float], rule_averages: 
     period_totals: dict[str, float] = {}
     for entry in entries:
         if entry.category and entry.spend:
-            period_totals[entry.category.key] = period_totals.get(entry.category.key, 0.0) + entry.tx.aed
+            period_totals[entry.category.key] = period_totals.get(entry.category.key, 0.0) + entry.aed
     return [{
         'category': category,
         'period_total': period_totals.get(category.key, 0.0),
@@ -216,13 +216,13 @@ def _monthly_averages(ledger, current) -> tuple[dict, dict, dict]:
         if not entry.spend:
             continue
         start = ledger.clock.period(entry.tx.at).start
-        totals[start] = totals.get(start, 0.0) + entry.tx.aed
+        totals[start] = totals.get(start, 0.0) + entry.aed
         if entry.category:
             months = by_category.setdefault(entry.category.key, {})
-            months[start] = months.get(start, 0.0) + entry.tx.aed
+            months[start] = months.get(start, 0.0) + entry.aed
         if entry.match and not entry.tx.category_override:
             months = by_rule.setdefault((entry.match.category.key, entry.match.index), {})
-            months[start] = months.get(start, 0.0) + entry.tx.aed
+            months[start] = months.get(start, 0.0) + entry.aed
     complete = [start for start in sorted(totals)[1:] if start < current.start]
     count = len(complete) or 1
 
@@ -272,7 +272,7 @@ def render_card_periods(services, account: str, before: str, count: int) -> str:
             periods.append({
                 'name': f'{period.day(period.length_days):%B %Y}',
                 'start': period.start.isoformat(),
-                'total': sum(e.tx.aed for e in entries if e.spend),
+                'total': sum(e.aed for e in entries if e.spend),
                 'entries': entries,
             })
         period = ledger.clock.previous(period)
@@ -295,7 +295,7 @@ def render_search(services, query: str, account: str, limit: int) -> str:
     entries = hits[:limit]
     return _env(ledger).get_template('search_results.html').render(
         entries=entries, truncated=len(hits) > limit, categories=ledger.categories, show_account=not account,
-        total=sum(e.tx.aed for e in hits if e.spend),
+        total=sum(e.aed for e in hits if e.spend),
     )
 
 
@@ -320,7 +320,7 @@ def render(services) -> str:
         card_sections=_card_sections(config, period_entries),
         all_cards={
             'entries': sorted(period_entries, key=lambda e: e.tx.ts, reverse=True),
-            'total': sum(e.tx.aed for e in period_entries if e.spend),
+            'total': sum(e.aed for e in period_entries if e.spend),
             'count': len(period_entries),
         },
         categories=ledger.categories,

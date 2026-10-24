@@ -16,3 +16,6 @@
 - key: income
   label: Income
   spend: false
+- key: declined
+  label: Declined
+  spend: false
