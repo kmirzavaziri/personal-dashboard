@@ -1,0 +1,6 @@
+channels:
+  notifications: "<telegram chat id>"
+relay:
+  senders:
+    - ExampleBank
+    - ExampleCard

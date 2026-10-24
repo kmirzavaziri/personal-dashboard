@@ -2,7 +2,7 @@ import hashlib
 import json
 import re
 from collections import Counter, defaultdict
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import messaging.service as messaging
 from pkg.model.io import read_yaml
@@ -11,13 +11,15 @@ from transactions import fx
 _NUMBER = r'(?:\d[\d,]*(?:\.\d+)?|\.\d+)'
 _TOKENS = {
     'amount': f'(?P<amount>{_NUMBER})',
-    'remaining': f'(?P<remaining>{_NUMBER})',
+    'remaining': f'(?P<remaining>-?{_NUMBER})',
     'currency': r'(?P<currency>[A-Z]{3})',
     'last4': r'(?P<last4>\d{4})',
+    'account_no': r'(?P<last4>[\dX*]{4,})',
     'number': _NUMBER,
 }
-_AMOUNT_HINT = re.compile(r'\b[A-Z]{3} ?(?:\d[\d,]*)?\.\d{2}\b')
+_AMOUNT_HINT = re.compile(r'\b(?:[A-Z]{3} ?(?:\d[\d,]*)?\.\d{2}|\d[\d,]*\.\d{2} ?[A-Z]{3})\b')
 _TXN_HINT = re.compile(r'card|spent|withdrawal|purchase|available limit|avl bal', re.I)
+_LIVE_WINDOW = timedelta(days=1)
 
 
 def _dir(config):
@@ -36,13 +38,19 @@ def _autolabel(config):
     return read_yaml(_dir(config) / 'autolabel.yaml') or []
 
 
+def _types(config) -> dict[str, dict]:
+    return {t['key']: t for t in read_yaml(_dir(config) / 'types.yaml') or []}
+
+
+def counts_as_spend(config, tx: dict) -> bool:
+    kind = _types(config).get(tx.get('type'))
+    if kind is None:
+        raise ValueError(f"transaction {tx.get('id')} has type {tx.get('type')!r}, missing from transactions/types.yaml")
+    return bool(kind.get('spend'))
+
+
 def _num(value):
     return float(value.replace(',', '')) if value else None
-
-
-def _text_of(payload):
-    text = payload.get('text', '') if isinstance(payload, dict) else str(payload or '')
-    return ' '.join(text.split())
 
 
 def _matches(match, text):
@@ -72,7 +80,7 @@ def parse_text(text, patterns):
             'type': fields.get('type', 'purchase'),
             'currency': (fields.get('currency') or '').upper() or None,
             'amount': amount,
-            'last4': fields.get('last4'),
+            'last4': fields['last4'][-4:] if fields.get('last4') else None,
             'card_name': (fields.get('card_name') or '').strip(),
             'venue': (fields.get('venue') or '').strip(),
             'remaining': _num(fields.get('remaining')),
@@ -96,12 +104,9 @@ def _account(parsed, cards):
     return f"card …{parsed['last4']}" if parsed.get('last4') else 'Unknown'
 
 
-def _auto_category(parsed, rules):
+def _autolabel_rule(parsed, rules) -> dict:
     hay = f"{parsed.get('venue', '')} {parsed.get('type', '')}"
-    for rule in rules:
-        if _matches(rule.get('match', ''), hay):
-            return rule.get('category', '')
-    return ''
+    return next((rule for rule in rules if _matches(rule.get('match', ''), hay)), {})
 
 
 def _signature(tx):
@@ -112,17 +117,16 @@ def _month_path(config, ts):
     return _dir(config) / f'{ts[:7]}.jsonl'
 
 
-def _existing(config, ts):
+def _read_month(config, ts) -> list[dict]:
     path = _month_path(config, ts)
     if not path.exists():
-        return [], set()
-    rows = [json.loads(line) for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
-    return rows, {_signature(r) for r in rows}
+        return []
+    return [json.loads(line) for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
 
 
 def transactions(config, month=None):
     ts = f'{month}-01' if month else datetime.now(timezone.utc).isoformat()
-    return _existing(config, ts)[0]
+    return _read_month(config, ts)
 
 
 def label_categories(config):
@@ -138,15 +142,19 @@ def set_category(config, tx_id, category):
             if r.get('id') == tx_id:
                 r['category_override'] = category
                 r['category_source'] = 'manual' if category else r.get('category_source', '')
-        path.write_text('\n'.join(json.dumps(r, ensure_ascii=False) for r in rows) + '\n', encoding='utf-8')
+        _write_month(path, rows)
         return True
     return False
+
+
+def _write_month(path, rows):
+    path.write_text('\n'.join(json.dumps(r, ensure_ascii=False) for r in rows) + '\n', encoding='utf-8')
 
 
 def _repeated(config, entry, text):
     ts = entry.get('received_at') or ''
     return any(
-        e.get('received_at', '') < ts and _text_of(e.get('payload')) == text
+        e.get('received_at', '') < ts and messaging.text_of(e.get('payload')) == text
         for e in messaging.inbox(config, ts[:7] or None)
     )
 
@@ -157,7 +165,8 @@ def _alert_text(parsed, account):
 
 def _record(config, entry, text, parsed, account):
     ts = entry.get('received_at') or datetime.now(timezone.utc).isoformat()
-    category = _auto_category(parsed, _autolabel(config))
+    rule = _autolabel_rule(parsed, _autolabel(config))
+    category = rule.get('category', '')
     rate = fx.rate(config, parsed['currency'], ts[:10])
     tx = {
         'id': hashlib.sha1(f"{ts}|{text}".encode()).hexdigest()[:12],
@@ -165,7 +174,7 @@ def _record(config, entry, text, parsed, account):
         'source': entry.get('source', ''),
         'account': account,
         'last4': parsed.get('last4'),
-        'type': parsed['type'],
+        'type': rule.get('type', parsed['type']),
         'amount': parsed['amount'],
         'currency': parsed['currency'],
         'amount_aed': round(parsed['amount'] * rate, 2) if rate is not None else None,
@@ -178,8 +187,7 @@ def _record(config, entry, text, parsed, account):
         'pattern': parsed['pattern'],
         'raw_ref': entry.get('received_at', ''),
     }
-    _, seen = _existing(config, ts)
-    if _signature(tx) in seen:
+    if _signature(tx) in {_signature(row) for row in _read_month(config, ts)}:
         return None
     path = _month_path(config, ts)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -189,7 +197,7 @@ def _record(config, entry, text, parsed, account):
 
 
 def ingest(config, entry, notify=True):
-    text = _text_of(entry.get('payload'))
+    text = messaging.text_of(entry.get('payload'))
     parsed = parse_text(text, _patterns(config))
     if parsed is None or (parsed['action'] == 'record' and parsed['amount'] is None):
         if not looks_like_transaction(text):
@@ -211,9 +219,40 @@ def ingest(config, entry, notify=True):
     return {'action': 'record', 'tx': tx} if tx else {'action': 'duplicate', 'pattern': parsed['pattern']}
 
 
-def backfill(config):
+def _is_live(entry, now: datetime) -> bool:
+    return now - datetime.fromisoformat(entry['received_at']) <= _LIVE_WINDOW
+
+
+def receive(config, source: str, payloads: list) -> Counter:
+    now = datetime.now(timezone.utc)
+    outcome = Counter()
+    for payload in payloads:
+        entry = messaging.ingest(config, source, payload)
+        if entry is None:
+            outcome['duplicate message'] += 1
+            continue
+        outcome[ingest(config, entry, notify=_is_live(entry, now))['action']] += 1
+    return outcome
+
+
+def _manual_categories(config) -> dict[str, str]:
+    return {
+        row['id']: row['category_override']
+        for path in _dir(config).glob('*.jsonl')
+        for row in _read_month(config, path.stem)
+        if row.get('category_source') == 'manual'
+    }
+
+
+def backfill(config, rebuild=False):
+    manual = _manual_categories(config) if rebuild else {}
+    if rebuild:
+        for path in _dir(config).glob('*.jsonl'):
+            path.unlink()
     results = [ingest(config, entry, notify=False)
                for entry in sorted(messaging.all_entries(config), key=lambda e: e.get('received_at', ''))]
+    for tx_id, category in manual.items():
+        set_category(config, tx_id, category)
     counts = Counter(r['action'] for r in results)
     lines = [f'{action}: {n}' for action, n in sorted(counts.items()) if action != 'none']
     lines += [f"alert (not sent): {r['message']}" for r in results if r['action'] == 'alert']

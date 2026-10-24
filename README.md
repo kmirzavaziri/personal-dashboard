@@ -102,7 +102,7 @@ base64 < data_key | tr -d '\n'      # copy this → DATA_DEPLOY_KEY_B64
 | `GIT_AUTHOR_EMAIL` | email for the auto-commits |
 | `WEB_HOSTS` | `dash.<your-domain>` — comma-separated; **the UI serves only on these** |
 | `ALLOWED_EMAIL` | your email (informational; Cloudflare Access enforces the real gate) |
-| `API_TOKEN` | a random secret the API host requires — MCP, SMS ingest, etc. (`openssl rand -hex 32`) |
+| `API_TOKEN` | a random secret the API host requires — MCP, message ingest, etc. (`openssl rand -hex 32`) |
 | `WEBHOOK_SECRET` | a random secret to enable GitHub-webhook pulls (`/api/webhook`) |
 | `CF_PROXY_SECRET` | a random secret for the origin lock — **set last**, see step 6 (`openssl rand -hex 32`) |
 | `ENABLE_MAC` | `false` unless you set up the Mac bridge |
@@ -151,25 +151,42 @@ reopens Host-spoofing; see *Why spoofing can't get in*).
 Done — edits in the app commit back to your private repo automatically; git is your backup.
 
 ### 8. Bank SMS → transactions (optional)
-Capture bank transaction texts on an iPhone and append them to the data repo, to feed the
-budget later. iOS won't let any app read SMS (and needs no paid developer account), so use a
-built-in **Shortcuts automation** that forwards messages to `/api/sms/ingest`. Each POST is
-appended as one JSON line to `db/transactions/YYYY-MM.jsonl` (raw body preserved, so a parser
-can reprocess history). iOS passes only the message **body**, not the sender — route/parse on
-content (bank texts name the bank/card anyway).
+Bank texts become transactions in the budget. Raw messages land in `db/messaging/inbox/YYYY-MM.jsonl`
+(the same message arriving twice within two days is stored once); rules in
+`db/transactions/patterns.yaml` turn each into a transaction, a Telegram alert (declines, bills) or
+nothing. Alerts fire only for messages sent within the last day, so history never pings you. Two
+complementary paths feed it; use either or both.
 
-**Shortcut automation** (Shortcuts → *Automation → + → Personal Automation → Message*):
-1. Filter: iOS requires one, so set **Message contains** a single space `" "` as a catch-all
-   (leave *Sender* empty — bank sender IDs are alphanumeric, not Contacts). The server decides
-   what's a transaction; the phone just forwards.
-2. Action **Get Contents of URL**:
-   - URL `https://api.<domain>/api/sms/ingest` · Method **POST**
-   - Header `Authorization` = `Bearer <API_TOKEN>`
-   - Request Body **JSON** → field `text` = the **Shortcut Input** variable (the message)
-3. **Run Immediately** (turn off *Ask Before Running*).
+**iPhone Shortcut — real time, best effort.** iOS won't let an app read SMS, so a built-in
+automation forwards each message as it arrives (Shortcuts → *Automation → + → Message*):
+1. Filter **Message contains** a single space `" "` as a catch-all.
+2. Action **Get Contents of URL**: `https://api.<domain>/api/ingest/sms`, method **POST**, header
+   `Authorization: Bearer <API_TOKEN>`, request body **JSON** with field `text` = *Shortcut Input*.
+3. **Run Immediately**.
 
-On a scale-to-zero host the first message after an idle period may hit a cold start — add a
-retry in the shortcut (on failure: wait ~60s, repeat) or keep the service warm.
+If the phone is offline when a text arrives, that POST fails and the message is never retried.
+
+**Mac relay — complete, catches up.** With *Messages in iCloud* on (and *Text Message Forwarding*
+to the Mac), a Mac holds every SMS the phone received, even ones that arrived while the phone was
+offline. The relay reads `~/Library/Messages/chat.db` and forwards texts from the senders listed in
+`db/messaging/config.yaml` (`relay.senders`), so personal chats never leave the Mac:
+```bash
+export DASHBOARD_API_URL=https://api.<domain>/mcp DASHBOARD_API_TOKEN=<API_TOKEN>
+dash messaging relay preview --since 2026-01-01   # counts per sender and month; sends nothing
+dash messaging relay start --since 2026-01-01     # background job: at login, on new messages, hourly
+dash messaging relay status                       # running?, progress, last result
+dash messaging relay stop
+```
+Run `start` from Terminal on the Mac itself (an SSH session can install the job but not start it).
+macOS guards `chat.db`: on the first run `status` names the Python binary to add under *System
+Settings → Privacy & Security → Full Disk Access*.
+
+**Starting from an iPhone backup.** No Mac history yet? Make an unencrypted local backup in Finder
+(select the iPhone → *Back up all of the data … to this Mac*, *Encrypt local backup* off) and
+import its texts; re-running is safe:
+```bash
+dash messaging relay import-backup --since 2025-01-01
+```
 
 ---
 
@@ -188,7 +205,7 @@ Locally, `WEB_HOSTS` is unset so the UI is served on localhost/LAN automatically
 |------|---------|-----------|
 | `/` and feature pages | web UI | UI hosts only, behind Access |
 | `/mcp` | MCP JSON-RPC | bearer `API_TOKEN` |
-| `/api/sms/ingest` | append a raw message → `db/transactions/YYYY-MM.jsonl` | bearer `API_TOKEN` |
+| `/api/ingest/<source>` | store a message (or a JSON list of them) in the inbox and parse it into transactions | bearer `API_TOKEN` |
 | `/api/webhook` | GitHub webhook → pull data | HMAC `WEBHOOK_SECRET` |
 | `/api/sync` | manual "pull data now" | UI host (via Access) or bearer token |
 | `/version` | deployed commit SHA | UI host (via Access) or bearer token |

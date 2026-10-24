@@ -13,6 +13,7 @@ import core.item.service as items
 import styling.service as styling
 import health.service as health
 import transactions.service as transactions
+import messaging.service as messaging
 from core.oauth import valid_access_token
 
 PROTOCOL_VERSION = '2024-11-05'
@@ -198,11 +199,22 @@ def transactions_list(services, month=None):
     ], ensure_ascii=False)
 
 
-def transactions_backfill(services):
-    summary = transactions.backfill(services.config)
+def transactions_backfill(services, rebuild=False):
+    summary = transactions.backfill(services.config, rebuild=rebuild)
     if services.git is not None:
         services.git.mark_dirty()
     return summary
+
+
+def messaging_senders(services):
+    return json.dumps(messaging.relay_senders(services.config))
+
+
+def messaging_ingest(services, source, messages):
+    outcome = transactions.receive(services.config, source, _as_container(messages))
+    if services.git is not None:
+        services.git.mark_dirty()
+    return json.dumps(dict(outcome))
 
 
 _STR = {'type': 'string'}
@@ -277,7 +289,13 @@ TOOLS = [
     ('transactions_list', 'List recorded transactions for a month (YYYY-MM, default current) as JSON.',
      {'month': _STR}, [], transactions_list),
     ('transactions_backfill', 'Replay every inbox message through the transaction parser without sending alerts; '
-     'idempotent (dedups against recorded transactions). Returns a summary.', {}, [], transactions_backfill),
+     'idempotent (dedups against recorded transactions). rebuild=true re-derives every transaction from the inbox, '
+     'keeping manually set categories. Returns a summary.', {'rebuild': _BOOL}, [], transactions_backfill),
+    ('messaging_senders', 'List the message senders the Mac relay forwards (from messaging/config.yaml relay.senders).',
+     {}, [], messaging_senders),
+    ('messaging_ingest', 'Store a batch of messages ({text, sender, sent_at}) in the inbox, skipping duplicates, and '
+     'parse each into transactions; alerts fire only for messages sent within the last day. Returns counts.',
+     {'source': _STR, 'messages': {'type': 'array', 'items': _OBJ}}, ['source', 'messages'], messaging_ingest),
 ]
 
 _DISPATCH = {name: fn for name, _d, _p, _r, fn in TOOLS}

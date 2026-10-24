@@ -1,5 +1,6 @@
 # Tried in order; first match wins. action: record (default) | alert | ignore.
-# Placeholders: {amount} {remaining} {currency} {last4} expand to named groups, {number} to a bare number.
+# Placeholders: {amount} {remaining} {currency} {last4} {account_no} expand to named groups, {number} to a bare number.
+# Amounts are money leaving the account: negate: true turns inflows (refunds, income) negative.
 # alert: message template over the named groups plus {account} (display name from cards.yaml).
 - name: example_payment_received
   action: ignore
@@ -21,3 +22,13 @@
   set:
     type: purchase
   regex: 'Card ending {last4} was used for {currency} {amount} at (?P<venue>.+?)\. Available limit [A-Z]{3} {remaining}'
+- name: example_salary
+  negate: true
+  set:
+    type: income
+    venue: Salary
+  regex: 'Salary of {currency} {amount} has been credited to your account {account_no}'
+- name: example_transfer_out
+  set:
+    type: transfer
+  regex: '{currency} {amount} has been debited from your account {account_no} for (?P<venue>[^.]+)'

@@ -1,0 +1,18 @@
+- key: purchase
+  label: Purchase
+  spend: true
+- key: refund
+  label: Refund
+  spend: true
+- key: cash_withdrawal
+  label: Cash withdrawal
+  spend: true
+- key: fee
+  label: Bank fee
+  spend: true
+- key: transfer
+  label: Transfer
+  spend: false
+- key: income
+  label: Income
+  spend: false

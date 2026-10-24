@@ -54,8 +54,9 @@ def _budget_actuals(config, cat_totals: dict[str, float], now: datetime) -> tupl
     fraction = now.day / days_in_month
 
     month_txns = tx_service.transactions(config)
+    spending = [tx for tx in month_txns if tx_service.counts_as_spend(config, tx)]
     actual_by_cat: dict[str, float] = {}
-    for tx in month_txns:
+    for tx in spending:
         cat = _tx_category(tx)
         actual_by_cat[cat] = actual_by_cat.get(cat, 0.0) + _tx_aed(tx)
 
@@ -92,7 +93,7 @@ def _budget_actuals(config, cat_totals: dict[str, float], now: datetime) -> tupl
         recent = sorted(txs, key=lambda t: t.get('ts', ''), reverse=True)
         card_sections.append({
             'account': account,
-            'total': sum(_tx_aed(t) for t in txs),
+            'total': sum(_tx_aed(t) for t in txs if tx_service.counts_as_spend(config, t)),
             'count': len(txs),
             'txns': [{
                 'id': t.get('id', ''),
