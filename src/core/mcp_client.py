@@ -32,7 +32,7 @@ class MCPClient:
         try:
             with urllib.request.urlopen(req, timeout=45) as response:
                 body = json.loads(response.read())
-        except URLError as exc:
+        except (URLError, TimeoutError) as exc:
             raise MCPError(f'MCP request to {self.url} failed: {exc}')
         if body.get('error'):
             raise MCPError(body['error'].get('message', 'unknown MCP error'))

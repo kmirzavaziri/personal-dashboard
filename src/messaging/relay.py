@@ -15,7 +15,7 @@ LABEL = 'dashboard.messaging-relay'
 PLIST = Path.home() / 'Library' / 'LaunchAgents' / f'{LABEL}.plist'
 LOG = Path.home() / 'Library' / 'Logs' / f'{LABEL}.log'
 STATE = Path.home() / 'Library' / 'Application Support' / 'dashboard' / f'{LABEL}.json'
-_BATCH_SIZE = 200
+_BATCH_SIZE = 50
 _SYNC_INTERVAL_SECONDS = 3600
 _THROTTLE_SECONDS = 60
 _SENDERS_MAX_AGE = timedelta(hours=1)
