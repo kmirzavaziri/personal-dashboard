@@ -3,9 +3,11 @@ from pathlib import Path
 
 import yaml
 
+_LOADER = getattr(yaml, 'CSafeLoader', yaml.SafeLoader)
+
 
 def read_yaml(path: Path):
-    return yaml.safe_load(path.read_text()) if path.exists() else None
+    return yaml.load(path.read_text(), Loader=_LOADER) if path.exists() else None
 
 
 def walk_paths(roots) -> Iterator[Path]:
