@@ -170,10 +170,11 @@ def _record(config, entry, text, parsed, account) -> Transaction | None:
     if existing is None:
         store.append(tx)
         return tx
-    if parsed['enriches'] > _enrichment_rank(config, existing) and existing.venue != tx.venue:
-        store.update(existing.id, venue=tx.venue, venue_pattern=tx.pattern)
+    if parsed['enriches'] > _enrichment_rank(config, existing):
+        store.update(existing.id, venue=tx.venue, venue_pattern=tx.pattern, type=tx.type)
     if existing.account == _UNKNOWN_ACCOUNT and tx.account != _UNKNOWN_ACCOUNT:
-        store.update(existing.id, account=tx.account, last4=tx.last4, amount=tx.amount, amount_aed=tx.amount_aed)
+        store.update(existing.id, account=tx.account, last4=tx.last4, amount=tx.amount, amount_aed=tx.amount_aed,
+                     remaining=tx.remaining, source=tx.source, pattern=tx.pattern)
     if existing.remaining is None and tx.remaining is not None:
         store.update(existing.id, remaining=tx.remaining)
     return None
@@ -191,7 +192,7 @@ def _same_movement(store: TransactionStore, tx: Transaction) -> Transaction | No
     if exact is not None:
         return exact
     return next((row for row in rows
-                 if row.type == tx.type
+                 if (row.type == tx.type or _UNKNOWN_ACCOUNT in (row.account, tx.account))
                  and (row.remaining is None or tx.remaining is None)
                  and abs(row.at - tx.at) <= _SAME_MOVEMENT_WINDOW
                  and _same_account_and_amount(row, tx)), None)

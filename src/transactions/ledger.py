@@ -74,7 +74,8 @@ class Ledger:
         refunds = _refunds_by_purchase(resolved)
         self._hidden = {tx.id for txs in refunds.values() for tx in txs}
         own = _self_transfers(resolved, set(self._accounts.values()), owner)
-        self.entries = [replace(entry, refunds=tuple(refunds.get(entry.tx.id, ())), self_transfer=entry.tx.id in own)
+        self.entries = [replace(entry, refunds=tuple(refunds.get(entry.tx.id, ())), self_transfer=entry.tx.id in own,
+                                spend=entry.spend and entry.tx.id not in own)
                         for entry in resolved]
         self._hidden |= {entry.tx.id for entry in self.entries if entry.refunds and not entry.partially_refunded}
 
