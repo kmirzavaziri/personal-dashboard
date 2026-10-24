@@ -10,7 +10,7 @@
 {% macro goal_desc(description) %}{% set parts = description.split("·") | map("trim") | select | list %}{% if parts | length <= 1 %}{{ description }}{% else %}<ul class="goal-bullets">{% for p in parts %}<li>{{ p }}</li>{% endfor %}</ul>{% endif %}{% endmacro %}
 
 {% block extra_css %}
-    h4 { font-size: 0.82rem; color: var(--muted); margin: 1rem 0 0.4rem; text-transform: uppercase; letter-spacing: 0.06em; }
+    h4 { font-size: 0.82rem; color: var(--muted); margin: 1rem 0 0.4rem; letter-spacing: 0.01em; }
     .badge { margin-left: 0.3rem; }
     .badge.home      { border-color: rgba(147,179,145,0.4); color: var(--c-sage); }
     .badge.commute   { border-color: rgba(157,180,192,0.4); color: var(--c-slate); }
@@ -36,8 +36,8 @@
     .badge.ctx-after-shower { border-color: rgba(143,176,160,0.4); color: var(--c-teal); }
     .badge.ctx-before-sleep { border-color: rgba(176,164,199,0.4); color: var(--c-mauve); }
     .badge.ctx-in-clinic    { border-color: rgba(203,185,148,0.4); color: var(--c-sand); }
-    .routine-phase { color: var(--strong); font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin: 2rem 0 0.4rem; }
-    .routine-section-heading { color: var(--strong); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; margin: 1rem 0 0.3rem; opacity: 0.7; }
+    .routine-phase { color: var(--strong); font-size: 0.9rem; font-weight: 600; letter-spacing: 0.01em; margin: 2rem 0 0.4rem; }
+    .routine-section-heading { color: var(--strong); font-size: 0.75rem; letter-spacing: 0.01em; margin: 1rem 0 0.3rem; opacity: 0.7; }
     .routine-variants { display: flex; gap: 1rem; }
     .routine-variants table { flex: 1; }
     .routine-subtotal { color: var(--muted); font-style: italic; font-size: 0.82rem; padding: 0.3rem 0.75rem; }

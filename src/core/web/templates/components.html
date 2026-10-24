@@ -15,8 +15,8 @@
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.15);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-lg);
-    padding: 1rem 1.25rem;
-    margin-bottom: 1.1rem;
+    padding: 0.8rem 1rem;
+    margin-bottom: 0.75rem;
     box-shadow: var(--glass-shadow);
   }
   section:last-child, .panel:last-child { margin-bottom: 0; }
@@ -24,7 +24,7 @@
   .tile > :first-child, .card > :first-child { margin-top: 0; }
 
   /* Responsive card grid — a shared layout for tile/card collections */
-  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 1rem; }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.7rem; }
 
   /* Flat content tile — sits INSIDE a glass surface (never glass-on-glass) */
   .tile {
@@ -36,11 +36,11 @@
 
   /* ── Section headings ───────────────────────────────────────────────── */
   h2 {
-    font-size: 1rem; color: var(--strong); font-weight: 600;
-    margin: 0 0 0.8rem; letter-spacing: 0.01em;
+    font-size: 0.95rem; color: var(--strong); font-weight: 600;
+    margin: 0 0 0.6rem; letter-spacing: 0;
   }
-  h2:not(:first-child) { margin-top: 1.6rem; }
-  h3 { font-size: 0.92rem; color: var(--strong); font-weight: 600; margin: 1.25rem 0 0.5rem; }
+  h2:not(:first-child) { margin-top: 1.2rem; }
+  h3 { font-size: 0.875rem; color: var(--strong); font-weight: 600; margin: 1rem 0 0.4rem; }
   h3:first-child { margin-top: 0; }
 
   /* ── Tabs: role=tablist[data-tabs=<group>] + role=tabpanel[data-tabs=<group>][data-tab=<key>] ── */
@@ -63,7 +63,7 @@
   summary > h2, summary > h3 { margin: 0; }
   details > summary { transition: opacity 0.15s; }
   @media (hover: hover) { details > summary:hover { opacity: 0.72; } }
-  details[open] > summary { margin-bottom: 0.8rem; }
+  details[open] > summary { margin-bottom: 0.6rem; }
 
   details::details-content {
     height: 0; overflow: hidden;
@@ -100,14 +100,14 @@
   table:last-child { margin-bottom: 0; }
   th {
     background: rgba(255,255,255,0.05); color: var(--muted);
-    font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em;
-    padding: 0.5rem 0.75rem; text-align: left;
+    font-size: 0.75rem; font-weight: 500;
+    padding: 0.35rem 0.6rem; text-align: left;
     border-bottom: 1px solid rgba(255,255,255,0.12);
   }
-  td { padding: 0.4rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.08); vertical-align: top; }
+  td { padding: 0.32rem 0.6rem; border-bottom: 1px solid rgba(255,255,255,0.08); vertical-align: top; }
   tr:last-child td { border-bottom: none; }
   @media (hover: hover) { tr:hover td { background: rgba(255,255,255,0.04); } }
-  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   tr:target td { background: color-mix(in srgb, var(--accent) 12%, transparent); }
   .thumb-col { width: 64px; padding: 0.2rem 0.3rem; }
   .thumb-col img { width: 56px; height: 56px; object-fit: contain; border-radius: 3px; display: block; background: var(--strong); }
@@ -115,7 +115,7 @@
   .total-row td { font-weight: bold; color: var(--strong); background: rgba(255,255,255,0.07); border-top: 1px solid rgba(255,255,255,0.12); }
   .grand-total-row td { font-size: 1rem; font-weight: bold; color: var(--strong); background: var(--surface); border-top: 2px solid var(--accent); }
   .subtotal-row td { color: var(--muted); background: rgba(255,255,255,0.03); border-top: 1px solid rgba(255,255,255,0.10); font-style: italic; }
-  .category-heading-row td { color: var(--strong); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.8rem 0.75rem 0.3rem; border-bottom: 1px solid rgba(255,255,255,0.10); }
+  .category-heading-row td { color: var(--strong); font-size: 0.8rem; font-weight: 600; padding: 0.7rem 0.6rem 0.25rem; border-bottom: 1px solid rgba(255,255,255,0.10); }
 
   /* ── Chips / badges / pills ─────────────────────────────────────────── */
   .badge {
@@ -210,7 +210,7 @@
     }
     table.stacked td::before {
       content: attr(data-label); flex: none; margin-right: auto; padding-right: 0.6rem; text-align: left; color: var(--muted);
-      font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em;
+      font-size: 0.75rem;
     }
     table.stacked td.cell-title { display: block; flex: 1 1 0; text-align: left; color: var(--strong); font-weight: 600; }
     table.stacked td.cell-bare { display: block; flex: 0 0 auto; width: auto; }
