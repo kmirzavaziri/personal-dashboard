@@ -287,13 +287,14 @@ def _matches_query(entry, terms: list[str]) -> bool:
     return all(term in haystack for term in terms)
 
 
-def render_search(services, query: str, limit: int) -> str:
+def render_search(services, query: str, account: str, limit: int) -> str:
     ledger = Ledger.load(services.config)
     terms = query.casefold().split()
-    hits = [e for e in reversed(ledger.visible) if _matches_query(e, terms)] if terms else []
+    hits = [e for e in reversed(ledger.visible)
+            if (not account or e.account == account) and _matches_query(e, terms)] if terms else []
     entries = hits[:limit]
     return _env(ledger).get_template('search_results.html').render(
-        entries=entries, truncated=len(hits) > limit, categories=ledger.categories,
+        entries=entries, truncated=len(hits) > limit, categories=ledger.categories, show_account=not account,
         total=sum(e.tx.aed for e in hits if e.spend),
     )
 

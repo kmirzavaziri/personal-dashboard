@@ -36,7 +36,8 @@ def make_expenses_bp(services) -> Blueprint:
 
     @bp.get('/expenses/search')
     def search():
-        return render_search(services, request.args.get('q', ''), int(request.args.get('limit', 200)))
+        args = request.args
+        return render_search(services, args.get('q', ''), args.get('account', ''), int(args.get('limit', 200)))
 
     @bp.get('/expenses/cards/periods')
     def card_periods():

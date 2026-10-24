@@ -40,7 +40,8 @@
 
   .tx-table .tx-note { width: 100%; min-width: 8rem; }
   .card-period { margin-top: 1.4rem; }
-  .search-input { width: 100%; margin-bottom: 0.6rem; }
+  .search-input { width: 100%; margin-bottom: 0.7rem; }
+  .search-hidden { display: none !important; }
   .search-meta { font-size: 0.76rem; margin: 0 0 0.3rem 0.2rem; }
   .card-col { font-size: 0.78rem; white-space: nowrap; }
   .card-period .section-head { margin-bottom: 0.3rem; }
@@ -76,8 +77,7 @@
 
 <nav role="tablist" data-tabs="budget">
   <button role="tab" data-tab="progress">Spending</button>
-  <button role="tab" data-tab="cards">Cards</button>
-  <button role="tab" data-tab="search">Search</button>
+  <button role="tab" data-tab="cards">Transactions</button>
   <button role="tab" data-tab="categories">Categories<span class="count">{{ categories | length }}</span></button>
   <button role="tab" data-tab="plan">Budgets</button>
   <button role="tab" data-tab="uncategorized">Uncategorized{% if uncategorized %}<span class="count">{{ uncategorized | length }}</span>{% endif %}</button>
@@ -91,10 +91,12 @@
 </div>
 
 <div role="tabpanel" data-tabs="budget" data-tab="cards" hidden>
+<input class="search-input" id="tx-search" type="search" placeholder="Search vendor, note, category or amount" autocomplete="off" aria-label="Search transactions">
 <nav role="tablist" class="sub" data-tabs="card" data-deselect="all">
-  <button role="tab" data-tab="all" hidden>All</button>
-  {% for c in card_sections %}<button role="tab" data-tab="card-{{ loop.index }}">{{ c.account }}</button>{% endfor %}
+  <button role="tab" data-tab="all" data-account="" hidden>All</button>
+  {% for c in card_sections %}<button role="tab" data-tab="card-{{ loop.index }}" data-account="{{ c.account }}">{{ c.account }}</button>{% endfor %}
 </nav>
+<section id="search-panel" hidden><div id="search-results"></div></section>
 <section role="tabpanel" data-tabs="card" data-tab="all" hidden>
   <div class="section-head">
     <h2>All cards</h2>
@@ -123,13 +125,6 @@
   <div class="periods-actions"><button class="btn btn-ghost load-more" type="button" data-url="/expenses/cards/periods?account={{ c.account | urlencode }}" data-before="{{ current_period.start }}">Previous months</button></div>
 </section>
 {% endfor %}
-</div>
-
-<div role="tabpanel" data-tabs="budget" data-tab="search" hidden>
-<section>
-  <input class="search-input" id="tx-search" type="search" placeholder="Vendor, note, category, card or amount" autocomplete="off" aria-label="Search transactions">
-  <div id="search-results"></div>
-</section>
 </div>
 
 <div role="tabpanel" data-tabs="budget" data-tab="categories" hidden>
@@ -293,13 +288,23 @@
 <script>
   (function () {
     var input = document.getElementById('tx-search');
+    var panel = document.getElementById('search-panel');
     var results = document.getElementById('search-results');
+    var chips = document.querySelector('[role="tablist"][data-tabs="card"]');
     var timer, latest = 0;
+    function cardPanels() { return document.querySelectorAll('[role="tabpanel"][data-tabs="card"]'); }
+    function selectedAccount() {
+      var tab = chips.querySelector('[role="tab"][aria-selected="true"]');
+      return tab ? tab.dataset.account : '';
+    }
     function run() {
       var query = input.value.trim();
       var ticket = ++latest;
-      if (!query) { results.innerHTML = ''; return; }
-      fetch('/expenses/search?q=' + encodeURIComponent(query))
+      var searching = !!query;
+      panel.hidden = !searching;
+      cardPanels().forEach(function (p) { p.classList.toggle('search-hidden', searching); });
+      if (!searching) { results.innerHTML = ''; return; }
+      fetch('/expenses/search?q=' + encodeURIComponent(query) + '&account=' + encodeURIComponent(selectedAccount()))
         .then(function (r) { return r.text(); })
         .then(function (html) {
           if (ticket !== latest) return;
@@ -308,7 +313,7 @@
         });
     }
     input.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(run, 250); });
-    document.querySelector('[role="tab"][data-tab="search"]').addEventListener('click', function () { setTimeout(function () { input.focus(); }, 50); });
+    chips.addEventListener('click', function () { if (input.value.trim()) setTimeout(run, 0); });
   })();
 
   (function () {
