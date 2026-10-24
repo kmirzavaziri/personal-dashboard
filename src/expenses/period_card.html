@@ -7,7 +7,7 @@
   <div class="period-total">
     <span class="amount">{{ dh }}{{ p.actual | fmt }}</span>{% if p.budget > 0 %}<span class="muted"> of {{ p.budget | fmt }}</span>{% endif %}
   </div>
-  <div class="bar {{ p.status }}"><span style="width: {{ p.pct }}%"></span></div>
+  <div class="paced"><div class="bar {{ p.status }}"><span style="width: {{ p.pct }}%"></span></div>{% if p.current and p.budget > 0 %}<i class="pace" style="left: {{ p.pace }}%" title="Today"></i>{% endif %}</div>
   {% if p.rows %}
   <div class="budget-list">
     {% for r in p.rows %}
@@ -16,7 +16,7 @@
         <span class="name"><span class="dot" style="--tone: {{ tone(r.category) }}"></span>{{ r.category }}</span>
         <span class="amount {{ r.status }}">{{ r.actual | fmt }}{% if r.budget > 0 %}<span class="muted"> / {{ r.budget | fmt }}</span>{% endif %}</span>
       </div>
-      {% if r.budget > 0 %}<div class="bar thin toned" style="--tone: {{ tone(r.category) }}"><span style="width: {{ r.pct }}%"></span></div>{% endif %}
+      {% if r.budget > 0 %}<div class="paced"><div class="bar thin toned" style="--tone: {{ tone(r.category) }}"><span style="width: {{ r.pct }}%"></span></div>{% if p.current %}<i class="pace" style="left: {{ p.pace }}%"></i>{% endif %}</div>{% endif %}
       {% if p.current and r.note %}<div class="bnote {{ r.status }}">{{ r.note }}</div>{% endif %}
     </div>
     {% endfor %}

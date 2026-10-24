@@ -200,6 +200,7 @@ def _period_summary(ledger, period, budgets: dict[str, float], current: bool) ->
         'range': period.label if current else period.range_label,
         'start': period.start.isoformat(),
         'current': current,
+        'pace': period.fraction * 100,
         'actual': actual,
         'budget': budget,
         'pct': min(actual / budget * 100, 100) if budget > 0 else 0,
