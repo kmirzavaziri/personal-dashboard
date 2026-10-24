@@ -4,6 +4,7 @@ from pathlib import Path
 
 import transactions.service as tx_service
 from transactions.ledger import Ledger
+from transactions.transaction import UNCATEGORIZED
 from core.item.schedule import build_pool
 from core.labels import colors_for
 from core.web.templating import make_env
@@ -241,6 +242,7 @@ def _env(ledger):
     tones = colors_for(c.name for c in ledger.categories)
     env = make_env(HERE)
     env.globals['tone'] = lambda name: tones.get(name, 'var(--faint)')
+    env.globals['uncategorized'] = UNCATEGORIZED
     env.filters['fmt'] = lambda v: f'{v:,.0f}'
     env.filters['fmt1'] = lambda v: f'{v:.1f}'
     env.filters['compact'] = lambda v: f'{v / 1000:.1f}k'.replace('.0k', 'k') if abs(v) >= 1000 else f'{v:,.0f}'

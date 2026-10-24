@@ -8,7 +8,7 @@ import messaging.service as messaging
 from pkg.model.io import read_yaml
 from transactions import fx
 from transactions.rules import Category, Clock, Rule, slug
-from transactions.transaction import Transaction, TransactionStore
+from transactions.transaction import UNCATEGORIZED, Transaction, TransactionStore
 
 _NUMBER = r'(?:\d[\d,]*(?:\.\d+)?|\.\d+)'
 _TOKENS = {
@@ -207,7 +207,7 @@ def type_keys(config) -> list[str]:
 
 
 def set_category(config, tx_id: str, category_key: str) -> bool:
-    if category_key and Category.objects.get_or_none(key=category_key) is None:
+    if category_key not in ('', UNCATEGORIZED) and Category.objects.get_or_none(key=category_key) is None:
         raise ValueError(f'unknown category {category_key!r}')
     return _store(config).update(tx_id, category_override=category_key)
 
@@ -260,7 +260,7 @@ def delete_category(config, key: str, move_rules_to: str = '') -> int:
     def release(tx: Transaction) -> bool:
         if tx.category_override != key:
             return False
-        tx.category_override = ''
+        tx.category_override, tx.note = UNCATEGORIZED, ''
         return True
 
     released = _store(config).update_each(release)

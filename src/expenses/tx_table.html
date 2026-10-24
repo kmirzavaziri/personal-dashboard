@@ -10,6 +10,7 @@
         <td>
           <select class="tx-cat tone" data-id="{{ e.tx.id }}" aria-label="Category">
             <option value="" data-tone="{{ tone(e.match.category.name) if e.match else 'var(--faint)' }}">{% if e.match %}{{ e.match.category.name }} · auto{% else %}None{% endif %}</option>
+            <option value="{{ uncategorized }}" data-tone="var(--faint)"{% if e.tx.category_override == uncategorized %} selected{% endif %}>Uncategorized</option>
             {% for cat in categories %}<option value="{{ cat.key }}" data-tone="{{ tone(cat.name) }}"{% if cat.key == e.tx.category_override %} selected{% endif %}>{{ cat.name }}</option>{% endfor %}
           </select>
         </td>

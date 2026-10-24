@@ -6,6 +6,7 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict
 
 _LOCATION_SUFFIX = re.compile(r',[^,]*$')
+UNCATEGORIZED = '-'
 
 
 class Transaction(BaseModel):
