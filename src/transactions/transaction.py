@@ -25,6 +25,7 @@ class Transaction(BaseModel):
     venue: str = ''
     remaining: float | None = None
     pattern: str = ''
+    venue_pattern: str = ''
     raw_ref: str = ''
     category_override: str = ''
     note: str = ''

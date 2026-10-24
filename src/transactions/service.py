@@ -23,6 +23,8 @@ _AMOUNT_HINT = re.compile(r'\b(?:[A-Z]{3} ?(?:\d[\d,]*)?\.\d{2}|\d[\d,]*\.\d{2} 
 _TXN_HINT = re.compile(r'card|spent|withdrawal|purchase|available limit|avl bal', re.I)
 _LIVE_WINDOW = timedelta(days=1)
 _SAME_MOVEMENT_WINDOW = timedelta(days=1)
+_CHARGES_TOLERANCE = 5.0
+_UNKNOWN_ACCOUNT = 'Unknown'
 
 
 def _dir(config):
@@ -67,7 +69,7 @@ def parse_text(text, patterns):
             'venue': (fields.get('venue') or '').strip(),
             'remaining': _num(fields.get('remaining')),
             'pattern': pattern['name'],
-            'enriches': bool(pattern.get('enriches')),
+            'enriches': int(pattern.get('enriches') or 0),
         }
     return None
 
@@ -84,7 +86,7 @@ def _account(parsed, cards):
             return card['display']
     if parsed.get('card_name'):
         return parsed['card_name']
-    return f"card …{parsed['last4']}" if parsed.get('last4') else 'Unknown'
+    return f"card …{parsed['last4']}" if parsed.get('last4') else _UNKNOWN_ACCOUNT
 
 
 def _repeated(config, entry, text):
@@ -168,11 +170,18 @@ def _record(config, entry, text, parsed, account) -> Transaction | None:
     if existing is None:
         store.append(tx)
         return tx
-    if parsed['enriches'] and existing.venue != tx.venue:
-        store.update(existing.id, venue=tx.venue)
+    if parsed['enriches'] > _enrichment_rank(config, existing) and existing.venue != tx.venue:
+        store.update(existing.id, venue=tx.venue, venue_pattern=tx.pattern)
+    if existing.account == _UNKNOWN_ACCOUNT and tx.account != _UNKNOWN_ACCOUNT:
+        store.update(existing.id, account=tx.account, last4=tx.last4, amount=tx.amount, amount_aed=tx.amount_aed)
     if existing.remaining is None and tx.remaining is not None:
         store.update(existing.id, remaining=tx.remaining)
     return None
+
+
+def _enrichment_rank(config, tx: Transaction) -> int:
+    source = tx.venue_pattern or tx.pattern
+    return next((int(p.get('enriches') or 0) for p in _patterns(config) if p['name'] == source), 0)
 
 
 def _same_movement(store: TransactionStore, tx: Transaction) -> Transaction | None:
@@ -182,9 +191,17 @@ def _same_movement(store: TransactionStore, tx: Transaction) -> Transaction | No
     if exact is not None:
         return exact
     return next((row for row in rows
-                 if row.account == tx.account and round(row.amount, 2) == round(tx.amount, 2)
-                 and (row.remaining is None or tx.remaining is None)
-                 and abs(row.at - tx.at) <= _SAME_MOVEMENT_WINDOW), None)
+                 if (row.remaining is None or tx.remaining is None)
+                 and abs(row.at - tx.at) <= _SAME_MOVEMENT_WINDOW
+                 and _same_account_and_amount(row, tx)), None)
+
+
+def _same_account_and_amount(row: Transaction, tx: Transaction) -> bool:
+    if row.account == tx.account:
+        return round(row.amount, 2) == round(tx.amount, 2)
+    if _UNKNOWN_ACCOUNT in (row.account, tx.account):
+        return 0 <= abs(row.amount - tx.amount) <= _CHARGES_TOLERANCE
+    return False
 
 
 def _overrides(config) -> dict[str, dict]:
