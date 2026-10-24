@@ -1,14 +1,14 @@
 import hashlib
-import json
 import re
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 
 import messaging.service as messaging
-import yaml
 
 from pkg.model.io import read_yaml
 from transactions import fx
+from transactions.rules import Category, Clock, Rule, slug
+from transactions.transaction import Transaction, TransactionStore
 
 _NUMBER = r'(?:\d[\d,]*(?:\.\d+)?|\.\d+)'
 _TOKENS = {
@@ -22,7 +22,6 @@ _TOKENS = {
 _AMOUNT_HINT = re.compile(r'\b(?:[A-Z]{3} ?(?:\d[\d,]*)?\.\d{2}|\d[\d,]*\.\d{2} ?[A-Z]{3})\b')
 _TXN_HINT = re.compile(r'card|spent|withdrawal|purchase|available limit|avl bal', re.I)
 _LIVE_WINDOW = timedelta(days=1)
-_LOCATION_SUFFIX = re.compile(r',[^,]*$')
 
 
 def _dir(config):
@@ -37,29 +36,8 @@ def _cards(config):
     return read_yaml(_dir(config) / 'cards.yaml') or []
 
 
-def _autolabel(config):
-    return read_yaml(_dir(config) / 'autolabel.yaml') or []
-
-
-def _types(config) -> dict[str, dict]:
-    return {t['key']: t for t in read_yaml(_dir(config) / 'types.yaml') or []}
-
-
-def counts_as_spend(config, tx: dict) -> bool:
-    kind = _types(config).get(tx.get('type'))
-    if kind is None:
-        raise ValueError(f"transaction {tx.get('id')} has type {tx.get('type')!r}, missing from transactions/types.yaml")
-    return bool(kind.get('spend'))
-
-
 def _num(value):
     return float(value.replace(',', '')) if value else None
-
-
-def _matches(match, text):
-    if match.startswith('re:'):
-        return re.search(match[3:], text, re.I) is not None
-    return match.lower() in text.lower()
 
 
 def _expand(regex):
@@ -107,103 +85,6 @@ def _account(parsed, cards):
     return f"card …{parsed['last4']}" if parsed.get('last4') else 'Unknown'
 
 
-def _autolabel_rule(parsed, rules) -> dict:
-    hay = f"{parsed.get('venue', '')} {parsed.get('type', '')}"
-    return next((rule for rule in rules if _matches(rule.get('match', ''), hay)), {})
-
-
-def _signature(tx):
-    return f"{tx.get('last4') or tx['account']}|{tx['amount']:.2f}|{tx['ts'][:10]}|{tx.get('remaining')}"
-
-
-def _month_path(config, ts):
-    return _dir(config) / f'{ts[:7]}.jsonl'
-
-
-def _read_month(config, ts) -> list[dict]:
-    path = _month_path(config, ts)
-    if not path.exists():
-        return []
-    return [json.loads(line) for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
-
-
-def transactions(config, month=None):
-    ts = f'{month}-01' if month else datetime.now(timezone.utc).isoformat()
-    return _read_month(config, ts)
-
-
-def account_names(config) -> list[str]:
-    return list(dict.fromkeys(card['display'] for card in _cards(config)))
-
-
-def vendor_of(venue: str) -> str:
-    return ' '.join(_LOCATION_SUFFIX.sub('', venue or '').split())
-
-
-def _all_transactions(config) -> list[dict]:
-    return [row for path in sorted(_dir(config).glob('*.jsonl')) for row in _read_month(config, path.stem)]
-
-
-def uncategorized_vendors(config) -> list[dict]:
-    totals: dict[str, dict] = {}
-    for tx in _all_transactions(config):
-        if tx.get('category_override') or tx.get('category') or not counts_as_spend(config, tx):
-            continue
-        vendor = vendor_of(tx['venue'])
-        if not vendor:
-            continue
-        entry = totals.setdefault(vendor.casefold(), {'vendor': vendor, 'total': 0.0, 'count': 0, 'last': ''})
-        entry['total'] += tx.get('amount_aed') or 0
-        entry['count'] += 1
-        entry['last'] = max(entry['last'], tx['ts'][:10])
-    return sorted(totals.values(), key=lambda entry: -entry['total'])
-
-
-def categorize_vendor(config, vendor: str, category: str) -> int:
-    rules = [rule for rule in _autolabel(config) if rule.get('match', '').casefold() != vendor.casefold()]
-    rules.append({'match': vendor, 'category': category})
-    (_dir(config) / 'autolabel.yaml').write_text(yaml.safe_dump(rules, allow_unicode=True, sort_keys=False))
-    updated = 0
-    for path in _dir(config).glob('*.jsonl'):
-        rows = _read_month(config, path.stem)
-        matching = [row for row in rows if not row.get('category_override') and not row.get('category')
-                    and vendor_of(row['venue']).casefold() == vendor.casefold()]
-        for row in matching:
-            row['category'], row['category_source'] = category, 'auto'
-        if matching:
-            _write_month(path, rows)
-            updated += len(matching)
-    return updated
-
-
-def label_categories(config):
-    return sorted({r.get('category', '') for r in _autolabel(config) if r.get('category')})
-
-
-def _update(config, tx_id, **fields) -> bool:
-    for path in sorted(_dir(config).glob('*.jsonl'), reverse=True):
-        rows = _read_month(config, path.stem)
-        row = next((r for r in rows if r.get('id') == tx_id), None)
-        if row is None:
-            continue
-        row.update(fields)
-        _write_month(path, rows)
-        return True
-    return False
-
-
-def set_category(config, tx_id, category):
-    return _update(config, tx_id, category_override=category, category_source='manual' if category else 'auto')
-
-
-def set_note(config, tx_id, note):
-    return _update(config, tx_id, note=note)
-
-
-def _write_month(path, rows):
-    path.write_text('\n'.join(json.dumps(r, ensure_ascii=False) for r in rows) + '\n', encoding='utf-8')
-
-
 def _repeated(config, entry, text):
     ts = entry.get('received_at') or ''
     return any(
@@ -214,39 +95,6 @@ def _repeated(config, entry, text):
 
 def _alert_text(parsed, account):
     return parsed['alert'].format_map(defaultdict(str, parsed['groups'], account=account))
-
-
-def _record(config, entry, text, parsed, account):
-    ts = entry.get('received_at') or datetime.now(timezone.utc).isoformat()
-    rule = _autolabel_rule(parsed, _autolabel(config))
-    category = rule.get('category', '')
-    rate = fx.rate(config, parsed['currency'], ts[:10])
-    tx = {
-        'id': hashlib.sha1(f"{ts}|{text}".encode()).hexdigest()[:12],
-        'ts': ts,
-        'source': entry.get('source', ''),
-        'account': account,
-        'last4': parsed.get('last4'),
-        'type': rule.get('type', parsed['type']),
-        'amount': parsed['amount'],
-        'currency': parsed['currency'],
-        'amount_aed': round(parsed['amount'] * rate, 2) if rate is not None else None,
-        'fx_rate': rate,
-        'venue': parsed['venue'],
-        'remaining': parsed['remaining'],
-        'category': category,
-        'category_source': 'auto' if category else '',
-        'category_override': '',
-        'pattern': parsed['pattern'],
-        'raw_ref': entry.get('received_at', ''),
-    }
-    if _signature(tx) in {_signature(row) for row in _read_month(config, ts)}:
-        return None
-    path = _month_path(config, ts)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open('a', encoding='utf-8') as f:
-        f.write(json.dumps(tx, ensure_ascii=False) + '\n')
-    return tx
 
 
 def ingest(config, entry, notify=True):
@@ -288,25 +136,134 @@ def receive(config, source: str, payloads: list) -> Counter:
     return outcome
 
 
-def _manual_edits(config) -> dict[str, dict]:
+def _store(config) -> TransactionStore:
+    return TransactionStore(_dir(config))
+
+
+def _record(config, entry, text, parsed, account) -> Transaction | None:
+    ts = entry.get('received_at') or datetime.now(timezone.utc).isoformat()
+    rate = fx.rate(config, parsed['currency'], ts[:10])
+    tx = Transaction(
+        id=hashlib.sha1(f"{ts}|{text}".encode()).hexdigest()[:12],
+        ts=ts,
+        source=entry.get('source', ''),
+        account=account,
+        last4=parsed.get('last4'),
+        type=parsed['type'],
+        amount=parsed['amount'],
+        currency=parsed['currency'],
+        amount_aed=round(parsed['amount'] * rate, 2) if rate is not None else None,
+        fx_rate=rate,
+        venue=parsed['venue'],
+        remaining=parsed['remaining'],
+        pattern=parsed['pattern'],
+        raw_ref=entry.get('received_at', ''),
+    )
+    store = _store(config)
+    if tx.signature in {row.signature for row in store.read_month(ts[:7])}:
+        return None
+    store.append(tx)
+    return tx
+
+
+def _overrides(config) -> dict[str, dict]:
     return {
-        row['id']: {key: row[key] for key in ('category_override', 'category_source', 'note') if key in row}
-        for row in _all_transactions(config)
-        if row.get('category_source') == 'manual' or row.get('note')
+        tx.id: {'category_override': tx.category_override, 'note': tx.note}
+        for tx in _store(config).all() if tx.category_override or tx.note
     }
 
 
 def backfill(config, rebuild=False):
-    manual = _manual_edits(config) if rebuild else {}
+    overrides = _overrides(config) if rebuild else {}
     if rebuild:
-        for path in _dir(config).glob('*.jsonl'):
-            path.unlink()
+        _store(config).clear()
     results = [ingest(config, entry, notify=False)
                for entry in sorted(messaging.all_entries(config), key=lambda e: e.get('received_at', ''))]
-    for tx_id, edits in manual.items():
-        _update(config, tx_id, **edits)
+    for tx_id, fields in overrides.items():
+        _store(config).update(tx_id, **fields)
     counts = Counter(r['action'] for r in results)
     lines = [f'{action}: {n}' for action, n in sorted(counts.items()) if action != 'none']
     lines += [f"alert (not sent): {r['message']}" for r in results if r['action'] == 'alert']
     lines += [f"unparsed: {r['text']}" for r in results if r['action'] == 'unparsed']
     return '\n'.join(lines) or 'nothing to backfill'
+
+
+def transactions(config, month=None) -> list[Transaction]:
+    return _store(config).read_month(month or f'{datetime.now(timezone.utc):%Y-%m}')
+
+
+def account_names(config) -> list[str]:
+    return list(dict.fromkeys(card['display'] for card in _cards(config)))
+
+
+def type_keys(config) -> list[str]:
+    return [t['key'] for t in read_yaml(_dir(config) / 'types.yaml') or []]
+
+
+def set_category(config, tx_id: str, category_key: str) -> bool:
+    if category_key and Category.objects.get_or_none(key=category_key) is None:
+        raise ValueError(f'unknown category {category_key!r}')
+    return _store(config).update(tx_id, category_override=category_key)
+
+
+def set_note(config, tx_id: str, note: str) -> bool:
+    return _store(config).update(tx_id, note=note)
+
+
+def create_category(name: str) -> Category:
+    key = slug(name)
+    if not key:
+        raise ValueError('category name is empty')
+    if Category.objects.get_or_none(key=key) is not None:
+        raise ValueError(f'category {name!r} already exists')
+    category = Category(key=key, name=name.strip())
+    category.save()
+    return category
+
+
+def save_category(config, key: str, name: str, rules: list[dict]) -> Category:
+    category = Category.objects.get(key=key)
+    clock, types = Clock.load(config.db), set(type_keys(config))
+    parsed = [Rule.model_validate(rule) for rule in rules]
+    for rule in parsed:
+        if not rule.match.strip():
+            raise ValueError('every rule needs a match')
+        if rule.slot and clock.slot(rule.slot) is None:
+            raise ValueError(f'unknown time slot {rule.slot!r}')
+        if rule.type and rule.type not in types:
+            raise ValueError(f'unknown transaction type {rule.type!r}')
+        if rule.is_pattern:
+            try:
+                re.compile(rule.match[3:])
+            except re.error as error:
+                raise ValueError(f'invalid pattern {rule.match!r}: {error}') from error
+    category.name = name.strip() or category.name
+    category.rules = parsed
+    category.save()
+    return category
+
+
+def delete_category(config, key: str, move_to: str = '') -> int:
+    category = Category.objects.get(key=key)
+    if move_to:
+        target = Category.objects.get(key=move_to)
+        target.rules = target.rules + category.rules
+        target.save()
+
+    def reassign(tx: Transaction) -> bool:
+        if tx.category_override != key:
+            return False
+        tx.category_override = move_to
+        return True
+
+    moved = _store(config).update_each(reassign)
+    category.delete()
+    return moved
+
+
+def categorize_vendor(vendor: str, category_key: str) -> Category:
+    category = Category.objects.get(key=category_key)
+    if not any(rule.match.casefold() == vendor.casefold() and not rule.slot for rule in category.rules):
+        category.rules = category.rules + [Rule(match=vendor)]
+        category.save()
+    return category

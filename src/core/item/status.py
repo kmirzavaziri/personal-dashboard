@@ -27,8 +27,8 @@ STATUSES: dict[str, tuple[Status, ...]] = {
     'clothing': (
         Status('candidate', 'Candidate', 'card-tag-candidate'),
         Status('deferred', 'Deferred', 'card-tag-deferred'),
-        Status('next_batch', 'Next Batch', 'card-tag-next_batch'),
-        Status('unavailable', 'Out of My Size', 'card-tag-unavailable'),
+        Status('next_batch', 'Next batch', 'card-tag-next_batch'),
+        Status('unavailable', 'Out of my size', 'card-tag-unavailable'),
         Status('pending', 'Pending', 'card-tag-pending'),
         Status('basket', 'Basket', 'card-tag-basket'),
         Status('ordered', 'Ordered', 'card-tag-ordered'),

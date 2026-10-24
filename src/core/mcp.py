@@ -1,4 +1,5 @@
 import json
+from datetime import datetime, timezone
 
 import yaml
 from flask import Blueprint, jsonify, request
@@ -13,6 +14,7 @@ import core.item.service as items
 import styling.service as styling
 import health.service as health
 import transactions.service as transactions
+from transactions.ledger import Ledger
 import messaging.service as messaging
 from core.oauth import valid_access_token
 
@@ -192,10 +194,13 @@ def styling_move(services, key, status):
 
 
 def transactions_list(services, month=None):
+    ledger = Ledger.load(services.config)
+    entries = ledger.month(month or f'{ledger.clock.local(datetime.now(timezone.utc)):%Y-%m}')
     return json.dumps([
-        {k: t.get(k) for k in ('id', 'ts', 'account', 'type', 'amount', 'currency', 'amount_aed', 'venue')}
-        | {'category': t.get('category_override') or t.get('category')}
-        for t in transactions.transactions(services.config, month)
+        {'id': e.tx.id, 'ts': e.tx.ts, 'account': e.tx.account, 'type': e.type, 'amount': e.tx.amount,
+         'currency': e.tx.currency, 'amount_aed': e.tx.amount_aed, 'venue': e.tx.venue,
+         'category': e.category_name, 'note': e.note}
+        for e in entries
     ], ensure_ascii=False)
 
 

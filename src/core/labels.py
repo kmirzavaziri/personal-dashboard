@@ -1,19 +1,18 @@
-_PALETTE = (
-    '#e78a4e', '#c56ea8', '#9d7cd8', '#d3869b', '#cf7a3e', '#3f9e93',
-    '#c99a6a', '#8f7bd0', '#d99ac0', '#a0785a', '#b57edc', '#7d6ba8',
+PALETTE = (
+    'var(--c-clay)', 'var(--c-mauve)', 'var(--c-slate)', 'var(--c-sand)', 'var(--c-sage)', 'var(--blue)',
 )
 
 UNLABELED = 'General'
 
 _RESERVED = {
-    UNLABELED: '#9aa09c',
-    'Routine': '#4fb0a5',
+    UNLABELED: 'var(--faint)',
+    'Routine': 'var(--c-teal)',
 }
 
 
 def colors_for(labels) -> dict[str, str]:
     ordered = sorted(label for label in labels if label not in _RESERVED)
-    colors = {label: _PALETTE[index % len(_PALETTE)] for index, label in enumerate(ordered)}
+    colors = {label: PALETTE[index % len(PALETTE)] for index, label in enumerate(ordered)}
     colors.update(_RESERVED)
     return colors
 

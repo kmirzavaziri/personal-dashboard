@@ -3,6 +3,7 @@ from pathlib import Path
 from collections import defaultdict
 
 from core.item.item import Item
+from core.labels import PALETTE
 from core.item.categories import clothing_section_of, clothing_sections
 from core.web.templating import make_env
 from pkg.model.io import read_yaml
@@ -11,15 +12,9 @@ HERE = Path(__file__).parent
 
 _jinja = make_env(HERE)
 
-_BRAND_PALETTE = (
-    '#e06c75', '#61afef', '#98c379', '#e5c07b', '#c678dd', '#56b6c2',
-    '#d19a66', '#e39ec1', '#7fd18e', '#b0a0f0', '#f0955e', '#5fb3d6',
-)
-
-
 def _brand_colors(items: list) -> dict[str, str]:
     brands = sorted({i.metadata.clothing.brand for i in items if i.metadata.clothing.brand})
-    return {brand: _BRAND_PALETTE[index % len(_BRAND_PALETTE)] for index, brand in enumerate(brands)}
+    return {brand: PALETTE[index % len(PALETTE)] for index, brand in enumerate(brands)}
 
 
 def _load_data() -> tuple[dict, dict, dict, dict, dict, dict]:

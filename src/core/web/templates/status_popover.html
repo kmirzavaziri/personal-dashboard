@@ -1,3 +1,17 @@
+<style>
+  .status-pop {
+    position: fixed; z-index: 500; display: none; flex-direction: column; gap: 0.1rem;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 0.3rem; box-shadow: var(--shadow-pop);
+  }
+  .status-pop button {
+    background: none; border: none; font: inherit; cursor: pointer; text-align: left;
+    padding: 0.25rem 0.55rem; border-radius: var(--radius-sm);
+  }
+  @media (hover: hover) { .status-pop button:hover { background: var(--hover); } }
+  .status-pop button.current { font-weight: 600; background: var(--raised); }
+  .status-trigger { cursor: pointer; }
+</style>
 <script>
 window.initStatusPopover = function (opts) {
   const statuses = opts.statuses;
@@ -7,7 +21,7 @@ window.initStatusPopover = function (opts) {
 
   const pop = document.createElement('div');
   pop.addEventListener('click', e => e.stopPropagation());
-  pop.style.cssText = 'position:fixed;z-index:500;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:0.35rem 0.5rem;display:none;box-shadow:0 4px 16px rgba(0,0,0,0.7);flex-direction:column;gap:0.4rem;';
+  pop.className = 'status-pop';
   document.body.appendChild(pop);
 
   let activeCell = null;
@@ -44,9 +58,9 @@ window.initStatusPopover = function (opts) {
     if (opts.mode === 'self') {
       cell.className = (selfBase + ' ' + s.css).trim();
       cell.textContent = s.label;
-      cell.style.cursor = 'pointer';
+      cell.classList.add('status-trigger');
     } else {
-      cell.innerHTML = '<span class="' + s.css + '" style="cursor:pointer;">' + s.label + '</span>';
+      cell.innerHTML = '<span class="status-trigger ' + s.css + '">' + s.label + '</span>';
     }
   }
 
@@ -73,8 +87,8 @@ window.initStatusPopover = function (opts) {
       const btn = document.createElement('button');
       btn.textContent = s.label;
       btn.className = (buttonBase ? buttonBase + ' ' : '') + s.css;
-      btn.style.cssText = 'background:none;border:none;font:inherit;font-size:' + buttonFont + ';cursor:pointer;text-align:left;padding:0.15rem 0.25rem;border-radius:2px;';
-      if (val === cell.dataset.status) btn.style.fontWeight = 'bold';
+      btn.style.fontSize = buttonFont;
+      if (val === cell.dataset.status) btn.classList.add('current');
       btn.addEventListener('click', e => { e.stopPropagation(); commit(cell, val); });
       pop.appendChild(btn);
     });

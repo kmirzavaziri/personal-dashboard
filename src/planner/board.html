@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
-{% block title %}Task Manager{% endblock %}
-{% block heading %}Task Manager{% endblock %}
+{% block title %}Task manager{% endblock %}
+{% block heading %}Task manager{% endblock %}
 {% block max_width %}100%{% endblock %}
 {% block wrap %}{% endblock %}
 {% block body_class %}planner-page{% endblock %}
@@ -10,84 +10,56 @@
   body.planner-page { height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
   body.planner-page main { flex: 1 1 auto; min-height: 0; width: 100%; margin: 0; display: flex; padding: 0; }
 
-  .board { flex: 1 1 auto; min-height: 0; display: flex; gap: 0.9rem; align-items: stretch; overflow-x: auto; overflow-y: hidden; padding: 1.1rem 0.9rem 0.9rem; scrollbar-width: none; -ms-overflow-style: none; }
+  .board { flex: 1 1 auto; min-height: 0; display: flex; gap: 0.7rem; align-items: stretch; overflow-x: auto; overflow-y: hidden; padding: 1rem 0.9rem 0.9rem; scrollbar-width: none; }
   .board::-webkit-scrollbar { display: none; }
 
-  .status {
-    display: flex; flex-direction: column; min-height: 0; flex: none;
-    background: none; border: none; box-shadow: none;
-    backdrop-filter: none; -webkit-backdrop-filter: none;
-    padding: 0; margin: 0; border-radius: 0;
-  }
+  .status { display: flex; flex-direction: column; min-height: 0; flex: none; }
   .status-pick    .grp-h { color: var(--yellow); }
   .status-planned .grp-h { color: var(--blue); }
   .status-missed  .grp-h { color: var(--red); }
   .status-done    .grp-h { color: var(--green); }
-  .status-pick    .grp-h .gdot { background: var(--yellow); }
-  .status-planned .grp-h .gdot { background: var(--blue); }
-  .status-missed  .grp-h .gdot { background: var(--red); }
-  .status-done    .grp-h .gdot { background: var(--green); }
+  .grp-h .gdot { background: currentColor; }
 
-  .groups { flex: 1 1 auto; min-height: 0; display: flex; gap: 0.9rem; align-items: flex-start; }
+  .groups { flex: 1 1 auto; min-height: 0; display: flex; gap: 0.7rem; align-items: flex-start; }
   .grp {
-    width: 280px; flex: none; max-height: 100%;
+    width: 272px; flex: none; max-height: 100%;
     display: flex; flex-direction: column;
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur)) saturate(1.15);
-    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.15);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius);
-    padding: 0 0.5rem 0 0.8rem;
-    box-shadow: var(--glass-shadow);
+    background: var(--sunken); border: 1px solid var(--border); border-radius: var(--radius-lg);
+    padding: 0 0.45rem 0 0.6rem;
   }
   .grp.dragging { opacity: 0.4; }
   .grp-h {
-    flex: none; display: flex; align-items: center; gap: 0.4rem;
-    font-size: 0.68rem; letter-spacing: 0.01em;
-    font-weight: 600; margin: 0.8rem 0.3rem 0 0.05rem; cursor: pointer; user-select: none;
+    flex: none; display: flex; align-items: center; gap: 0.45rem;
+    font-size: 0.8rem; font-weight: 600; margin: 0.65rem 0.15rem 0 0.1rem; cursor: pointer; user-select: none;
   }
-  .grp-h .gdot { width: 7px; height: 7px; border-radius: 2px; flex: none; }
+  .grp-h .gdot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
   .grp-h .badge { margin-left: auto; }
   .grp.collapsed .grp-cards { display: none; }
+  .grp.collapsed .grp-h { margin-bottom: 0.65rem; }
 
-  .grp-cards { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0.8rem 0.3rem 0.8rem 0; scrollbar-width: none; -ms-overflow-style: none; }
+  .grp-cards { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0.6rem 0.15rem 0.6rem 0; scrollbar-width: none; }
   .grp-cards::-webkit-scrollbar { display: none; }
 
   .card {
-    background: var(--surface);
-    border-left: 3px solid;
+    background: var(--surface); border: 1px solid var(--border); border-left: 3px solid;
     border-radius: var(--radius-sm);
-    padding: 0.55rem 0.65rem; margin-bottom: 0.45rem;
-    cursor: pointer; transition: background 0.14s;
+    padding: 0.5rem 0.6rem; margin-bottom: 0.4rem;
+    cursor: pointer; transition: border-color 0.14s, box-shadow 0.14s;
   }
   .card:last-child { margin-bottom: 0; }
-  @media (hover: hover) { .card:hover { background: #2e2e2e; } }
+  @media (hover: hover) { .card:hover { border-top-color: var(--border-strong); border-right-color: var(--border-strong); border-bottom-color: var(--border-strong); } }
   .card.dragging { opacity: 0.4; }
-  .card-title { font-family: var(--font-ui); color: var(--strong); font-size: 0.84rem; line-height: 1.4; }
-  .card-when { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.4rem; }
-  .when-chip {
-    display: inline-flex; align-items: center; gap: 0.25rem;
-    font-size: 0.68rem; color: var(--muted); text-decoration: none;
-    background: rgba(255,255,255,0.06); border: 1px solid var(--tile-border);
-    border-radius: 999px; padding: 0.1rem 0.45rem;
-  }
-  .when-chip:hover { color: var(--strong); border-color: rgba(255,255,255,0.25); }
-  .col-empty { color: var(--muted); font-size: 0.82rem; font-style: italic; opacity: 0.7; }
+  .card-title { color: var(--strong); font-size: 0.83rem; line-height: 1.4; }
+  .card-when { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.35rem; }
+  .when-chip { text-decoration: none; }
+  .when-chip svg { width: 0.7rem; height: 0.7rem; }
+  @media (hover: hover) { .when-chip:hover { color: var(--strong); } }
+  .col-empty { color: var(--faint); font-size: 0.8rem; padding: 0.2rem 0.1rem; }
 
-  .modal-status {
-    display: inline-block; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.01em; color: var(--muted);
-    background: rgba(255,255,255,0.06); border-radius: 999px;
-    padding: 0.12rem 0.55rem; margin-bottom: 0.55rem;
-  }
-  .modal-title {
-    font-size: 1rem; font-weight: 600; color: var(--strong);
-    text-transform: none; letter-spacing: normal;
-    margin: 0 0 0.6rem; line-height: 1.3;
-  }
-  .modal-labels { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.75rem; }
+  .modal .badge { margin-bottom: 0.5rem; }
+  .modal-labels { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.7rem; }
   .modal-labels:empty { display: none; }
-  .modal-title:last-child { margin-bottom: 0; }
-  .modal-notes { color: var(--text); font-size: 0.87rem; line-height: 1.55; white-space: pre-wrap; }
+  .modal-notes { color: var(--text); font-size: 0.86rem; line-height: 1.55; white-space: pre-wrap; }
   .modal-notes:empty { display: none; }
 
   @media (max-width: 600px) {
@@ -102,14 +74,14 @@
        data-title="{{ t.title }}"
        data-notes="{{ t.notes }}"
        data-labels="{{ t.labels | join('|') }}"
-       data-status="{{ {'backlog': 'Backlog', 'next': 'To Pick', 'done': 'Done'}.get(t.status, t.status) }}"
+       data-status="{{ {'backlog': 'Backlog', 'next': 'To pick', 'done': 'Done'}.get(t.status, t.status) }}"
        title="{{ t.labels | join(', ') if t.labels else 'General' }}"
        style="border-left-color: {{ label_colors[t.labels[0]] if t.labels else label_colors['General'] }}">
     <div class="card-title">{{ t.title }}</div>
     {% set sched = schedules.get(t.key, []) %}
     {% if sched and t.status != 'done' %}
     <div class="card-when">
-      {% for s in sched %}<a class="when-chip" href="/calendar?offset={{ s.offset }}">📅 {{ s.text }}</a>{% endfor %}
+      {% for s in sched %}<a class="badge when-chip" href="/calendar?offset={{ s.offset }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>{{ s.text }}</a>{% endfor %}
     </div>
     {% endif %}
   </div>
@@ -118,62 +90,62 @@
 {% block content %}
 <div class="board">
 
-  <section class="status status-backlog">
+  <div class="status status-backlog">
     <div class="groups" id="backlog-groups">
       {% for label, tasks in backlog_groups %}
       <div class="grp" draggable="true" data-label="{{ label }}" data-col="{{ label }}">
         <div class="grp-h" style="color: {{ label_colors[label] }}">
-          <span class="gdot" style="background: {{ label_colors[label] }}"></span>{{ label }}<span class="badge">{{ tasks | length }}</span>
+          <span class="gdot"></span>{{ label }}<span class="badge">{{ tasks | length }}</span>
         </div>
         <div class="grp-cards">{% for t in tasks %}{{ card(t) }}{% endfor %}</div>
       </div>
       {% else %}<p class="col-empty">Nothing queued.</p>{% endfor %}
     </div>
-  </section>
+  </div>
 
-  <section class="status status-pick">
+  <div class="status status-pick">
     <div class="groups">
       <div class="grp" data-col="pick">
-        <div class="grp-h"><span class="gdot"></span>To Pick<span class="badge">{{ counts.next }}</span></div>
+        <div class="grp-h"><span class="gdot"></span>To pick<span class="badge">{{ counts.next }}</span></div>
         <div class="grp-cards">{% for t in picks %}{{ card(t) }}{% else %}<p class="col-empty">Nothing to triage.</p>{% endfor %}</div>
       </div>
     </div>
-  </section>
+  </div>
 
-  <section class="status status-planned">
+  <div class="status status-planned">
     <div class="groups">
       <div class="grp" data-col="planned">
         <div class="grp-h"><span class="gdot"></span>Planned<span class="badge">{{ counts.planned }}</span></div>
         <div class="grp-cards">{% for t in planned %}{{ card(t) }}{% else %}<p class="col-empty">Nothing scheduled.</p>{% endfor %}</div>
       </div>
     </div>
-  </section>
+  </div>
 
-  <section class="status status-missed">
+  <div class="status status-missed">
     <div class="groups">
       <div class="grp" data-col="missed">
         <div class="grp-h"><span class="gdot"></span>Missed<span class="badge">{{ counts.missed }}</span></div>
         <div class="grp-cards">{% for t in missed %}{{ card(t) }}{% else %}<p class="col-empty">Nothing missed.</p>{% endfor %}</div>
       </div>
     </div>
-  </section>
+  </div>
 
-  <section class="status status-done">
+  <div class="status status-done">
     <div class="groups">
       <div class="grp" data-col="done">
         <div class="grp-h"><span class="gdot"></span>Done<span class="badge">{{ counts.done }}</span></div>
         <div class="grp-cards">{% for t in done %}{{ card(t) }}{% else %}<p class="col-empty">Nothing done yet.</p>{% endfor %}</div>
       </div>
     </div>
-  </section>
+  </div>
 
 </div>
 
 <div class="modal-overlay" id="modal">
   <div class="modal">
     <button class="modal-close" id="modal-close" aria-label="Close">&times;</button>
-    <div class="modal-status" id="m-status"></div>
-    <h2 class="modal-title" id="m-title"></h2>
+    <span class="badge" id="m-status"></span>
+    <h2 id="m-title"></h2>
     <div class="modal-labels" id="m-labels"></div>
     <div class="modal-notes" id="m-notes"></div>
   </div>
@@ -182,7 +154,6 @@
 <script>
   var LABEL_COLORS = {{ label_colors | tojson }};
   (function () {
-    /* ── Modal ─────────────────────────────────────────────── */
     var overlay = document.getElementById('modal');
     var mStatus = document.getElementById('m-status'), mTitle = document.getElementById('m-title');
     var mLabels = document.getElementById('m-labels'), mNotes = document.getElementById('m-notes');
@@ -193,7 +164,7 @@
       (card.dataset.labels ? card.dataset.labels.split('|') : []).forEach(function (l) {
         var chip = document.createElement('span');
         chip.className = 'chip'; chip.textContent = l;
-        var c = LABEL_COLORS[l] || '#888'; chip.style.color = c; chip.style.borderColor = c;
+        chip.style.color = LABEL_COLORS[l] || 'var(--muted)';
         mLabels.appendChild(chip);
       });
       mNotes.textContent = card.dataset.notes || '';
@@ -204,7 +175,6 @@
     overlay.addEventListener('click', function (e) { if (e.target === overlay) closeModal(); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
 
-    /* ── Drag-to-sort ──────────────────────────────────────── */
     function post(url, body) {
       fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     }
@@ -256,7 +226,6 @@
       makeSortable(c, '.card', false, function (cc) { post('/api/planner/reorder-cards', { keys: keysOf(cc) }); });
     });
 
-    /* click opens modal (suppressed automatically when a drag happens) */
     document.querySelectorAll('.card').forEach(function (card) {
       card.addEventListener('click', function () { openModal(card); });
     });
@@ -264,7 +233,6 @@
       chip.addEventListener('click', function (e) { e.stopPropagation(); });
     });
 
-    /* stateful collapse: click a column header to toggle */
     var COLLAPSE_KEY = 'planner-collapsed';
     var collapsed;
     try { collapsed = new Set(JSON.parse(localStorage.getItem(COLLAPSE_KEY) || '[]')); } catch (e) { collapsed = new Set(); }
@@ -281,7 +249,6 @@
       });
     });
 
-    /* preserve horizontal scroll across refreshes */
     var board = document.querySelector('.board');
     if (board) {
       var saved = sessionStorage.getItem('planner-scroll');

@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import transactions.service as tx_service
+from transactions.ledger import Ledger
 from core.item.schedule import build_pool
 from core.web.templating import make_env
 from expenses.reference import category_account, category_display, expense_accounts
@@ -29,15 +30,6 @@ def _to_monthly(cost: float, frequency: str) -> float:
     return cost * _FREQ_TO_MONTHLY.get(frequency, 1.0)
 
 
-def _tx_aed(tx: dict) -> float:
-    aed = tx.get('amount_aed')
-    return aed if aed is not None else tx.get('amount') or 0
-
-
-def _tx_category(tx: dict) -> str:
-    return tx.get('category_override') or tx.get('category') or 'Unlabeled'
-
-
 def _budget_status(budget: float, actual: float, fraction: float) -> tuple[str, float]:
     projected = actual / fraction if fraction else actual
     if budget <= 0:
@@ -49,16 +41,14 @@ def _budget_status(budget: float, actual: float, fraction: float) -> tuple[str, 
     return 'green', projected
 
 
-def _budget_actuals(config, cat_totals: dict[str, float], now: datetime) -> tuple[list[dict], list[dict]]:
+def _budget_rows(month_entries, cat_totals: dict[str, float], now: datetime) -> list[dict]:
     days_in_month = calendar.monthrange(now.year, now.month)[1]
     fraction = now.day / days_in_month
-
-    month_txns = tx_service.transactions(config)
-    spending = [tx for tx in month_txns if tx_service.counts_as_spend(config, tx)]
     actual_by_cat: dict[str, float] = {}
-    for tx in spending:
-        cat = _tx_category(tx)
-        actual_by_cat[cat] = actual_by_cat.get(cat, 0.0) + _tx_aed(tx)
+    for entry in month_entries:
+        if entry.spend:
+            name = entry.category_name or 'Uncategorized'
+            actual_by_cat[name] = actual_by_cat.get(name, 0.0) + entry.tx.aed
 
     rows = []
     for cat in set(cat_totals) | set(actual_by_cat):
@@ -84,31 +74,32 @@ def _budget_actuals(config, cat_totals: dict[str, float], now: datetime) -> tupl
             'note': note,
         })
     rows.sort(key=lambda r: ({'red': 0, 'yellow': 1, 'green': 2, 'none': 3}[r['status']], -r['actual']))
+    return rows
 
-    cards: dict[str, list[dict]] = {name: [] for name in tx_service.account_names(config)}
-    for tx in month_txns:
-        cards.setdefault(tx.get('account') or 'Unknown', []).append(tx)
-    card_sections = []
-    for account, txs in cards.items():
-        recent = sorted(txs, key=lambda t: t.get('ts', ''), reverse=True)
-        card_sections.append({
-            'account': account,
-            'total': sum(_tx_aed(t) for t in txs if tx_service.counts_as_spend(config, t)),
-            'count': len(txs),
-            'txns': [{
-                'id': t.get('id', ''),
-                'when': (t.get('ts') or '')[:16].replace('T', ' '),
-                'venue': t.get('venue', ''),
-                'amount': abs(_tx_aed(t)),
-                'inflow': _tx_aed(t) < 0,
-                'note': t.get('note', ''),
-                'currency': (t.get('currency') or 'AED'),
-                'orig_amount': t.get('amount'),
-                'category': _tx_category(t),
-                'type': t.get('type', ''),
-            } for t in recent],
-        })
-    return rows, card_sections
+
+def _card_sections(config, month_entries) -> list[dict]:
+    cards: dict[str, list] = {name: [] for name in tx_service.account_names(config)}
+    for entry in month_entries:
+        cards.setdefault(entry.tx.account or 'Unknown', []).append(entry)
+    return [{
+        'account': account,
+        'total': sum(e.tx.aed for e in entries if e.spend),
+        'count': len(entries),
+        'entries': sorted(entries, key=lambda e: e.tx.ts, reverse=True),
+    } for account, entries in cards.items()]
+
+
+def _category_cards(ledger, month_entries) -> list[dict]:
+    hits = ledger.rule_hits()
+    month_totals: dict[str, float] = {}
+    for entry in month_entries:
+        if entry.category and entry.spend:
+            month_totals[entry.category.key] = month_totals.get(entry.category.key, 0.0) + entry.tx.aed
+    return [{
+        'category': category,
+        'month_total': month_totals.get(category.key, 0.0),
+        'rules': [{'rule': rule, 'hits': hits[(category.key, index)]} for index, rule in enumerate(category.rules)],
+    } for category in ledger.categories]
 
 
 def render(services) -> str:
@@ -200,15 +191,17 @@ def render(services) -> str:
             cat_totals[cat] = cat_totals.get(cat, 0.0) + r['monthly']
     by_category = sorted(cat_totals.items(), key=lambda kv: -kv[1])
 
-    now = datetime.now(timezone.utc)
-    budget_rows, card_sections = _budget_actuals(config, cat_totals, now)
+    ledger = Ledger.load(config)
+    clock = ledger.clock
+    now = clock.local(datetime.now(timezone.utc))
+    month_entries = ledger.month(f'{now:%Y-%m}')
     days_in_month = calendar.monthrange(now.year, now.month)[1]
-    period_label = f'{now:%B %Y} · day {now.day}/{days_in_month}'
-    categories = sorted(set(cat_totals) | set(tx_service.label_categories(config)))
+    period_label = f'{now:%B %Y} · day {now.day} of {days_in_month}'
 
     env = make_env(HERE)
     env.filters['fmt']  = lambda v: f'{v:,.0f}'
     env.filters['fmt1'] = lambda v: f'{v:.1f}'
+    env.filters['when'] = lambda ts: clock.local(datetime.fromisoformat(ts)).strftime('%a %b %-d · %H:%M')
 
     tmpl = env.get_template('expenses.html')
     return tmpl.render(
@@ -216,9 +209,12 @@ def render(services) -> str:
         grand_total=grand_total,
         grand_daily=grand_daily,
         by_category=by_category,
-        budget_rows=budget_rows,
-        card_sections=card_sections,
+        budget_rows=_budget_rows(month_entries, cat_totals, now),
+        card_sections=_card_sections(config, month_entries),
         period_label=period_label,
-        categories=categories,
-        uncategorized=tx_service.uncategorized_vendors(config),
+        categories=ledger.categories,
+        category_cards=_category_cards(ledger, month_entries),
+        slots=clock.slots,
+        types=tx_service.type_keys(config),
+        uncategorized=ledger.uncategorized_vendors(),
     )

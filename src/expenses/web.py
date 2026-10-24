@@ -1,11 +1,30 @@
 from flask import Blueprint, jsonify, request
+from pydantic import ValidationError
 
 import transactions.service as tx_service
 from expenses.view import render
+from pkg.model.base import DoesNotExist
 
 
 def make_expenses_bp(services) -> Blueprint:
     bp = Blueprint('expenses', __name__)
+
+    def body() -> dict:
+        return request.get_json(silent=True) or {}
+
+    def changed(payload):
+        if services.git is not None:
+            services.git.mark_dirty()
+        return jsonify(payload)
+
+    @bp.errorhandler(ValueError)
+    @bp.errorhandler(ValidationError)
+    def invalid(error):
+        return str(error), 400
+
+    @bp.errorhandler(DoesNotExist)
+    def missing(error):
+        return str(error), 404
 
     @bp.get('/expenses')
     def page():
@@ -13,31 +32,40 @@ def make_expenses_bp(services) -> Blueprint:
 
     @bp.post('/api/transaction/<tx_id>/category')
     def set_transaction_category(tx_id):
-        category = (request.get_json(silent=True) or {}).get('category', '')
+        category = body().get('category', '')
         if not tx_service.set_category(services.config, tx_id, category):
-            return 'not found', 404
-        if services.git is not None:
-            services.git.mark_dirty()
-        return jsonify({'id': tx_id, 'category': category})
+            return 'transaction not found', 404
+        return changed({'id': tx_id, 'category': category})
 
     @bp.post('/api/transaction/<tx_id>/note')
     def set_transaction_note(tx_id):
-        note = (request.get_json(silent=True) or {}).get('note', '').strip()
+        note = body().get('note', '').strip()
         if not tx_service.set_note(services.config, tx_id, note):
-            return 'not found', 404
-        if services.git is not None:
-            services.git.mark_dirty()
-        return jsonify({'id': tx_id, 'note': note})
+            return 'transaction not found', 404
+        return changed({'id': tx_id, 'note': note})
 
     @bp.post('/api/vendor/category')
     def categorize_vendor():
-        body = request.get_json(silent=True) or {}
-        vendor, category = body.get('vendor', '').strip(), body.get('category', '').strip()
+        vendor, category = body().get('vendor', '').strip(), body().get('category', '').strip()
         if not vendor or not category:
             return 'vendor and category are required', 400
-        updated = tx_service.categorize_vendor(services.config, vendor, category)
-        if services.git is not None:
-            services.git.mark_dirty()
-        return jsonify({'vendor': vendor, 'category': category, 'updated': updated})
+        tx_service.categorize_vendor(vendor, category)
+        return changed({'vendor': vendor, 'category': category})
+
+    @bp.post('/api/categories')
+    def create_category():
+        category = tx_service.create_category(body().get('name', ''))
+        return changed({'key': category.key, 'name': category.name})
+
+    @bp.put('/api/categories/<key>')
+    def save_category(key):
+        payload = body()
+        category = tx_service.save_category(services.config, key, payload.get('name', ''), payload.get('rules', []))
+        return changed({'key': category.key, 'name': category.name})
+
+    @bp.delete('/api/categories/<key>')
+    def delete_category(key):
+        moved = tx_service.delete_category(services.config, key, body().get('move_to', ''))
+        return changed({'deleted': key, 'reassigned': moved})
 
     return bp

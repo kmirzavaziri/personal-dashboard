@@ -7,84 +7,61 @@
 {% block extra_css %}
   .card {
     position: relative;
-    background: var(--tile-bg);
-    border: 1px solid var(--tile-border);
-    border-radius: var(--radius-sm);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    transition: border-color 0.15s;
+    transition: border-color 0.14s;
   }
-  .card:hover { border-color: var(--accent); }
-  .card-img { width: 100%; aspect-ratio: 3/4; object-fit: cover; background: var(--shadow); display: block; }
+  @media (hover: hover) { .card:hover { border-color: var(--border-strong); } }
+  .card-img { width: 100%; aspect-ratio: 3/4; object-fit: cover; background: #fff; display: block; }
   .card-img-placeholder {
-    width: 100%; aspect-ratio: 3/4; background: var(--shadow);
+    width: 100%; aspect-ratio: 3/4; background: var(--raised);
     display: flex; align-items: center; justify-content: center;
-    color: var(--muted); font-size: 0.75rem;
+    color: var(--faint); font-size: 0.75rem;
   }
-  .card-body { padding: 0.6rem 0.7rem; flex: 1; display: flex; flex-direction: column; gap: 0.25rem; }
-  .card-goal {
-    align-self: flex-start; font-size: 0.6rem; font-weight: 600; letter-spacing: 0.03em;
-    padding: 0.12rem 0.45rem; border-radius: 3px;
-    background: rgba(203,185,148,0.14); color: var(--c-sand); border: 1px solid rgba(203,185,148,0.35);
-  }
-  .card-brand {
-    align-self: flex-start; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.01em;
-    padding: 0.12rem 0.45rem; border-radius: 3px; color: var(--bg);
-  }
+  .card-body { padding: 0.55rem 0.65rem 0.65rem; flex: 1; display: flex; flex-direction: column; gap: 0.25rem; }
+  .card-body .badge { align-self: flex-start; }
+  .card-brand { color: var(--brand); background: color-mix(in srgb, var(--brand) 14%, transparent); font-weight: 600; }
+  .card-goal { color: var(--c-sand); background: color-mix(in srgb, var(--c-sand) 14%, transparent); white-space: normal; }
   .card-name { font-size: 0.82rem; color: var(--text); line-height: 1.35; }
-  .card-price { font-size: 0.85rem; color: var(--strong); margin-top: auto; padding-top: 0.4rem; }
-  .card-store { font-size: 0.7rem; color: var(--muted); }
+  .card-name a { color: inherit; text-decoration: none; }
+  @media (hover: hover) { .card-name a:hover { color: var(--accent); } }
+  .card-price { font-size: 0.84rem; font-weight: 500; color: var(--strong); margin-top: auto; padding-top: 0.35rem; font-variant-numeric: tabular-nums; }
+  .card-store { font-size: 0.72rem; color: var(--muted); }
   .card-del {
-    position: absolute; top: 5px; right: 5px;
-    width: 22px; height: 22px; line-height: 1; padding: 0;
-    background: rgba(0,0,0,0.55); color: var(--muted);
-    border: 1px solid var(--border); border-radius: 4px;
-    font-size: 0.8rem; cursor: pointer; opacity: 0; transition: opacity 0.12s;
+    position: absolute; top: 6px; right: 6px;
+    background: var(--surface); color: var(--muted);
+    opacity: 0; transition: opacity 0.12s;
   }
-  .card:hover .card-del { opacity: 1; }
-  .card-del:hover { border-color: var(--red); color: var(--red); background: rgba(0,0,0,0.8); }
-  .card-tag {
-    display: inline-block; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.01em;
-    padding: 0.15rem 0.45rem; border-radius: 3px; margin-top: 0.3rem;
-  }
-  .card-tag-owned { background: rgba(143,180,136,0.15); color: var(--green); }
-  .card-tag-pending { background: rgba(207,144,136,0.15); color: var(--red); }
-  .card-tag-basket { background: rgba(194,173,134,0.15); color: var(--accent); }
-  .card-tag-ordered { background: rgba(176,164,199,0.15); color: var(--c-mauve); }
-  .card-tag-candidate { background: rgba(152,168,154,0.15); color: var(--muted); }
-  .card-tag-deferred { background: rgba(143,176,160,0.15); color: var(--c-teal); }
-  .card-tag-next_batch { background: rgba(197,143,131,0.18); color: var(--c-clay); }
-  .card-tag-unavailable { background: rgba(203,176,121,0.15); color: var(--yellow); }
-  .size-badge {
-    display: inline-block; font-size: 0.65rem; font-weight: 600;
-    letter-spacing: 0.01em; padding: 0.15rem 0.45rem; border-radius: 3px; margin-top: 0.2rem;
-  }
-  .size-ok  { background: rgba(143,180,136,0.12); color: var(--green); }
-  .size-no  { background: rgba(207,144,136,0.12);  color: var(--red); }
-  .flags { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.3rem; }
-  .flag-badge {
-    font-size: 0.6rem; font-weight: 600; letter-spacing: 0.02em;
-    padding: 0.1rem 0.4rem; border-radius: 3px;
-    background: rgba(207,144,136,0.14); color: var(--red);
-    border: 1px solid rgba(207,144,136,0.3);
-  }
-  .badges { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.3rem; }
-  .total { font-size: 0.9rem; color: var(--muted); margin-top: 1rem; }
-  .total span { color: var(--strong); }
-  .hdr-meta { color: var(--muted); font-size: 0.8rem; font-weight: normal; }
-  .group-toggle { font-size: 0.8rem; color: var(--muted); margin: 0.2rem 0 0.8rem; }
-  .group-toggle select {
-    background: var(--surface); color: var(--text); border: 1px solid var(--border);
-    border-radius: 4px; padding: 0.2rem 0.4rem; font: inherit; font-size: 0.8rem; cursor: pointer;
-  }
-  .ctx-chips { display: flex; flex-wrap: wrap; gap: 0.75rem 1.5rem; font-size: 0.78rem; color: var(--muted); }
-  .ctx-chips strong { color: var(--strong); }
+  .card:hover .card-del, .card-del:focus-visible { opacity: 1; }
+  @media (hover: hover) { .card-del:hover { border-color: var(--red); color: var(--red); background: var(--surface); } }
+  .card-tag { --tag: var(--muted); color: var(--tag); background: color-mix(in srgb, var(--tag) 14%, transparent); }
+  .styling-status-tag { cursor: pointer; }
+  .card-tag-owned { --tag: var(--green); }
+  .card-tag-pending { --tag: var(--red); }
+  .card-tag-basket { --tag: var(--accent); }
+  .card-tag-ordered { --tag: var(--c-mauve); }
+  .card-tag-candidate { --tag: var(--muted); }
+  .card-tag-deferred { --tag: var(--c-teal); }
+  .card-tag-next_batch { --tag: var(--c-clay); }
+  .card-tag-unavailable { --tag: var(--yellow); }
+  .status-pop .card-tag { background: none; }
+  .size-ok  { color: var(--green); background: color-mix(in srgb, var(--green) 12%, transparent); }
+  .size-no  { color: var(--red); background: color-mix(in srgb, var(--red) 12%, transparent); }
+  .flags, .badges { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.25rem; }
+  .flag-badge { color: var(--red); background: color-mix(in srgb, var(--red) 12%, transparent); }
+  .hdr-meta { color: var(--muted); font-family: var(--font-ui); font-size: 0.78rem; font-weight: 400; }
+  .group-toggle { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--muted); margin: 0 0 0.8rem; }
+  .ctx-chips { display: flex; flex-wrap: wrap; gap: 0.5rem 1.4rem; font-size: 0.8rem; color: var(--muted); }
+  .ctx-chips strong { color: var(--strong); font-weight: 500; }
   .goal-block { display: flex; gap: 1rem; padding: 0.4rem 0; border-bottom: 1px solid var(--border); }
   .goal-block:last-child { border-bottom: none; }
-  .goal-category { flex: 0 0 14rem; font-weight: 600; color: var(--strong); font-size: 0.8rem; }
-  .goal-desc { flex: 1; color: var(--muted); font-size: 0.8rem; }
-  @media (hover: none) { .card-del { opacity: 1; width: 36px; height: 36px; font-size: 1rem; } }
+  .goal-category { flex: 0 0 14rem; font-weight: 600; color: var(--strong); font-size: 0.82rem; }
+  .goal-desc { flex: 1; color: var(--muted); font-size: 0.82rem; }
+  @media (hover: none) { .card-del { opacity: 1; } }
   @media (max-width: 600px) {
     .goal-block { flex-direction: column; gap: 0.15rem; }
     .goal-category { flex: none; }
@@ -95,36 +72,36 @@
 
 {% macro card(item) %}
 <div class="card">
-  <button class="card-del" data-key="{{ item.key }}" data-name="{{ item.name }}" title="Remove item">✕</button>
+  <button class="btn btn-sm btn-icon card-del" data-key="{{ item.key }}" data-name="{{ item.name }}" title="Remove item" aria-label="Remove item">×</button>
   {% if item.image %}
   <a href="{{ item.url }}" target="_blank" rel="noopener">
     <img class="card-img" src="{{ item.image }}" alt="{{ item.name }}" loading="lazy">
   </a>
   {% else %}
-  <div class="card-img-placeholder">{{ item.metadata.clothing.category or 'no image' }}</div>
+  <div class="card-img-placeholder">{{ item.metadata.clothing.category or 'No image' }}</div>
   {% endif %}
   <div class="card-body">
-    {% if item.metadata.clothing.brand %}<div class="card-brand" style="background: {{ brand_colors.get(item.metadata.clothing.brand) or 'var(--muted)' }}">{{ item.metadata.clothing.brand }}</div>{% endif %}
+    {% if item.metadata.clothing.brand %}<span class="badge card-brand" style="--brand: {{ brand_colors.get(item.metadata.clothing.brand) or 'var(--muted)' }}">{{ item.metadata.clothing.brand }}</span>{% endif %}
     <div class="card-name">
-      <a href="{{ item.url }}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">{{ item.name }} ↗</a>
+      <a href="{{ item.url }}" target="_blank" rel="noopener">{{ item.name }} ↗</a>
     </div>
     <div class="card-price">AED {{ item.price if item.price else '—' }}</div>
     <div class="card-store">{{ item.store_display }}</div>
     {% if item.notes %}<div class="card-store">{{ item.notes }}</div>{% endif %}
     <div class="badges">
-      <span class="card-tag card-tag-{{ item.status }} styling-status-tag"
-            data-key="{{ item.key }}" data-status="{{ item.status }}" style="cursor:pointer;">{{ item.status }}</span>
+      <span class="badge card-tag card-tag-{{ item.status }} styling-status-tag"
+            data-key="{{ item.key }}" data-status="{{ item.status }}">{{ item.status }}</span>
       {% if item.metadata.clothing.size_ok is not none %}
-        {% if item.metadata.clothing.size_ok %}<span class="size-badge size-ok">size ✓</span>
-        {% else %}<span class="size-badge size-no">size ✗</span>{% endif %}
+        {% if item.metadata.clothing.size_ok %}<span class="badge size-ok">Size ✓</span>
+        {% else %}<span class="badge size-no">Size ✗</span>{% endif %}
       {% endif %}
     </div>
     {% if item.metadata.clothing.flags %}
     <div class="flags">
-      {% for f in item.metadata.clothing.flags %}<span class="flag-badge">{{ f }}</span>{% endfor %}
+      {% for f in item.metadata.clothing.flags %}<span class="badge flag-badge">{{ f }}</span>{% endfor %}
     </div>
     {% endif %}
-    {% if item.metadata.clothing.goal %}<div class="card-goal">{{ item.metadata.clothing.goal.split('—')[-1] | trim }}</div>{% endif %}
+    {% if item.metadata.clothing.goal %}<span class="badge card-goal">{{ item.metadata.clothing.goal.split('—')[-1] | trim }}</span>{% endif %}
   </div>
 </div>
 {% endmacro %}
@@ -187,12 +164,12 @@
 <section>
   <details open>
     <summary><h2>Decided <span class="hdr-meta">{% if decided_pending %}· pending AED {{ decided_pending }}{% endif %}{% if decided_basket %}· basket AED {{ decided_basket }}{% endif %}</span></h2></summary>
-    <div class="group-toggle">Group by:
+    <label class="group-toggle">Group by
       <select id="decided-group">
         <option value="type">Type</option>
         <option value="store">Store</option>
       </select>
-    </div>
+    </label>
     <div id="decided-type">{{ grouped_cards(decided_by_type, 'DecidedType') }}</div>
     <div id="decided-store" hidden>{{ grouped_cards(decided_by_store, 'DecidedStore') }}</div>
   </details>
@@ -201,8 +178,8 @@
 
 {{ group('Candidates', candidates, none) }}
 {{ group('Deferred', deferred, none) }}
-{{ group('Next Batch', next_batch, next_batch_total) }}
-{{ group('Out of My Size', out_of_size, none) }}
+{{ group('Next batch', next_batch, next_batch_total) }}
+{{ group('Out of my size', out_of_size, none) }}
 {{ group('Owned', owned, none) }}
 
 {% endblock %}
@@ -212,7 +189,7 @@
 <script>
   initStatusPopover({
     selector: '.styling-status-tag', endpoint: '/api/styling', mode: 'self',
-    selfBase: 'card-tag styling-status-tag', buttonBase: 'card-tag', buttonFont: '0.8rem',
+    selfBase: 'badge card-tag styling-status-tag', buttonBase: 'card-tag', buttonFont: '0.8rem',
     statuses: {{ status_config('clothing') | tojson }},
   });
 
@@ -245,8 +222,8 @@
       try {
         const res = await fetch('/api/styling/' + encodeURIComponent(key) + '/delete', { method: 'POST' });
         if (res.ok) btn.closest('.card').remove();
-        else alert('Delete failed: ' + await res.text());
-      } catch (err) { alert('Delete failed: ' + err); }
+        else toast('Delete failed: ' + await res.text(), true);
+      } catch (err) { toast('Delete failed: ' + err, true); }
     });
   });
 </script>

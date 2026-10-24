@@ -1,35 +1,36 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="aurora">
+<html lang="en">
 <head>
   <title>{% block title %}Dashboard{% endblock %}</title>
   {% include "head_meta.html" %}
   {% include "components.html" %}
   <style>
     body {
-      --pad: 1.25rem;
+      --pad: 1.4rem;
       color: var(--text);
       font-family: var(--font-ui);
       font-size: 0.875rem;
       line-height: 1.5;
       -webkit-font-smoothing: antialiased;
+      font-feature-settings: 'cv11', 'ss01';
       margin: 0;
       min-height: 100vh;
     }
 
-    /* ── Navbar (solid, full-width, sticks to top) ──────────────────────── */
     .crumbs {
       position: sticky; top: 0; z-index: 100;
-      display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
-      font-size: 0.82rem;
-      padding: calc(0.55rem + env(safe-area-inset-top)) max(var(--pad), env(safe-area-inset-right)) 0.55rem max(var(--pad), env(safe-area-inset-left));
-      background: var(--navbar-bg);
-      border-bottom: 1px solid rgba(255,255,255,0.08);
+      display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap;
+      font-size: 0.84rem;
+      padding: calc(0.6rem + env(safe-area-inset-top)) max(var(--pad), env(safe-area-inset-right)) 0.6rem max(var(--pad), env(safe-area-inset-left));
+      background: color-mix(in srgb, var(--bg) 88%, transparent);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
     }
-    .crumbs a { color: var(--navbar-muted); text-decoration: none; transition: color 0.18s ease; }
-    .crumbs a:hover { color: var(--navbar-text); }
-    .crumb-brand { color: var(--navbar-text); font-weight: 600; }
-    .crumb-sep { color: var(--navbar-muted); opacity: 0.6; }
-    .crumb-current { color: var(--navbar-text); font-weight: 600; }
+    .crumbs a { color: var(--muted); text-decoration: none; transition: color 0.15s ease; }
+    .crumbs a:hover { color: var(--strong); }
+    .crumb-brand { font-family: var(--font-display); font-size: 0.98rem; font-weight: 500; color: var(--strong) !important; }
+    .crumb-sep { color: var(--faint); }
+    .crumb-current { color: var(--strong); font-weight: 500; }
 
     main {
       display: block;
@@ -43,8 +44,8 @@
 
     [id] { scroll-margin-top: calc(var(--nav-h, 3.2rem) + 0.6rem); }
 
-    @media (max-width: 900px) { body { --pad: 0.9rem; } }
-    @media (max-width: 600px) { body { --pad: 0.7rem; } }
+    @media (max-width: 900px) { body { --pad: 1rem; } }
+    @media (max-width: 600px) { body { --pad: 0.8rem; } }
 
     {% block extra_css %}{% endblock %}
   </style>
@@ -97,8 +98,17 @@
           panel.hidden = panel.dataset.tab !== key;
         });
       }
-      tabs.forEach(function (tab) { tab.addEventListener('click', function () { show(tab.dataset.tab); }); });
-      if (tabs.length) show(tabs[0].dataset.tab);
+      var memory = 'tab:' + location.pathname + ':' + group;
+      tabs.forEach(function (tab) {
+        tab.addEventListener('click', function () {
+          show(tab.dataset.tab);
+          try { sessionStorage.setItem(memory, tab.dataset.tab); } catch (e) {}
+        });
+      });
+      var remembered;
+      try { remembered = sessionStorage.getItem(memory); } catch (e) {}
+      var initial = tabs.some(function (t) { return t.dataset.tab === remembered; }) ? remembered : tabs.length && tabs[0].dataset.tab;
+      if (initial) show(initial);
     });
   })();
 </script>
@@ -166,6 +176,28 @@
       });
     });
   })();
+</script>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+  window.toast = function (message, isError) {
+    var el = document.getElementById('toast');
+    el.textContent = message;
+    el.classList.toggle('error', !!isError);
+    el.classList.add('show');
+    clearTimeout(window.toast.timer);
+    window.toast.timer = setTimeout(function () { el.classList.remove('show'); }, 2200);
+  };
+  window.api = function (url, method, body) {
+    return fetch(url, {
+      method: method || 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    }).then(function (r) {
+      if (r.ok) return r.json();
+      return r.text().then(function (t) { window.toast(t || 'Request failed', true); throw new Error(t); });
+    });
+  };
 </script>
 
 {% block scripts %}{% endblock %}

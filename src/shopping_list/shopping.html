@@ -1,14 +1,23 @@
 {% extends "base.html" %}
 {% import "macros.html" as m %}
 
-{% block title %}Shopping List{% endblock %}
-{% block heading %}Shopping List{% endblock %}
+{% block title %}Shopping list{% endblock %}
+{% block heading %}Shopping list{% endblock %}
 {% block max_width %}1000px{% endblock %}
+
+{% block extra_css %}
+  {{ m.tooltip_css() }}
+  .tt-plain { cursor: default; }
+  .tt-right { left: auto; right: 0; text-align: left; }
+  .tt-head { border-bottom: 1px solid var(--border); margin-bottom: 0.3rem; padding-bottom: 0.3rem; }
+  .nowrap { white-space: nowrap; }
+  .srv { font-size: 0.8rem; }
+{% endblock %}
 
 {% block content %}
 <section>
 <details open>
-<summary><h2>Groceries &amp; Supplements</h2></summary>
+<summary><h2>Groceries &amp; supplements</h2></summary>
 <table>
   <thead>
     <tr>
@@ -47,19 +56,19 @@
       <td class="num">
         {%- set item_refs = refs.get(item.key, []) -%}
         {%- if item.items_per_month is not none -%}
-        <span class="has-tooltip" style="cursor:default;">{{ item.items_per_month | fmt_freq }}
-          <span class="tooltip-box" style="left:auto;right:0;text-align:left;">
-            <div class="nut-row" style="border-bottom:1px solid var(--border);margin-bottom:0.3rem;padding-bottom:0.3rem;">
-              <span class="nut-label">per week</span>
+        <span class="has-tooltip tt-plain">{{ item.items_per_month | fmt_freq }}
+          <span class="tooltip-box tt-right">
+            <div class="nut-row tt-head">
+              <span class="nut-label">Per week</span>
               <span class="nut-val">
                 {%- if item.items_per_week is not none -%}~{{ item.items_per_week | round(1) }}×{%- endif -%}
-                <span style="color:var(--muted);"> ({{ item.servings_per_week }} servings)</span>
+                <span class="muted"> ({{ item.servings_per_week }} servings)</span>
               </span>
             </div>
             {%- if item_refs -%}
               {%- for r in item_refs -%}<div class="nut-row"><span class="nut-val">{{ r }}</span></div>{% endfor -%}
             {%- else -%}
-              <div class="nut-row"><span class="nut-label">daily supplement</span></div>
+              <div class="nut-row"><span class="nut-label">Daily supplement</span></div>
             {%- endif -%}
           </span>
         </span>
@@ -67,16 +76,16 @@
       </td>
       <td class="num">
         {%- if item.price_per_month is not none or item.price_per_protein_g is not none -%}
-        <span class="has-tooltip" style="cursor:default;">{{ item.price | fmt_price }}
-          <span class="tooltip-box" style="left:auto;right:0;">
+        <span class="has-tooltip tt-plain">{{ item.price | fmt_price }}
+          <span class="tooltip-box tt-right">
             {%- if item.price_per_serving is not none -%}
-            <div class="nut-row"><span class="nut-label">per serving</span><span class="nut-val">{{ item.price_per_serving | fmt_price }}</span></div>
+            <div class="nut-row"><span class="nut-label">Per serving</span><span class="nut-val">{{ item.price_per_serving | fmt_price }}</span></div>
             {%- endif -%}
             {%- if item.price_per_month is not none -%}
-            <div class="nut-row"><span class="nut-label">per month</span><span class="nut-val">{{ item.price_per_month | fmt_price }}</span></div>
+            <div class="nut-row"><span class="nut-label">Per month</span><span class="nut-val">{{ item.price_per_month | fmt_price }}</span></div>
             {%- endif -%}
             {%- if item.price_per_protein_g is not none -%}
-            <div class="nut-row"><span class="nut-label">per g protein</span><span class="nut-val">{{ item.price_per_protein_g | fmt_price }}</span></div>
+            <div class="nut-row"><span class="nut-label">Per g protein</span><span class="nut-val">{{ item.price_per_protein_g | fmt_price }}</span></div>
             {%- endif -%}
           </span>
         </span>
@@ -89,11 +98,11 @@
           <span class="status-cell" data-key="{{ item.key }}" data-status="{{ item.status or '' }}"></span>
         {%- endif -%}
       </td>
-      <td style="white-space:nowrap;">
+      <td class="nowrap">
         {%- if item.url -%}
         <a href="{{ item.url }}" target="_blank" rel="noopener" class="link">{{ item.url | fmt_store }}</a>
         {%- set src = item.chosen_source -%}
-        {%- if src and src.servings_per_item -%}<span class="muted" style="font-size:0.82rem;"> ({{ src.servings_per_item }} srv)</span>{%- endif -%}
+        {%- if src and src.servings_per_item -%}<span class="muted srv"> ({{ src.servings_per_item }} srv)</span>{%- endif -%}
         {%- else -%}<span class="muted">—</span>{%- endif -%}
       </td>
     </tr>

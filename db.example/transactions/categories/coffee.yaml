@@ -1,0 +1,8 @@
+# coffee
+key: coffee
+name: Coffee
+rules:
+- match: 're:COFFEE|CAFE'
+- match: 're:COFFEE|CAFE'
+  slot: weekend
+  note: weekend treat

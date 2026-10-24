@@ -1,63 +1,58 @@
 {% extends "base.html" %}
 {% import "macros.html" as m %}
 
-{% block title %}Health Master Plan{% endblock %}
-{% block heading %}Health Master Plan{% endblock %}
+{% block title %}Health master plan{% endblock %}
+{% block heading %}Health master plan{% endblock %}
 {% block max_width %}1200px{% endblock %}
-{% block tooltip_min_width %}340px{% endblock %}
 
-{% macro thumb(item) %}{%- if item.image %}<img src="{{ item.image }}" style="width:36px;height:36px;object-fit:contain;vertical-align:middle;border-radius:3px;margin-right:5px;background:#fff;">{% endif %}{% endmacro %}
+{% macro thumb(item) %}{%- if item.image %}<img src="{{ item.image }}" class="thumb" alt="">{% endif %}{% endmacro %}
 {% macro goal_desc(description) %}{% set parts = description.split("·") | map("trim") | select | list %}{% if parts | length <= 1 %}{{ description }}{% else %}<ul class="goal-bullets">{% for p in parts %}<li>{{ p }}</li>{% endfor %}</ul>{% endif %}{% endmacro %}
 
 {% block extra_css %}
-    h4 { font-size: 0.82rem; color: var(--muted); margin: 1rem 0 0.4rem; letter-spacing: 0.01em; }
-    .badge { margin-left: 0.3rem; }
-    .badge.home      { border-color: rgba(147,179,145,0.4); color: var(--c-sage); }
-    .badge.commute   { border-color: rgba(157,180,192,0.4); color: var(--c-slate); }
-    .badge.office    { border-color: rgba(157,180,192,0.4); color: var(--c-slate); }
-    .badge.after_gym { border-color: rgba(203,185,148,0.4); color: var(--c-sand); }
-    .badge.unavailable   { border-color: rgba(207,144,136,0.4); color: var(--red); }
-    .badge.fish-conflict { border-color: rgba(207,144,136,0.4); color: var(--red); }
+    {{ m.tooltip_css() }}
+    h4 { font-size: 0.82rem; font-weight: 600; color: var(--muted); margin: 1rem 0 0.4rem; }
+    td .badge { margin-left: 0.3rem; }
+    .badge.fish-conflict    { color: var(--red); background: color-mix(in srgb, var(--red) 12%, transparent); }
+    .badge.ctx-in-shower    { color: var(--c-slate); background: color-mix(in srgb, var(--c-slate) 14%, transparent); }
+    .badge.ctx-after-shower { color: var(--c-teal); background: color-mix(in srgb, var(--c-teal) 14%, transparent); }
+    .badge.ctx-before-sleep { color: var(--c-mauve); background: color-mix(in srgb, var(--c-mauve) 14%, transparent); }
+    .badge.ctx-in-clinic    { color: var(--c-sand); background: color-mix(in srgb, var(--c-sand) 14%, transparent); }
+    .thumb { width: 32px; height: 32px; object-fit: contain; vertical-align: middle; border-radius: var(--radius-sm); margin-right: 6px; background: #fff; }
     .no-actual  { color: var(--muted); }
     .plan-link  { color: inherit; text-decoration: none; }
-    .plan-link:hover { color: var(--accent); text-decoration: underline; }
+    @media (hover: hover) { .plan-link:hover { color: var(--accent); } }
+    .nowrap { white-space: nowrap; }
     .goal-block { display: flex; gap: 1rem; padding: 0.45rem 0; border-bottom: 1px solid var(--border); }
     .goal-block:last-child { border-bottom: none; }
-    .goal-category { flex: 0 0 13rem; font-weight: 600; color: var(--strong); font-size: 0.85rem; padding-top: 0.1rem; }
-    .goal-desc { flex: 1; color: var(--muted); font-size: 0.85rem; }
+    .goal-category { flex: 0 0 13rem; font-weight: 600; color: var(--strong); font-size: 0.84rem; }
+    .goal-desc { flex: 1; color: var(--muted); font-size: 0.84rem; }
     .goal-bullets { margin: 0; padding-left: 1.1rem; }
     .goal-bullets li { margin-bottom: 0.2rem; }
     .routine-alt { display: block; margin-top: 0.35rem; }
-    .routine-section-row td { color: var(--strong) !important; font-size: 0.85rem !important; padding-top: 1.2rem; }
-    .variant-entry { padding: 0.3rem 0; border-bottom: 1px dotted var(--border); }
-    .variant-entry:last-child { border-bottom: none; }
-    .variant-note { display: block; font-size: 0.78rem; color: var(--muted); margin-top: 0.1rem; padding-left: 41px; }
-    .badge.ctx-in-shower    { border-color: rgba(157,180,192,0.4); color: var(--c-slate); }
-    .badge.ctx-after-shower { border-color: rgba(143,176,160,0.4); color: var(--c-teal); }
-    .badge.ctx-before-sleep { border-color: rgba(176,164,199,0.4); color: var(--c-mauve); }
-    .badge.ctx-in-clinic    { border-color: rgba(203,185,148,0.4); color: var(--c-sand); }
-    .routine-phase { color: var(--strong); font-size: 0.9rem; font-weight: 600; letter-spacing: 0.01em; margin: 2rem 0 0.4rem; }
-    .routine-section-heading { color: var(--strong); font-size: 0.75rem; letter-spacing: 0.01em; margin: 1rem 0 0.3rem; opacity: 0.7; }
+    .routine-phase { font-family: var(--font-display); color: var(--strong); font-size: 1rem; font-weight: 500; margin: 1.4rem 0 0.3rem; }
+    .routine-phase:first-child { margin-top: 0.2rem; }
+    .routine-section-heading { color: var(--muted); font-size: 0.78rem; font-weight: 500; margin: 0.9rem 0 0.3rem; }
     .routine-variants { display: flex; gap: 1rem; }
     .routine-variants table { flex: 1; }
-    .routine-subtotal { color: var(--muted); font-style: italic; font-size: 0.82rem; padding: 0.3rem 0.75rem; }
-    .phase { background: var(--tile-bg); border: 1px solid var(--tile-border); border-radius: var(--radius-sm); padding: 1.2rem 1.4rem; margin-bottom: 1rem; }
-    .why { color: var(--muted); font-size: 0.82rem; margin-bottom: 0.8rem; border-left: 2px solid var(--border); padding-left: 0.75rem; }
+    .routine-subtotal { color: var(--muted); font-size: 0.8rem; padding: 0.3rem 0.2rem; }
+    .care-name { font-weight: 600; width: 12rem; }
+    .phase { margin-bottom: 0.8rem; padding: 0.85rem 1rem; }
+    .why { color: var(--muted); font-size: 0.82rem; margin-bottom: 0.7rem; border-left: 2px solid var(--border-strong); padding-left: 0.7rem; }
     .why strong { color: var(--text); }
     .phase ol { padding-left: 1.3rem; }
-    .phase ol li { margin-bottom: 0.4rem; font-size: 0.88rem; }
-    .phase ol li .note { display: block; border-left: none; padding: 0; color: var(--muted); font-size: 0.8rem; margin: 0.15rem 0 0; }
-    .wa-msg {
-      background: rgba(143,208,166,0.1); border: 1px solid rgba(143,208,166,0.3); border-radius: 4px;
-      padding: 0.75rem 1rem; color: var(--green); font-size: 0.82rem;
-      margin: 0.6rem 0 0.2rem; white-space: pre-wrap;
+    .phase ol li { margin-bottom: 0.4rem; font-size: 0.86rem; }
+    .phase ol li .note { display: block; background: none; padding: 0; color: var(--muted); font-size: 0.8rem; margin: 0.15rem 0 0; }
+    .phase ol li .note.wa-msg {
+      background: color-mix(in srgb, var(--green) 10%, transparent); border-radius: var(--radius-sm);
+      padding: 0.6rem 0.8rem; color: var(--green); margin: 0.5rem 0 0.2rem; white-space: pre-wrap;
     }
-    .clinics { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.5rem; }
-    .clinic-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.4rem 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+    .clinics { display: flex; flex-direction: column; margin-top: 0.4rem; }
+    .clinic-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.4rem 0; border-bottom: 1px solid var(--border); font-size: 0.84rem; }
     .clinic-row:last-child { border-bottom: none; }
-    .clinic-name { flex: 1; }
+    .clinic-name { flex: 1; color: var(--strong); }
     .clinic-tags { color: var(--muted); font-size: 0.78rem; flex: 1; }
     .wa-link { color: var(--green); text-decoration: none; white-space: nowrap; }
+    .wa-link.web { color: var(--accent); }
     .wa-link:hover { text-decoration: underline; }
     @media (max-width: 900px) {
       .routine-variants { flex-direction: column; gap: 0.5rem; }
@@ -72,10 +67,9 @@
 
 {% block content %}
 
-<!-- ========== CONTEXT & GOALS ========== -->
 <section>
   <details open>
-  <summary><h2>Context &amp; Goals</h2></summary>
+  <summary><h2>Context &amp; goals</h2></summary>
 
   <details open><summary><h3>Context</h3></summary>
   <table>
@@ -96,10 +90,9 @@
   </details>
 </section>
 
-<!-- ========== DAILY PLAN ========== -->
 <section>
   <details open>
-  <summary><h2>Weekly Plan</h2></summary>
+  <summary><h2>Weekly plan</h2></summary>
   <table>
     <thead>
       <tr>
@@ -115,23 +108,23 @@
           {%- for it, count in row.slots.get(occ, []) | group_items -%}
           <span class="has-tooltip"><a href="/shopping#item-{{ it.key }}" class="plan-link">{{ thumb(it) }}{{ it.short_name }}{% if count > 1 %} ×{{ count }}{% endif %}</a><span class="tooltip-box">{{ m.nutrient_block(it, true) }}</span></span>{% if not loop.last %}<br>{% endif %}
           {%- endfor -%}
-          {%- if occ == 'lunch' and row.fish_conflict %} <span class="badge fish-conflict">fish day!</span>{% endif -%}
+          {%- if occ == 'lunch' and row.fish_conflict %} <span class="badge fish-conflict">fish day</span>{% endif -%}
         </td>
         {%- endfor -%}
-        <td class="num muted" style="white-space:nowrap;">{{ row.nutrition.protein_g | round | int }}P · {{ row.nutrition.net_carbs_g | round | int }}C · {{ row.nutrition.calories | round | int }}k</td>
+        <td class="num muted nowrap">{{ row.nutrition.protein_g | round | int }}P · {{ row.nutrition.net_carbs_g | round | int }}C · {{ row.nutrition.calories | round | int }}k</td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
 
   {% if snack_options %}
-  <h4>Calories snack — pick any (~{{ snack_budget }} kcal each)</h4>
+  <h4>Calories snack, pick any (~{{ snack_budget }} kcal each)</h4>
   <div class="note">Each <strong>Calories snack</strong> in the plan is a ~{{ snack_budget }} kcal block. Grab whatever you're craving from the list — the portions below are all worth the same calories, so the day's total holds no matter which you pick.</div>
   <table>
     <tbody>
       {% for o in snack_options %}
       <tr>
-        <td><a href="/shopping#item-{{ o.key }}" class="plan-link">{% if o.image %}<img src="{{ o.image }}" style="width:36px;height:36px;object-fit:contain;vertical-align:middle;border-radius:3px;margin-right:5px;background:#fff;">{% endif %}{{ o.name }}</a></td>
+        <td><a href="/shopping#item-{{ o.key }}" class="plan-link">{% if o.image %}<img src="{{ o.image }}" class="thumb" alt="">{% endif %}{{ o.name }}</a></td>
         <td class="num"><strong>{{ o.portion }}</strong></td>
       </tr>
       {% endfor %}
@@ -192,13 +185,12 @@
   </details>
 </section>
 
-<!-- ========== TARGET SUBSTANCES ========== -->
 <section>
   <details open>
-  <summary><h2>Daily Targets</h2></summary>
+  <summary><h2>Daily targets</h2></summary>
   <div class="note">Single source of truth for what the body needs. Diet, supplements, and routines must collectively cover everything here.</div>
   {% if supplement_strategy %}
-  <details open><summary><h3>Supplement Selection Strategy</h3></summary>
+  <details open><summary><h3>Supplement selection strategy</h3></summary>
   <table>
     {% for rule in supplement_strategy %}
     <tr><td>{{ loop.index }}</td><td>{{ rule }}</td></tr>
@@ -208,7 +200,7 @@
   {% endif %}
   <table>
     <thead>
-      <tr><th>Nutrient</th><th>Daily Target</th><th>Actual (avg/day)</th><th>Purpose &amp; Notes</th></tr>
+      <tr><th>Nutrient</th><th>Daily target</th><th>Actual (avg/day)</th><th>Purpose &amp; notes</th></tr>
     </thead>
     <tbody>
       {% for s in nutrient_targets %}
@@ -230,15 +222,14 @@
   </details>
 </section>
 
-<!-- ========== GYM ========== -->
 <section>
   <details open>
   <summary><h2>Gym</h2></summary>
   <div class="note">{{ gym.schedule }}</div>
 
-  <details open><summary><h3>Warm-Up — every session</h3></summary>
+  <details open><summary><h3>Warm-up, every session</h3></summary>
   <table>
-    <thead><tr><th>Exercise</th><th>Sets × Reps</th><th>Notes</th></tr></thead>
+    <thead><tr><th>Exercise</th><th>Sets × reps</th><th>Notes</th></tr></thead>
     <tbody>
       {% for ex in gym.warmup %}
       <tr><td>{{ ex.exercise }}</td><td>{{ ex.sets_reps }}</td><td class="muted">{{ ex.notes }}</td></tr>
@@ -250,7 +241,7 @@
   {% for section in gym.sections %}
   <details open><summary><h3>{{ section.name }}</h3></summary>
   <table>
-    <thead><tr><th>Exercise</th><th>Weight</th><th>Sets × Reps</th><th>Notes</th></tr></thead>
+    <thead><tr><th>Exercise</th><th>Weight</th><th>Sets × reps</th><th>Notes</th></tr></thead>
     <tbody>
       {% for ex in section.exercises %}
       <tr><td>{{ ex.exercise }}</td><td>{{ ex.weight }}</td><td>{{ ex.sets_reps }}</td><td class="muted">{{ ex.notes }}</td></tr>
@@ -260,11 +251,11 @@
   </details>
   {% endfor %}
 
-  <details open><summary><h3>Progressive Overload</h3></summary>
+  <details open><summary><h3>Progressive overload</h3></summary>
   <div class="note">{{ gym.overload }}</div>
   </details>
 
-  <details open><summary><h3>When to Change</h3></summary>
+  <details open><summary><h3>When to change</h3></summary>
   <table>
     {% for row in gym.when_to_change %}
     <tr><td>{{ row.period }}</td><td class="muted">{{ row.action }}</td></tr>
@@ -274,21 +265,20 @@
   </details>
 </section>
 
-<!-- ========== HAIR & SKIN CARE ========== -->
 <section>
   <details open>
-  <summary><h2>Hair &amp; Skin Care</h2></summary>
+  <summary><h2>Hair &amp; skin care</h2></summary>
   {%- set care_categories = care_guide | map(attribute='category') | unique | list -%}
   <table>
     <thead>
-      <tr><th style="width:12rem;">Product / Treatment</th><th>What it does</th><th>How to apply</th><th>What to expect</th></tr>
+      <tr><th class="care-name">Product / treatment</th><th>What it does</th><th>How to apply</th><th>What to expect</th></tr>
     </thead>
     <tbody>
       {% for cat in care_categories %}
       <tr class="category-heading-row"><td colspan="4"><strong>{{ cat }}</strong></td></tr>
       {% for item in care_guide if item.category == cat %}
       <tr>
-        <td style="font-weight:600;">{{ item.short_name or item.name }}{%- if item.context %} <span class="badge ctx-{{ item.context | replace(' ', '-') }}">{{ item.context }}</span>{%- endif %}</td>
+        <td class="care-name">{{ item.short_name or item.name }}{%- if item.context %} <span class="badge ctx-{{ item.context | replace(' ', '-') }}">{{ item.context }}</span>{%- endif %}</td>
         <td class="muted">{{ item.does }}</td>
         <td class="muted">{{ item.apply }}</td>
         <td class="muted">{{ item.expect }}</td>
@@ -300,7 +290,6 @@
   </details>
 </section>
 
-<!-- ========== MONITORING ========== -->
 <section>
   <details open>
   <summary><h2>Monitoring</h2></summary>
@@ -315,18 +304,17 @@
   </details>
 </section>
 
-<!-- ========== SKIN CLINIC ========== -->
 <section>
   <details open>
-  <summary><h2>Skin Clinic</h2></summary>
+  <summary><h2>Skin clinic</h2></summary>
 
   {% for group in skin_clinic %}
   <details open><summary><h3>{{ group.heading }}</h3></summary>
-  <p class="section-note">{{ group.note }}</p>
+  <p class="note">{{ group.note }}</p>
 
   {% for phase in group.phases %}
   <h4>{{ phase.name }}</h4>
-  <div class="phase">
+  <div class="phase tile">
     <div class="why">
       <strong>{{ phase.why_label }}</strong> {{ phase.why }}
     </div>
@@ -349,7 +337,7 @@
       <span class="clinic-name">{{ c.name }}</span>
       <span class="clinic-tags">{{ c.tags | join(" · ") }}</span>
       {% if c.whatsapp %}<a class="wa-link" href="{{ c.whatsapp }}" target="_blank">WhatsApp →</a>{% endif %}
-      {% if c.website %}<a class="wa-link" href="{{ c.website }}" target="_blank" style="color:var(--accent);">Web →</a>{% endif %}
+      {% if c.website %}<a class="wa-link web" href="{{ c.website }}" target="_blank">Web →</a>{% endif %}
     </div>
     {% endfor %}
   </div>
@@ -358,8 +346,6 @@
   {% endfor %}
   </details>
 </section>
-
-
 {% endblock %}
 
 {% block scripts %}{% endblock %}

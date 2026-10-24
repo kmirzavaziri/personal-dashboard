@@ -8,80 +8,57 @@
 
 {% block extra_css %}
   body.calendar-page { height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
-  body.calendar-page main { flex: 1 1 auto; min-height: 0; width: 100%; margin: 0; display: flex; flex-direction: column; padding: 1.1rem 0 0.9rem; }
-  .cal-nav { padding: 0 0.9rem; }
+  body.calendar-page main { flex: 1 1 auto; min-height: 0; width: 100%; margin: 0; display: flex; flex-direction: column; padding: 1rem 0 0.9rem; }
 
-  .cal-nav { flex: none; display: flex; align-items: center; gap: 0.7rem; margin-bottom: 1rem; }
-  .cal-btn {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 2rem; height: 2rem; border-radius: var(--radius-sm);
-    background: var(--glass-bg); border: 1px solid var(--glass-border);
-    color: var(--strong); text-decoration: none; font-size: 1.1rem; line-height: 1;
-    backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur));
-  }
-  @media (hover: hover) { .cal-btn:hover { background: rgba(255,255,255,0.1); } }
-  @media (pointer: coarse) { .cal-btn { width: 2.6rem; height: 2.6rem; } }
-  .cal-span { font-size: 0.95rem; font-weight: 600; color: var(--strong); text-shadow: 0 1px 10px rgba(0,0,0,0.5); }
-  .cal-today {
-    margin-left: 0.3rem; font-size: 0.78rem; text-decoration: none;
-    color: var(--strong); padding: 0.35rem 0.7rem; border-radius: var(--radius-sm);
-    background: var(--glass-bg); border: 1px solid var(--glass-border);
-  }
-  @media (hover: hover) { .cal-today:hover { background: rgba(255,255,255,0.1); } }
+  .cal-nav { flex: none; display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.8rem; padding: 0 0.9rem; }
+  .cal-nav .btn { text-decoration: none; }
+  .cal-span { font-family: var(--font-display); font-size: 1.08rem; font-weight: 500; color: var(--strong); margin: 0 0.4rem; }
 
   .cal-board {
     flex: 1 1 auto; min-height: 0; display: flex; overflow: hidden; margin: 0 0.9rem;
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur)) saturate(1.15);
-    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.15);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius);
-    box-shadow: var(--glass-shadow);
-    scrollbar-width: none; -ms-overflow-style: none;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
   }
-  .cal-board::-webkit-scrollbar { display: none; }
 
   .cal-day {
     flex: 1 1 0; min-width: 0; max-height: 100%;
     display: flex; flex-direction: column;
-    padding: 0.7rem 0.6rem;
-    border-right: 1px solid var(--glass-border);
+    padding: 0.65rem 0.5rem;
+    border-right: 1px solid var(--border);
   }
   .cal-day:last-child { border-right: none; }
-  .cal-day-h { flex: none; display: flex; align-items: baseline; gap: 0.4rem; margin: 0 0.2rem 0.6rem 0.05rem; }
-  .cal-dow { font-size: 0.68rem; letter-spacing: 0.01em; font-weight: 600; color: var(--muted); }
-  .cal-today-badge {
-    font-size: 0.56rem; font-weight: 700; letter-spacing: 0.01em;
-    color: var(--bg); background: var(--accent);
-    padding: 0.08rem 0.4rem; border-radius: 999px; align-self: center;
-  }
-  .cal-num { font-size: 1.05rem; font-weight: 600; color: var(--strong); margin-left: auto; }
+  .cal-day.is-today { background: color-mix(in srgb, var(--accent) 4%, transparent); }
+  .cal-day-h { flex: none; display: flex; align-items: center; gap: 0.4rem; margin: 0 0.2rem 0.55rem 0.1rem; }
+  .cal-dow { font-size: 0.78rem; font-weight: 500; color: var(--muted); }
+  .cal-num { font-family: var(--font-display); font-size: 1.15rem; font-weight: 500; color: var(--strong); margin-left: auto; font-variant-numeric: tabular-nums; }
+  .is-today .cal-num { color: var(--accent); }
 
-  .cal-cards { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-right: 0.3rem; scrollbar-width: none; -ms-overflow-style: none; }
+  .cal-cards { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-right: 0.15rem; scrollbar-width: none; }
   .cal-cards::-webkit-scrollbar { display: none; }
 
   .ecard {
-    display: flex; align-items: flex-start; gap: 0.35rem;
-    background: var(--surface); border-left: 3px solid;
+    display: flex; align-items: flex-start; gap: 0.4rem;
+    background: var(--raised); border-left: 3px solid;
     border-radius: var(--radius-sm);
-    padding: 0.5rem 0.55rem; margin-bottom: 0.4rem;
+    padding: 0.45rem 0.5rem; margin-bottom: 0.35rem;
     cursor: pointer; transition: background 0.14s;
   }
   .ecard:last-child { margin-bottom: 0; }
-  @media (hover: hover) { .ecard:hover { background: #2e2e2e; } }
+  @media (hover: hover) { .ecard:hover { background: color-mix(in srgb, var(--raised) 100%, var(--strong) 5%); } }
   .ebox {
     flex: none; width: 13px; height: 13px; margin-top: 2px;
-    border: 1.5px solid var(--muted); border-radius: 3px;
+    border: 1.5px solid var(--faint); border-radius: 4px;
     display: inline-flex; align-items: center; justify-content: center;
-    font-size: 0.6rem; line-height: 1; color: var(--bg); cursor: pointer;
+    font-size: 0.6rem; line-height: 1; color: var(--on-accent); cursor: pointer;
   }
-  .ecard.done .ebox { background: var(--green); border-color: var(--green); }
+  .ecard.done .ebox { background: var(--green); border-color: var(--green); color: var(--surface); }
   .ecard.done .ebox::after { content: '✓'; }
+  .ecard.done .etitle { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--faint); }
   .ecard.milestone { cursor: default; }
   .emark { flex: none; width: 13px; margin-top: 2px; color: var(--muted); font-size: 0.7rem; line-height: 1; text-align: center; }
-  .etitle { font-family: var(--font-ui); font-size: 0.8rem; line-height: 1.35; color: var(--strong); }
-  .elink { margin-left: auto; flex: none; color: var(--muted); font-size: 0.8rem; text-decoration: none; }
-  .elink:hover { opacity: 0.7; }
+  .etitle { font-size: 0.8rem; line-height: 1.35; color: var(--strong); }
+  .elink { margin-left: auto; flex: none; color: var(--faint); display: inline-flex; }
+  .elink svg { width: 0.85rem; height: 0.85rem; }
+  @media (hover: hover) { .elink:hover { color: var(--accent); } }
 
   @media (max-width: 700px) {
     body.calendar-page { height: auto; overflow: visible; display: block; }
@@ -89,10 +66,9 @@
     .cal-board { flex-direction: column; overflow: visible; }
     .cal-day {
       flex: none; width: auto; max-height: none; scroll-margin-top: calc(var(--nav-h, 3.2rem) + 0.6rem);
-      border-right: none; border-bottom: 1px solid var(--glass-border);
+      border-right: none; border-bottom: 1px solid var(--border);
     }
     .cal-day:last-child { border-bottom: none; }
-    .cal-day.is-today { background: rgba(255,255,255,0.04); }
     .cal-cards { overflow: visible; padding-right: 0; }
     .elink { padding: 0.45rem; margin: -0.45rem -0.45rem -0.45rem auto; }
   }
@@ -100,23 +76,23 @@
 
 {% block content %}
 <div class="cal-nav">
-  <a class="cal-btn" href="/calendar?offset={{ offset - 1 }}" aria-label="Previous week">‹</a>
-  <a class="cal-btn" href="/calendar?offset={{ offset + 1 }}" aria-label="Next week">›</a>
+  <a class="btn btn-icon" href="/calendar?offset={{ offset - 1 }}" aria-label="Previous week">‹</a>
+  <a class="btn btn-icon" href="/calendar?offset={{ offset + 1 }}" aria-label="Next week">›</a>
   <span class="cal-span">{{ span }}</span>
-  {% if not is_current %}<a class="cal-today" href="/calendar">Today</a>{% endif %}
+  {% if not is_current %}<a class="btn btn-sm" href="/calendar">Today</a>{% endif %}
 </div>
 
 <div class="cal-board">
   {% for d in days %}
   <div class="cal-day {{ 'is-today' if d.is_today }}">
-    <div class="cal-day-h"><span class="cal-dow">{{ d.label }}</span>{% if d.is_today %}<span class="cal-today-badge">Today</span>{% endif %}<span class="cal-num">{{ d.num }}</span></div>
+    <div class="cal-day-h"><span class="cal-dow">{{ d.label }}</span>{% if d.is_today %}<span class="badge accent">Today</span>{% endif %}<span class="cal-num">{{ d.num }}</span></div>
     <div class="cal-cards">
       {% for c in d.cards %}
       <div class="ecard {{ 'done' if c.done }} {{ 'milestone' if c.milestone }}" data-key="{{ c.key }}" data-week="{{ week }}"
            style="border-left-color: {{ c.color }}">
         {% if c.milestone %}<span class="emark" title="Record marker">◆</span>{% else %}<span class="ebox" role="checkbox" aria-checked="{{ 'true' if c.done else 'false' }}"></span>{% endif %}
         <span class="etitle">{{ c.title }}</span>
-        {% if c.task_key %}<a class="elink" href="/planner#task-{{ c.task_key }}" title="Open in Task Manager">🗂</a>{% endif %}
+        {% if c.task_key %}<a class="elink" href="/planner#task-{{ c.task_key }}" title="Open in task manager" aria-label="Open in task manager"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></a>{% endif %}
       </div>
       {% endfor %}
     </div>
