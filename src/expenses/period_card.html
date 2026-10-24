@@ -5,7 +5,7 @@
     <span class="muted">{{ p.range }}</span>
   </div>
   <div class="period-total">
-    <span class="amount">AED {{ p.actual | fmt }}</span>{% if p.budget > 0 %}<span class="muted"> of {{ p.budget | fmt }}</span>{% endif %}
+    <span class="amount">{{ dh }}{{ p.actual | fmt }}</span>{% if p.budget > 0 %}<span class="muted"> of {{ p.budget | fmt }}</span>{% endif %}
   </div>
   <div class="bar {{ p.status }}"><span style="width: {{ p.pct }}%"></span></div>
   {% if p.rows %}

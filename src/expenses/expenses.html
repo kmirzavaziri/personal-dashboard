@@ -24,7 +24,7 @@
   .amount.red { color: var(--red); }
   .amount.yellow { color: var(--yellow); }
   .cat-head { display: flex; align-items: center; gap: 0.4rem; }
-  .cat-stats { font-size: 0.78rem; color: var(--strong); margin: 0 0 0.45rem 1.05rem; }
+  .cat-stat { font-size: 0.74rem; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
   .periods-actions { display: flex; justify-content: center; padding: 0.4rem 0 1rem; }
   .periods-actions[hidden] { display: none; }
   .budget-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; font-size: 0.86rem; margin-bottom: 0.3rem; }
@@ -51,8 +51,10 @@
   }
   .cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 0.7rem; align-items: start; }
   .cat-grid > section { margin: 0; padding: 0.75rem 0.8rem 0.6rem; }
-  .rules { display: flex; flex-direction: column; }
-  .rule { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 0 0.2rem; padding: 0.3rem 0; border-top: 1px solid var(--border); }
+  .rules { display: flex; flex-direction: column; height: 15.5rem; overflow-y: auto; scrollbar-width: thin; margin-top: 0.35rem; }
+  .rules::-webkit-scrollbar { width: 6px; }
+  .rules::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+  .rule { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 0 0.2rem; padding: 0.25rem 0; border-top: 1px solid var(--border); }
   .rule input.match { font-family: var(--font-mono); font-size: 0.74rem; width: 100%; }
   .rule .hits { font-size: 0.72rem; font-variant-numeric: tabular-nums; min-width: 1.5rem; text-align: right; }
   .rule-meta { grid-column: 1 / -1; display: flex; gap: 0.15rem; align-items: center; }
@@ -77,7 +79,7 @@
 </nav>
 
 <div role="tabpanel" data-tabs="budget" data-tab="progress">
-{% if average.months %}<div class="average" title="Average over {{ average.months }} completed months"><span class="muted">Monthly average</span> <span class="amount">AED {{ average.amount | fmt }}</span></div>{% endif %}
+{% if average.months %}<div class="average" title="Average over {{ average.months }} completed months"><span class="muted">Monthly average</span> <span class="amount">{{ dh }}{{ average.amount | fmt }}</span></div>{% endif %}
 {{ pc.period_card(current_period) }}
 <div id="previous-periods"></div>
 <div class="periods-actions"><button class="btn btn-ghost load-more" type="button" data-url="/expenses/periods?count=3" data-before="{{ current_period.start }}">Previous months</button></div>
@@ -91,7 +93,7 @@
 <section role="tabpanel" data-tabs="card" data-tab="card-{{ loop.index }}" hidden>
   <div class="section-head">
     <h2>{{ c.account }}</h2>
-    {% if c.count %}<span class="muted amount">AED {{ c.total | fmt }} · {{ c.count }}</span>{% endif %}
+    {% if c.count %}<span class="muted amount">{{ dh }}{{ c.total | fmt }} · {{ c.count }}</span>{% endif %}
   </div>
   {% if c.entries %}
   {{ tt.tx_table(c.entries, categories) }}
@@ -108,7 +110,7 @@
 {% macro rule_row(rule, hits, average) %}
   <div class="rule">
     <input class="match input-quiet" value="{{ rule.match if rule else '' }}" placeholder="Vendor text or re:pattern" aria-label="Match">
-    <span class="hits muted" title="Matching transactions · average per month">{% if rule %}{{ hits }} · {{ average | fmt }}/mo{% endif %}</span>
+    <span class="hits muted" title="Matching transactions · average per month">{% if rule %}{{ hits }}<span class="faint"> · {{ dh }}{{ average | compact }}</span>{% endif %}</span>
     <button class="btn btn-ghost btn-sm btn-icon rule-remove" type="button" aria-label="Remove rule">×</button>
     <div class="rule-meta">
       <select class="slot input-quiet" aria-label="When">
@@ -134,9 +136,9 @@
   <div class="cat-head">
     <span class="dot lg" style="--tone: {{ tone(cat.name) }}"></span>
     <input class="cat-name input-quiet" value="{{ cat.name }}" maxlength="40" aria-label="Category name">
+    <span class="cat-stat" title="This month · monthly average">{{ dh }}{{ card.period_total | compact }}<span class="faint"> / {{ card.average | compact }}</span></span>
     <button class="btn btn-ghost btn-sm btn-icon cat-delete" type="button" aria-label="Delete category" title="Delete category"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>
   </div>
-  <div class="cat-stats"><span class="amount">AED {{ card.period_total | fmt }}</span> <span class="muted">this month · avg {{ card.average | fmt }}</span></div>
   <div class="rules">
     {% for r in card.rules %}{{ rule_row(r.rule, r.hits, r.average) }}{% endfor %}
   </div>
@@ -175,9 +177,9 @@
     <thead>
       <tr>
         {% if sec.tracking == "daily" %}
-        <th>Item</th><th>Category</th><th class="num">AED each</th>
+        <th>Item</th><th>Category</th><th class="num">{{ dh }} each</th>
         {% else %}
-        <th>Vendor</th><th>Category</th><th class="num">AED / mo</th>
+        <th>Vendor</th><th>Category</th><th class="num">{{ dh }} / mo</th>
         {% endif %}
       </tr>
     </thead>
@@ -192,7 +194,7 @@
           {%- if r.workday %} <span class="badge accent">work days</span>{%- endif %}
         </td>
         <td class="muted">{{ r.category }}</td>
-        <td class="num" data-tip="AED {{ r.monthly | fmt1 }} / mo">{{ r.per_event | fmt }}</td>
+        <td class="num" data-tip="{{ dh }}{{ r.monthly | fmt1 }} / mo">{{ r.per_event | fmt }}</td>
       </tr>
       {% else %}
       <tr>
@@ -205,9 +207,9 @@
       <tr class="total-row">
         <td colspan="2">{{ sec.name | capitalize }} total</td>
         {% if sec.tracking == "daily" %}
-        <td class="num" data-tip="AED {{ sec.total | fmt }} / mo">AED {{ sec.daily_total | fmt1 }} / day</td>
+        <td class="num" data-tip="{{ dh }}{{ sec.total | fmt }} / mo">{{ dh }}{{ sec.daily_total | fmt1 }} / day</td>
         {% else %}
-        <td class="num">AED {{ sec.total | fmt }} / mo</td>
+        <td class="num">{{ dh }}{{ sec.total | fmt }} / mo</td>
         {% endif %}
       </tr>
     </tbody>
@@ -222,9 +224,9 @@
   <table>
     <tbody>
       {% for category, total in by_category %}
-      <tr><td>{{ category }}</td><td class="num muted">AED {{ total | fmt }} / mo</td></tr>
+      <tr><td>{{ category }}</td><td class="num muted">{{ dh }}{{ total | fmt }} / mo</td></tr>
       {% endfor %}
-      <tr class="grand-total-row"><td>Total</td><td class="num">AED {{ grand_total | fmt }} / mo</td></tr>
+      <tr class="grand-total-row"><td>Total</td><td class="num">{{ dh }}{{ grand_total | fmt }} / mo</td></tr>
     </tbody>
   </table>
   </details>
@@ -236,7 +238,7 @@
   <div class="section-head"><h2>Uncategorized vendors</h2></div>
   {% if uncategorized %}
   <table>
-    <thead><tr><th>Vendor</th><th class="num">Count</th><th>Last</th><th class="num">AED</th><th>Category</th></tr></thead>
+    <thead><tr><th>Vendor</th><th class="num">Count</th><th>Last</th><th class="num">{{ dh }}</th><th>Category</th></tr></thead>
     <tbody>
       {% for v in uncategorized %}
       <tr>

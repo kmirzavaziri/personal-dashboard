@@ -6,7 +6,7 @@
 {% macro item_tooltip(item) %}{% if item.image %}{{ img_tag(item.image) }}
 {% endif %}<div class="tt-title">{{ item.name }}</div>
 {{ nutrient_lines(item) }}{% if item.price_per_month is not none %}
-<div class="nut-row"><span class="nut-label">Per month</span><span class="nut-val">AED {{ "%.2f"|format(item.price_per_month) }}</span></div>{% endif %}{% if item.notes %}
+<div class="nut-row"><span class="nut-label">Per month</span><span class="nut-val">{{ dh }}{{ "%.2f"|format(item.price_per_month) }}</span></div>{% endif %}{% if item.notes %}
 <div class="tt-notes">{{ item.notes }}</div>{% endif %}{% endmacro %}
 {% macro nutrient_tooltip(rows) %}{% for r in rows %}<div class="nut-row"><span class="nut-label">{{ r.label }}</span><span class="nut-val">{{ r.val }} <span class="nut-daily">{{ r.daily }}</span></span></div>{% if not loop.last %}
 {% endif %}{% endfor %}{% endmacro %}

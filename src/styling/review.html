@@ -75,7 +75,7 @@
     <div class="card-name">
       <a href="{{ item.url }}" target="_blank" rel="noopener">{{ item.name }} ↗</a>
     </div>
-    <div class="card-price">AED {{ item.price if item.price else '—' }}</div>
+    <div class="card-price">{{ dh }}{{ item.price if item.price else '—' }}</div>
     <div class="card-store">{{ item.store_display }}</div>
     {% if item.notes %}<div class="card-store">{{ item.notes }}</div>{% endif %}
     <div class="badges">
@@ -102,7 +102,7 @@
   {% set bask = namespace(v=0) %}
   {% for item in items %}{% if item.price and item.status == 'pending' %}{% set pend.v = pend.v + item.price %}{% elif item.price and item.status == 'basket' %}{% set bask.v = bask.v + item.price %}{% endif %}{% endfor %}
   <details open data-sid="{{ sid_prefix }}:{{ label }}">
-    <summary><h3>{{ label }} <span class="hdr-meta">({{ items | map(attribute='garment_count') | sum }}){% if pend.v %} · pending AED {{ pend.v | int }}{% endif %}{% if bask.v %} · basket AED {{ bask.v | int }}{% endif %}</span></h3></summary>
+    <summary><h3>{{ label }} <span class="hdr-meta">({{ items | map(attribute='garment_count') | sum }}){% if pend.v %} · pending {{ dh }}{{ pend.v | int }}{% endif %}{% if bask.v %} · basket {{ dh }}{{ bask.v | int }}{% endif %}</span></h3></summary>
     <div class="card-grid">
       {% for item in items %}{{ card(item) }}{% endfor %}
     </div>
@@ -117,7 +117,7 @@
 {% for section in section_order %}{% if groups.get(section.key) %}{% set _ = pairs.append((section.label, groups[section.key])) %}{% endif %}{% endfor %}
 <section>
   <details open>
-    <summary><h2>{{ title }}{% if heading_total %} <span class="hdr-meta">· AED {{ heading_total }}</span>{% endif %}</h2></summary>
+    <summary><h2>{{ title }}{% if heading_total %} <span class="hdr-meta">· {{ dh }}{{ heading_total }}</span>{% endif %}</h2></summary>
     {{ grouped_cards(pairs, title) }}
   </details>
 </section>
@@ -152,7 +152,7 @@
 {% if decided_by_type %}
 <section>
   <details open>
-    <summary><h2>Decided <span class="hdr-meta">{% if decided_pending %}· pending AED {{ decided_pending }}{% endif %}{% if decided_basket %}· basket AED {{ decided_basket }}{% endif %}</span></h2></summary>
+    <summary><h2>Decided <span class="hdr-meta">{% if decided_pending %}· pending {{ dh }}{{ decided_pending }}{% endif %}{% if decided_basket %}· basket {{ dh }}{{ decided_basket }}{% endif %}</span></h2></summary>
     <label class="group-toggle">Group by
       <select id="decided-group">
         <option value="type">Type</option>

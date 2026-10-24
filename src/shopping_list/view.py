@@ -5,7 +5,7 @@ from core.item.item import Item
 from core.item.categories import edible_categories
 from core.item.schedule import PLAN_SLOTS, build_pool, load_plan
 from core.item.sourcing import store_pref_rank
-from core.web.templating import make_env, trim_number
+from core.web.templating import DIRHAM, make_env, trim_number
 from core.item.nutrients import nutrient
 from core.store.registry import STORES
 
@@ -15,7 +15,7 @@ HERE = Path(__file__).parent
 def _fmt_price(value) -> str:
     if value is None:
         return '—'
-    return f'AED {value:.2f}'
+    return DIRHAM + f'{value:.2f}'
 
 
 def _fmt_store(url: str) -> str:

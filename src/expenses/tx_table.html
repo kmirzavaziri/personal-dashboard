@@ -1,6 +1,6 @@
 {% macro tx_table(entries, categories) %}
   <table class="tx-table">
-    <thead><tr><th>When</th><th>Where</th><th>Category</th><th>Note</th><th class="num">AED</th></tr></thead>
+    <thead><tr><th>When</th><th>Where</th><th>Category</th><th>Note</th><th class="num">{{ dh }}</th></tr></thead>
     <tbody>
       {% for e in entries %}
       <tr>

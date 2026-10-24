@@ -55,14 +55,14 @@ def _budget_rows(entries, cat_totals: dict[str, float], period) -> list[dict]:
         status, projected = _budget_status(budget, actual, period.fraction)
         note = ''
         if status == 'red':
-            note = f'over budget (AED {actual - budget:,.0f} above)'
+            note = f'{actual - budget:,.0f} over'
         elif status == 'yellow':
             daily_rate = actual / period.elapsed_days
             exhaust_day = budget / daily_rate if daily_rate else 0
             if 0 < exhaust_day <= period.length_days:
-                note = f'on pace to exhaust by {period.day(max(1, round(exhaust_day))):%b %-d} (projected AED {projected:,.0f})'
+                note = f'runs out {period.day(max(1, round(exhaust_day))):%b %-d} · projected {projected:,.0f}'
             else:
-                note = f'projected AED {projected:,.0f}'
+                note = f'projected {projected:,.0f}'
         rows.append({
             'category': cat,
             'budget': budget,
@@ -236,6 +236,7 @@ def _env(ledger):
     env.globals['tone'] = lambda name: tones.get(name, 'var(--faint)')
     env.filters['fmt'] = lambda v: f'{v:,.0f}'
     env.filters['fmt1'] = lambda v: f'{v:.1f}'
+    env.filters['compact'] = lambda v: f'{v / 1000:.1f}k'.replace('.0k', 'k') if abs(v) >= 1000 else f'{v:,.0f}'
     return env
 
 
