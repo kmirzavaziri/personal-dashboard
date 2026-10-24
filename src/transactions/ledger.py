@@ -21,6 +21,7 @@ class Match:
 @dataclass(frozen=True)
 class Entry:
     tx: Transaction
+    account: str
     category: Category | None
     match: Match | None
     type: str
@@ -45,11 +46,13 @@ class Entry:
 
 
 class Ledger:
-    def __init__(self, transactions: list[Transaction], categories: list[Category], clock: Clock, types: dict[str, dict]):
+    def __init__(self, transactions: list[Transaction], categories: list[Category], clock: Clock,
+                 types: dict[str, dict], cards: list[dict]):
         self.categories = sorted(categories, key=lambda c: c.name.casefold())
         self._by_key = {c.key: c for c in self.categories}
         self.clock = clock
         self._types = types
+        self._accounts = {card['last4']: card['display'] for card in cards if card.get('last4')}
         resolved = [self._resolve(tx) for tx in sorted(transactions, key=lambda t: t.at)]
         self._pairs = self._refund_pairs(resolved)
         by_id = {entry.tx.id: entry.tx for entry in resolved}
@@ -109,14 +112,15 @@ class Ledger:
             match = self._match(tx)
             category = match.category if match else None
         kind = (match.rule.type if match else '') or tx.type
-        return Entry(tx=tx, category=category, match=match, type=kind, spend=self.counts_as_spend(kind))
+        account = self._accounts.get(tx.last4 or '', tx.account)
+        return Entry(tx=tx, account=account, category=category, match=match, type=kind, spend=self.counts_as_spend(kind))
 
     @staticmethod
     def _refund_pairs(entries: list[Entry]) -> dict[str, str]:
         open_purchases: dict[tuple, list[Entry]] = defaultdict(list)
         pairs: dict[str, str] = {}
         for entry in entries:
-            key = (entry.tx.account, entry.tx.currency, round(abs(entry.tx.amount), 2))
+            key = (entry.account, entry.tx.currency, round(abs(entry.tx.amount), 2))
             if entry.type == 'refund':
                 candidates = [p for p in open_purchases[key] if entry.tx.at - p.tx.at <= _REFUND_WINDOW]
                 same_vendor = [p for p in candidates if p.tx.vendor.casefold() == entry.tx.vendor.casefold()]
@@ -141,4 +145,5 @@ def _fingerprint(directory: Path) -> tuple:
 @lru_cache(maxsize=2)
 def _load(db: Path, fingerprint: tuple) -> Ledger:
     types = {t['key']: t for t in read_yaml(db / 'transactions' / 'types.yaml') or []}
-    return Ledger(TransactionStore(db / 'transactions').all(), Category.objects.all(), Clock.load(db), types)
+    cards = read_yaml(db / 'transactions' / 'cards.yaml') or []
+    return Ledger(TransactionStore(db / 'transactions').all(), Category.objects.all(), Clock.load(db), types, cards)

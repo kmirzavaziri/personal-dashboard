@@ -66,6 +66,7 @@ def parse_text(text, patterns):
             'venue': (fields.get('venue') or '').strip(),
             'remaining': _num(fields.get('remaining')),
             'pattern': pattern['name'],
+            'enriches': bool(pattern.get('enriches')),
         }
     return None
 
@@ -160,10 +161,13 @@ def _record(config, entry, text, parsed, account) -> Transaction | None:
         raw_ref=entry.get('received_at', ''),
     )
     store = _store(config)
-    if tx.signature in {row.signature for row in store.read_month(ts[:7])}:
-        return None
-    store.append(tx)
-    return tx
+    existing = next((row for row in store.read_month(ts[:7]) if row.signature == tx.signature), None)
+    if existing is None:
+        store.append(tx)
+        return tx
+    if parsed['enriches'] and existing.venue != tx.venue:
+        store.update(existing.id, venue=tx.venue)
+    return None
 
 
 def _overrides(config) -> dict[str, dict]:

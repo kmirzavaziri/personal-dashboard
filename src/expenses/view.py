@@ -78,7 +78,7 @@ def _budget_rows(entries, cat_totals: dict[str, float], period) -> list[dict]:
 def _card_sections(config, entries) -> list[dict]:
     cards: dict[str, list] = {name: [] for name in tx_service.account_names(config)}
     for entry in entries:
-        cards.setdefault(entry.tx.account or 'Unknown', []).append(entry)
+        cards.setdefault(entry.account or 'Unknown', []).append(entry)
     return [{
         'account': account,
         'total': sum(e.tx.aed for e in entries if e.spend),
