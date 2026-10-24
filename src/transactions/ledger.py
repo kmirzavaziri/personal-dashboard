@@ -64,7 +64,7 @@ class Entry:
 
 class Ledger:
     def __init__(self, transactions: list[Transaction], categories: list[Category], clock: Clock,
-                 types: dict[str, dict], cards: list[dict]):
+                 types: dict[str, dict], cards: list[dict], owner_names: list[str]):
         self.categories = sorted(categories, key=lambda c: c.name.casefold())
         self._by_key = {c.key: c for c in self.categories}
         self.clock = clock
@@ -73,7 +73,7 @@ class Ledger:
         resolved = [self._resolve(tx) for tx in sorted(transactions, key=lambda t: t.at)]
         refunds = _refunds_by_purchase(resolved)
         self._hidden = {tx.id for txs in refunds.values() for tx in txs}
-        own = _self_transfers(resolved, set(self._accounts.values()))
+        own = _self_transfers(resolved, set(self._accounts.values()), owner_names)
         self.entries = [replace(entry, refunds=tuple(refunds.get(entry.tx.id, ())), self_transfer=entry.tx.id in own)
                         for entry in resolved]
         self._hidden |= {entry.tx.id for entry in self.entries if entry.refunds and not entry.partially_refunded}
@@ -180,7 +180,10 @@ def _refunds_by_purchase(entries: list[Entry]) -> dict[str, list[Transaction]]:
     return refunds
 
 
-def _self_transfers(entries: list[Entry], own_accounts: set[str]) -> set[str]:
+def _self_transfers(entries: list[Entry], own_accounts: set[str], owner_names: list[str]) -> set[str]:
+    names = [name.casefold() for name in owner_names]
+    to_owner = {e.tx.id for e in entries
+                if e.type == 'transfer' and any(name in e.tx.venue.casefold() for name in names)}
     outgoing = [e for e in entries if e.type == 'transfer' and e.tx.amount > 0 and e.account in own_accounts]
     incoming = [e for e in entries if e.type in _MOVEMENT_TYPES and e.tx.amount < 0 and e.account in own_accounts]
     paired: set[str] = set()
@@ -191,7 +194,7 @@ def _self_transfers(entries: list[Entry], own_accounts: set[str]) -> set[str]:
                       and abs(inc.tx.at - out.tx.at) <= _SELF_TRANSFER_WINDOW), None)
         if match is not None:
             paired |= {out.tx.id, match.tx.id}
-    return paired
+    return paired | to_owner
 
 
 def _fingerprint(directory: Path) -> tuple:
@@ -203,4 +206,6 @@ def _fingerprint(directory: Path) -> tuple:
 def _load(db: Path, fingerprint: tuple) -> Ledger:
     types = {t['key']: t for t in read_yaml(db / 'transactions' / 'types.yaml') or []}
     cards = read_yaml(db / 'transactions' / 'cards.yaml') or []
-    return Ledger(TransactionStore(db / 'transactions').all(), Category.objects.all(), Clock.load(db), types, cards)
+    owner = read_yaml(db / 'transactions' / 'owner.yaml') or {}
+    return Ledger(TransactionStore(db / 'transactions').all(), Category.objects.all(), Clock.load(db), types, cards,
+                  owner.get('names') or [])

@@ -32,7 +32,7 @@ cp -r db.example db && dash server up
   template, `action: record | alert | ignore`), `cards.yaml` (last4/name →
   account display), `categories/` (one file per category with its rules: vendor text or `re:` pattern, optional
   time `slot`, default `note`, and `type` override), `time.yaml` (timezone, when the day starts, the day of the month a budget period starts, weekend days and
-  the time slots rules can target), `fx.yaml` (pegged rates), `types.yaml` (transaction types and which count as
+  the time slots rules can target), `owner.yaml` (your own names, so transfers to yourself count as self-transfers), `fx.yaml` (pegged rates), `types.yaml` (transaction types and which count as
   spending). Categories, notes and refunds are derived live from these rules; a transaction stores only its
   manual `category_override` and `note`.
 - `messaging/config.yaml` — Telegram `channels` and the senders the Mac relay forwards (`relay.senders`).

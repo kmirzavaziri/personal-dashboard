@@ -22,6 +22,7 @@ _TOKENS = {
 _AMOUNT_HINT = re.compile(r'\b(?:[A-Z]{3} ?(?:\d[\d,]*)?\.\d{2}|\d[\d,]*\.\d{2} ?[A-Z]{3})\b')
 _TXN_HINT = re.compile(r'card|spent|withdrawal|purchase|available limit|avl bal', re.I)
 _LIVE_WINDOW = timedelta(days=1)
+_SAME_MOVEMENT_WINDOW = timedelta(days=1)
 
 
 def _dir(config):
@@ -61,7 +62,7 @@ def parse_text(text, patterns):
             'type': fields.get('type', 'purchase'),
             'currency': (fields.get('currency') or '').upper() or None,
             'amount': amount,
-            'last4': fields['last4'][-4:] if fields.get('last4') else None,
+            'last4': fields['last4'][-4:].replace('*', 'X') if fields.get('last4') else None,
             'card_name': (fields.get('card_name') or '').strip(),
             'venue': (fields.get('venue') or '').strip(),
             'remaining': _num(fields.get('remaining')),
@@ -163,13 +164,27 @@ def _record(config, entry, text, parsed, account) -> Transaction | None:
         raw_ref=entry.get('received_at', ''),
     )
     store = _store(config)
-    existing = next((row for row in store.read_month(ts[:7]) if row.signature == tx.signature), None)
+    existing = _same_movement(store, tx)
     if existing is None:
         store.append(tx)
         return tx
     if parsed['enriches'] and existing.venue != tx.venue:
         store.update(existing.id, venue=tx.venue)
+    if existing.remaining is None and tx.remaining is not None:
+        store.update(existing.id, remaining=tx.remaining)
     return None
+
+
+def _same_movement(store: TransactionStore, tx: Transaction) -> Transaction | None:
+    months = {f'{tx.at + shift:%Y-%m}' for shift in (-_SAME_MOVEMENT_WINDOW, timedelta(), _SAME_MOVEMENT_WINDOW)}
+    rows = [row for month in sorted(months) for row in store.read_month(month)]
+    exact = next((row for row in rows if row.signature == tx.signature), None)
+    if exact is not None:
+        return exact
+    return next((row for row in rows
+                 if row.account == tx.account and round(row.amount, 2) == round(tx.amount, 2)
+                 and (row.remaining is None or tx.remaining is None)
+                 and abs(row.at - tx.at) <= _SAME_MOVEMENT_WINDOW), None)
 
 
 def _overrides(config) -> dict[str, dict]:
