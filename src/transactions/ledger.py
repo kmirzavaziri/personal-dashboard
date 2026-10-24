@@ -5,12 +5,9 @@ from functools import cached_property, lru_cache
 from pathlib import Path
 
 from pkg.model.io import read_yaml
-from transactions.rules import Category, Clock, Rule
+from transactions.rules import Category, Clock, Matching, Rule
 from transactions.transaction import Transaction, TransactionStore
 
-_REFUND_WINDOW = timedelta(days=120)
-_FX_REFUND_TOLERANCE = 0.05
-_SELF_TRANSFER_WINDOW = timedelta(days=3)
 _MOVEMENT_TYPES = {'transfer', 'income'}
 
 
@@ -64,16 +61,16 @@ class Entry:
 
 class Ledger:
     def __init__(self, transactions: list[Transaction], categories: list[Category], clock: Clock,
-                 types: dict[str, dict], cards: list[dict], owner: dict):
+                 types: dict[str, dict], cards: list[dict], owner: dict, matching: Matching):
         self.categories = sorted(categories, key=lambda c: c.name.casefold())
         self._by_key = {c.key: c for c in self.categories}
         self.clock = clock
         self._types = types
         self._accounts = {card['last4']: card['display'] for card in cards if card.get('last4')}
         resolved = [self._resolve(tx) for tx in sorted(transactions, key=lambda t: t.at)]
-        refunds = _refunds_by_purchase(resolved)
+        refunds = _refunds_by_purchase(resolved, matching)
         self._hidden = {tx.id for txs in refunds.values() for tx in txs}
-        own = _self_transfers(resolved, set(self._accounts.values()), owner)
+        own = _self_transfers(resolved, set(self._accounts.values()), owner, matching.self_transfer)
         self.entries = [replace(entry, refunds=tuple(refunds.get(entry.tx.id, ())), self_transfer=entry.tx.id in own,
                                 spend=entry.spend and entry.tx.id not in own)
                         for entry in resolved]
@@ -141,14 +138,14 @@ class Ledger:
 
 
 
-def _within_window(refund: Entry, purchase: Entry) -> bool:
-    return purchase.tx.at <= refund.tx.at and refund.tx.at - purchase.tx.at <= _REFUND_WINDOW
+def _within_window(refund: Entry, purchase: Entry, window: timedelta) -> bool:
+    return purchase.tx.at <= refund.tx.at and refund.tx.at - purchase.tx.at <= window
 
 
-def _fully_refunds(refund: Entry, purchase: Entry) -> bool:
+def _fully_refunds(refund: Entry, purchase: Entry, fx_ratio: float) -> bool:
     if purchase.tx.currency == refund.tx.currency:
         return round(abs(purchase.tx.amount), 2) == round(abs(refund.tx.amount), 2)
-    return abs(abs(purchase.tx.aed) - abs(refund.tx.aed)) <= abs(purchase.tx.aed) * _FX_REFUND_TOLERANCE
+    return abs(abs(purchase.tx.aed) - abs(refund.tx.aed)) <= abs(purchase.tx.aed) * fx_ratio
 
 
 def _vendor_stem(vendor: str) -> str:
@@ -161,7 +158,7 @@ def _same_vendor(refund: Entry, purchase: Entry) -> bool:
     return len(stem) >= 3 and _vendor_stem(purchase.tx.vendor).startswith(stem)
 
 
-def _refunds_by_purchase(entries: list[Entry]) -> dict[str, list[Transaction]]:
+def _refunds_by_purchase(entries: list[Entry], matching: Matching) -> dict[str, list[Transaction]]:
     open_purchases: dict[str, list[Entry]] = defaultdict(list)
     remaining: dict[str, float] = {}
     refunds: dict[str, list[Transaction]] = defaultdict(list)
@@ -171,8 +168,8 @@ def _refunds_by_purchase(entries: list[Entry]) -> dict[str, list[Transaction]]:
                 open_purchases[entry.account].append(entry)
                 remaining[entry.tx.id] = entry.tx.aed
             continue
-        candidates = [p for p in open_purchases[entry.account] if _within_window(entry, p)]
-        full = [p for p in candidates if _fully_refunds(entry, p)]
+        candidates = [p for p in open_purchases[entry.account] if _within_window(entry, p, matching.refund)]
+        full = [p for p in candidates if _fully_refunds(entry, p, matching.fx_refund_ratio)]
         partial = [p for p in candidates if _same_vendor(entry, p) and remaining[p.tx.id] > abs(entry.tx.aed)]
         preferred = [p for p in full if _same_vendor(entry, p)] or full or partial
         if not preferred:
@@ -185,18 +182,18 @@ def _refunds_by_purchase(entries: list[Entry]) -> dict[str, list[Transaction]]:
     return refunds
 
 
-def _pairs_with(out: Entry, inc: Entry) -> bool:
+def _pairs_with(out: Entry, inc: Entry, window: timedelta) -> bool:
     return (inc.account != out.account and round(abs(inc.tx.aed), 2) == round(out.tx.aed, 2)
-            and abs(inc.tx.at - out.tx.at) <= _SELF_TRANSFER_WINDOW)
+            and abs(inc.tx.at - out.tx.at) <= window)
 
 
-def _self_transfers(entries: list[Entry], own_accounts: set[str], owner: dict) -> set[str]:
+def _self_transfers(entries: list[Entry], own_accounts: set[str], owner: dict, window: timedelta) -> set[str]:
     markers = [text.casefold() for text in (owner.get('names') or []) + (owner.get('movements') or [])]
     to_owner = {e.tx.id for e in entries
                 if e.type in _MOVEMENT_TYPES and any(marker in e.tx.venue.casefold() for marker in markers)}
     outgoing = [e for e in entries if e.type == 'transfer' and e.tx.amount > 0 and e.account in own_accounts]
     incoming = [e for e in entries if e.type in _MOVEMENT_TYPES and e.tx.amount < 0 and e.account in own_accounts]
-    candidates = {out.tx.id: [inc for inc in incoming if _pairs_with(out, inc)] for out in outgoing}
+    candidates = {out.tx.id: [inc for inc in incoming if _pairs_with(out, inc, window)] for out in outgoing}
     paired: set[str] = set()
     for out in sorted(outgoing, key=lambda o: (len(candidates[o.tx.id]), o.tx.at)):
         match = min((inc for inc in candidates[out.tx.id] if inc.tx.id not in paired),
@@ -216,4 +213,5 @@ def _load(db: Path, fingerprint: tuple) -> Ledger:
     types = {t['key']: t for t in read_yaml(db / 'transactions' / 'types.yaml') or []}
     cards = read_yaml(db / 'transactions' / 'cards.yaml') or []
     owner = read_yaml(db / 'transactions' / 'owner.yaml') or {}
-    return Ledger(TransactionStore(db / 'transactions').all(), Category.objects.all(), Clock.load(db), types, cards, owner)
+    return Ledger(TransactionStore(db / 'transactions').all(), Category.objects.all(), Clock.load(db), types, cards, owner,
+                  Matching.load(db))

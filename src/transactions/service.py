@@ -7,7 +7,7 @@ import messaging.service as messaging
 
 from pkg.model.io import read_yaml
 from transactions import fx
-from transactions.rules import Category, Clock, Rule, slug
+from transactions.rules import Category, Clock, Matching, Rule, slug
 from transactions.transaction import UNCATEGORIZED, Transaction, TransactionStore
 
 _NUMBER = r'(?:\d[\d,]*(?:\.\d+)?|\.\d+)'
@@ -22,10 +22,7 @@ _TOKENS = {
 _AMOUNT_HINT = re.compile(r'\b(?:[A-Z]{3} ?(?:\d[\d,]*)?\.\d{2}|\d[\d,]*\.\d{2} ?[A-Z]{3})\b')
 _TXN_HINT = re.compile(r'card|spent|withdrawal|purchase|available limit|avl bal', re.I)
 _LIVE_WINDOW = timedelta(days=1)
-_SAME_MOVEMENT_WINDOW = timedelta(days=1)
-_CHARGES_TOLERANCE = 5.0
 _UNKNOWN_ACCOUNT = 'Unknown'
-_INTERCHANGEABLE_TYPES = {'transfer', 'purchase'}
 
 
 def _dir(config):
@@ -176,7 +173,7 @@ def _record(config, entry, text, parsed, account) -> Transaction | None:
         raw_ref=entry.get('received_at', ''),
     )
     store = _store(config)
-    existing = _same_movement(store, tx)
+    existing = _same_movement(config, store, tx)
     if existing is None:
         store.append(tx)
         return tx
@@ -195,26 +192,40 @@ def _enrichment_rank(config, tx: Transaction) -> int:
     return next((int(p.get('enriches') or 0) for p in _patterns(config) if p['name'] == source), 0)
 
 
-def _same_movement(store: TransactionStore, tx: Transaction) -> Transaction | None:
-    months = {f'{tx.at + shift:%Y-%m}' for shift in (-_SAME_MOVEMENT_WINDOW, timedelta(), _SAME_MOVEMENT_WINDOW)}
+def _same_movement(config, store: TransactionStore, tx: Transaction) -> Transaction | None:
+    matching = Matching.load(config.db)
+    window = matching.same_movement
+    months = {f'{tx.at + shift:%Y-%m}' for shift in (-window, timedelta(), window)}
     rows = [row for month in sorted(months) for row in store.read_month(month)]
     exact = next((row for row in rows if row.signature == tx.signature), None)
     if exact is not None:
         return exact
+    patterns = {pattern['name']: pattern for pattern in _patterns(config)}
+    banks = {card['display']: card.get('bank', '') for card in _cards(config)}
     return next((row for row in rows
-                 if (row.type == tx.type
-                     or (_UNKNOWN_ACCOUNT in (row.account, tx.account) and {row.type, tx.type} <= _INTERCHANGEABLE_TYPES))
-                 and (row.remaining is None or tx.remaining is None)
-                 and abs(row.at - tx.at) <= _SAME_MOVEMENT_WINDOW
-                 and _same_account_and_amount(row, tx)), None)
+                 if (row.remaining is None or tx.remaining is None)
+                 and abs(row.at - tx.at) <= window
+                 and _compatible_types(row, tx, patterns)
+                 and _same_account_and_amount(row, tx, patterns, banks, matching.charges_aed)), None)
 
 
-def _same_account_and_amount(row: Transaction, tx: Transaction) -> bool:
+def _compatible_types(row: Transaction, tx: Transaction, patterns: dict) -> bool:
+    if row.type == tx.type:
+        return True
+    merges = lambda a, b: b.type in (patterns.get(a.pattern) or {}).get('merges_with', [])
+    return merges(row, tx) or merges(tx, row)
+
+
+def _same_account_and_amount(row: Transaction, tx: Transaction, patterns: dict, banks: dict, charges: float) -> bool:
     if row.account == tx.account:
         return round(row.amount, 2) == round(tx.amount, 2)
-    if _UNKNOWN_ACCOUNT in (row.account, tx.account):
-        return 0 <= abs(row.amount - tx.amount) <= _CHARGES_TOLERANCE
-    return False
+    if _UNKNOWN_ACCOUNT not in (row.account, tx.account):
+        return False
+    unknown, known = (row, tx) if row.account == _UNKNOWN_ACCOUNT else (tx, row)
+    bank = (patterns.get(unknown.pattern) or {}).get('bank')
+    if bank and banks.get(known.account) != bank:
+        return False
+    return abs(row.amount - tx.amount) <= charges
 
 
 def _overrides(config) -> dict[str, dict]:

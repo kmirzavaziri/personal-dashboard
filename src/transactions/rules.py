@@ -119,6 +119,32 @@ class Clock(BaseModel):
         return next((slot for slot in self.slots if slot.key == key), None)
 
 
+class Matching(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+    same_movement_hours: int
+    charges_aed: float
+    self_transfer_days: int
+    refund_days: int
+    fx_refund_ratio: float
+
+    @classmethod
+    def load(cls, db) -> 'Matching':
+        return cls.model_validate(read_yaml(db / 'transactions' / 'matching.yaml'))
+
+    @property
+    def same_movement(self) -> timedelta:
+        return timedelta(hours=self.same_movement_hours)
+
+    @property
+    def self_transfer(self) -> timedelta:
+        return timedelta(days=self.self_transfer_days)
+
+    @property
+    def refund(self) -> timedelta:
+        return timedelta(days=self.refund_days)
+
+
 class Rule(BaseModel):
     model_config = ConfigDict(extra='forbid')
 
