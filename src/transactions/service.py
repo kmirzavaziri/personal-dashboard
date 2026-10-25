@@ -155,9 +155,16 @@ def receive(config, source: str, payloads: list) -> Counter:
     return outcome
 
 
-def receive_wallet(config, merchant: str, amount, card: str) -> Counter:
-    text = f'Apple Pay: spent {str(amount).strip()} at {str(merchant).strip()} with {str(card).strip()}'
-    return receive(config, 'wallet', [{'text': text, 'sender': 'Apple Wallet'}])
+def receive_wallet(config, request: dict) -> Counter:
+    field = lambda *names: next((_wallet_text(request.get(name)) for name in names if _wallet_text(request.get(name))), '')
+    text = f"Apple Pay: spent {field('amount')} at {field('merchant')} with {field('name', 'card_or_pass', 'card')}"
+    return receive(config, 'wallet', [{'text': text, 'sender': 'Apple Wallet', 'raw': request}])
+
+
+def _wallet_text(value) -> str:
+    if isinstance(value, dict):
+        return _wallet_text(value.get('name') or value.get('title') or '')
+    return str(value or '').strip()
 
 
 def _store(config) -> TransactionStore:
