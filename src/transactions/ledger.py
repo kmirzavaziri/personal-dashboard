@@ -73,6 +73,10 @@ class Ledger:
                  period_starts: dict[str, str], statement_lines: list[StatementLine], counterparties: list[dict]):
         self.categories = sorted(categories, key=lambda c: c.name.casefold())
         self._by_key = {c.key: c for c in self.categories}
+        self._rules_by_match: dict[str, list[Match]] = defaultdict(list)
+        for category in self.categories:
+            for index, rule in enumerate(category.rules):
+                self._rules_by_match[rule.match.casefold()].append(Match(category, rule, index))
         self.clock = clock
         self._types = types
         self._accounts = {card['last4']: card['display'] for card in cards if card.get('last4')}
@@ -193,14 +197,13 @@ class Ledger:
         return list(rows.values())
 
     def _match(self, tx: Transaction) -> Match | None:
+        vendor = tx.vendor
+        indexed = [match for key in {vendor.casefold(), tx.type.casefold()} for match in self._rules_by_match.get(key, ())]
+        if not indexed:
+            return None
         slots_now = self.clock.slot_keys_at(tx.at)
-        candidates = [
-            Match(category, rule, index)
-            for category in self.categories
-            for index, rule in enumerate(category.rules)
-            if rule.matches(tx.vendor, tx.type, slots_now)
-        ]
-        return max(candidates, key=lambda m: m.rule.precedence, default=None)
+        candidates = [match for match in indexed if match.rule.matches(vendor, tx.type, slots_now)]
+        return max(candidates, key=lambda m: (m.rule.precedence, -self.categories.index(m.category), -m.index), default=None)
 
     def _resolve(self, tx: Transaction) -> Entry:
         if tx.category_override:
@@ -244,6 +247,8 @@ def _refunds_by_purchase(entries: list[Entry], matching: Matching) -> dict[str, 
                 open_purchases[entry.account].append(entry)
                 remaining[entry.tx.id] = entry.tx.aed
             continue
+        open_purchases[entry.account] = [p for p in open_purchases[entry.account]
+                                         if entry.tx.at - p.tx.at <= matching.refund]
         candidates = [p for p in open_purchases[entry.account] if _within_window(entry, p, matching.refund)]
         full = [p for p in candidates if _fully_refunds(entry, p, matching.fx_refund_ratio)]
         partial = [p for p in candidates if _same_vendor(entry, p) and remaining[p.tx.id] > abs(entry.tx.aed)]
