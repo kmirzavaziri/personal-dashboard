@@ -28,7 +28,7 @@ def make_expenses_bp(services) -> Blueprint:
         return str(error), 404
 
     @bp.get('/expenses')
-    @bp.get('/expenses/<any(spending, transactions, budgets, categorize):tab>')
+    @bp.get('/expenses/<any(spending, transactions, budgets, categorize, trends):tab>')
     def page(tab=None):
         return render(services)
 

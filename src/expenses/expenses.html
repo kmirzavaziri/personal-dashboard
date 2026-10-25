@@ -107,6 +107,27 @@
   .describe-body .vnote { flex: 1; max-width: none; font-size: 0.82rem; color: var(--text); }
   #describe-dialog .modal-actions { align-items: center; }
   #new-category-name { width: 100%; margin-top: 0.4rem; }
+  .trend-card { padding: 0.9rem 1rem 0.8rem; }
+  .trend-chart { position: relative; }
+  .trend-chart { min-height: 340px; }
+  .trend-chart svg { display: block; overflow: visible; }
+  .trend-chart .grid { stroke: var(--border); stroke-width: 1; }
+  .trend-chart .axis { fill: var(--faint); font-size: 11px; font-family: var(--font-ui); font-variant-numeric: tabular-nums; }
+  .trend-chart .line { fill: none; stroke: var(--tone); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; transition: opacity 0.15s ease; }
+  .trend-chart .line.partial { stroke-dasharray: 4 4; }
+  .trend-chart.focusing .line:not(.focus) { opacity: 0.12; }
+  .trend-chart .cross { stroke: var(--border-strong); stroke-width: 1; }
+  .trend-chart .dot { fill: var(--tone); stroke: var(--surface); stroke-width: 2; }
+  .trend-tip { position: absolute; z-index: 5; pointer-events: none; min-width: 12rem; padding: 0.45rem 0.6rem; border-radius: var(--radius-sm); background: var(--raised); border: 1px solid var(--border); box-shadow: var(--shadow-pop); font-size: 0.74rem; color: var(--text); }
+  .trend-tip .tip-head { display: flex; justify-content: space-between; gap: 1rem; color: var(--strong); font-weight: 500; margin-bottom: 0.25rem; }
+  .trend-tip .tip-row { display: flex; align-items: center; gap: 0.4rem; font-variant-numeric: tabular-nums; }
+  .trend-tip .tip-row span:nth-child(2) { flex: 1; color: var(--muted); }
+  .trend-legend { display: flex; flex-wrap: wrap; gap: 0.3rem 0.35rem; margin-top: 0.7rem; }
+  .trend-legend button { all: unset; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.15rem 0.5rem; border-radius: 999px; border: 1px solid var(--border); font-size: 0.74rem; color: var(--text); cursor: pointer; }
+  .trend-legend button[aria-pressed="false"] { color: var(--faint); }
+  .trend-legend button[aria-pressed="false"] .dd-dot { background: transparent; box-shadow: inset 0 0 0 1px var(--faint); }
+  .trend-legend button:focus-visible { outline: 2px solid var(--accent); }
+  .trend-actions { display: flex; gap: 0.4rem; justify-content: flex-end; margin-bottom: 0.4rem; }
   .delete-choice { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.8rem; font-size: 0.84rem; }
   .delete-choice label { display: flex; align-items: center; gap: 0.5rem; }
   .delete-choice .dd { margin-left: 1.45rem; width: 16rem; max-width: calc(100% - 1.45rem); }
@@ -119,6 +140,7 @@
   <button role="tab" data-tab="transactions">Transactions</button>
   <button role="tab" data-tab="budgets">Budgets</button>
   <button role="tab" data-tab="categorize">Categorize</button>
+  <button role="tab" data-tab="trends">Trends</button>
 </nav>
 
 <div role="tabpanel" data-tabs="budget" data-tab="spending">
@@ -205,6 +227,15 @@
 
 
 
+</div>
+
+<div role="tabpanel" data-tabs="budget" data-tab="trends" hidden>
+<section class="trend-card">
+  <div class="trend-actions"><button class="btn btn-ghost btn-sm" type="button" id="trend-all">Show all</button><button class="btn btn-ghost btn-sm" type="button" id="trend-none">Hide all</button></div>
+  <div class="trend-chart" id="trend-chart"></div>
+  <div class="trend-legend" id="trend-legend"></div>
+</section>
+<script type="application/json" id="trend-data">{{ trends | tojson }}</script>
 </div>
 
 <div role="tabpanel" data-tabs="budget" data-tab="budgets" hidden>
@@ -541,6 +572,150 @@
     toggle.addEventListener('change', schedule);
     new MutationObserver(schedule).observe(panel, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });
     apply();
+  })();
+
+  (function () {
+    var box = document.getElementById('trend-chart');
+    var legend = document.getElementById('trend-legend');
+    var data = JSON.parse(document.getElementById('trend-data').textContent);
+    var SVG = 'http://www.w3.org/2000/svg';
+    var WIDTH = 0, HEIGHT = 340, LEFT = 46, RIGHT = 10, TOP = 10, BOTTOM = 24;
+    var all = data.series.filter(function (s) { return s.name === 'All spending'; })[0];
+    var series = data.series.filter(function (s) { return s.name !== 'All spending'; });
+    var shown = {};
+    series.forEach(function (s) { shown[s.name] = true; });
+    var count = data.periods.length;
+    var svg, tip, cross;
+    function money(value) { return 'Đ' + Math.round(value).toLocaleString('en-US'); }
+    function el(name, attrs, parent) {
+      var node = document.createElementNS(SVG, name);
+      Object.keys(attrs).forEach(function (key) { node.setAttribute(key, attrs[key]); });
+      if (parent) parent.appendChild(node);
+      return node;
+    }
+    function x(i) { return LEFT + (count === 1 ? 0 : i * (WIDTH - LEFT - RIGHT) / (count - 1)); }
+    function niceMax(value) {
+      var step = Math.pow(10, Math.floor(Math.log10(value || 1)));
+      var nice = [1, 2, 2.5, 5, 10].map(function (m) { return m * step; }).filter(function (v) { return v >= value; })[0];
+      return nice || value;
+    }
+    function draw() {
+      WIDTH = box.clientWidth;
+      if (!WIDTH) return;
+      box.innerHTML = '';
+      var visible = series.filter(function (s) { return shown[s.name]; });
+      var peak = niceMax(Math.max.apply(null, [1].concat(visible.map(function (s) { return Math.max.apply(null, s.values); }))));
+      var y = function (value) { return TOP + (HEIGHT - TOP - BOTTOM) * (1 - value / peak); };
+      svg = el('svg', { viewBox: '0 0 ' + WIDTH + ' ' + HEIGHT, width: WIDTH, height: HEIGHT, role: 'img', 'aria-label': 'Monthly spending per category' }, box);
+      [0, 0.25, 0.5, 0.75, 1].forEach(function (f) {
+        el('line', { class: 'grid', x1: LEFT, x2: WIDTH - RIGHT, y1: y(peak * f), y2: y(peak * f), 'vector-effect': 'non-scaling-stroke' }, svg);
+        el('text', { class: 'axis', x: LEFT - 6, y: y(peak * f) + 4, 'text-anchor': 'end' }, svg).textContent = peak * f >= 1000 ? (peak * f / 1000) + 'k' : Math.round(peak * f);
+      });
+      var every = Math.ceil(count / 9);
+      data.periods.forEach(function (p, i) {
+        if (i % every && i !== count - 1) return;
+        el('text', { class: 'axis', x: x(i), y: HEIGHT - 6, 'text-anchor': i === 0 ? 'start' : i === count - 1 ? 'end' : 'middle' }, svg).textContent = p.label.replace(/^(\w{3})\w* (\d{2})(\d{2})$/, '$1 $3');
+      });
+      cross = el('line', { class: 'cross', y1: TOP, y2: HEIGHT - BOTTOM, 'vector-effect': 'non-scaling-stroke' }, svg);
+      cross.style.display = 'none';
+      visible.forEach(function (s) {
+        var points = s.values.map(function (v, i) { return x(i) + ',' + y(v); });
+        var settled = el('polyline', { class: 'line', points: points.slice(0, count - 1).join(' '), 'vector-effect': 'non-scaling-stroke', 'data-name': s.name }, svg);
+        var partial = el('polyline', { class: 'line partial', points: points.slice(count - 2).join(' '), 'vector-effect': 'non-scaling-stroke', 'data-name': s.name }, svg);
+        [settled, partial].forEach(function (line) { line.style.setProperty('--tone', s.tone); });
+      });
+      tip = document.createElement('div');
+      tip.className = 'trend-tip';
+      tip.hidden = true;
+      box.appendChild(tip);
+      svg.addEventListener('mousemove', function (e) {
+        var rect = svg.getBoundingClientRect();
+        var i = Math.round(((e.clientX - rect.left) / rect.width * WIDTH - LEFT) / ((WIDTH - LEFT - RIGHT) / Math.max(count - 1, 1)));
+        hover(Math.max(0, Math.min(count - 1, i)), visible, y, rect);
+      });
+      svg.addEventListener('mouseleave', function () { tip.hidden = true; cross.style.display = 'none'; svg.querySelectorAll('.dot').forEach(function (d) { d.remove(); }); });
+    }
+    function hover(i, visible, y, rect) {
+      cross.setAttribute('x1', x(i));
+      cross.setAttribute('x2', x(i));
+      cross.style.display = '';
+      svg.querySelectorAll('.dot').forEach(function (d) { d.remove(); });
+      var rows = visible.map(function (s) { return { s: s, v: s.values[i] }; }).filter(function (r) { return r.v > 0; })
+        .sort(function (a, b) { return b.v - a.v; });
+      rows.slice(0, 8).forEach(function (r) {
+        var dot = el('circle', { class: 'dot', cx: x(i), cy: y(r.v), r: 4 }, svg);
+        dot.style.setProperty('--tone', r.s.tone);
+      });
+      tip.innerHTML = '';
+      var head = document.createElement('div');
+      head.className = 'tip-head';
+      var label = document.createElement('span');
+      label.textContent = data.periods[i].label + (i === count - 1 ? ' · so far' : '');
+      var total = document.createElement('span');
+      total.textContent = all ? money(all.values[i]) : '';
+      head.appendChild(label);
+      head.appendChild(total);
+      tip.appendChild(head);
+      rows.slice(0, 10).forEach(function (r) {
+        var row = document.createElement('div');
+        row.className = 'tip-row';
+        var dot = document.createElement('span');
+        dot.className = 'dd-dot';
+        dot.style.setProperty('--tone', r.s.tone);
+        var name = document.createElement('span');
+        name.textContent = r.s.name;
+        var value = document.createElement('span');
+        value.textContent = money(r.v);
+        row.appendChild(dot);
+        row.appendChild(name);
+        row.appendChild(value);
+        tip.appendChild(row);
+      });
+      if (rows.length > 10) {
+        var more = document.createElement('div');
+        more.className = 'tip-row';
+        more.textContent = '+' + (rows.length - 10) + ' more';
+        tip.appendChild(more);
+      }
+      tip.hidden = false;
+      var px = x(i) / WIDTH * rect.width;
+      tip.style.left = Math.min(px + 12, rect.width - tip.offsetWidth) + 'px';
+      if (px + 12 + tip.offsetWidth > rect.width) tip.style.left = Math.max(px - 12 - tip.offsetWidth, 0) + 'px';
+      tip.style.top = '8px';
+    }
+    function focus(name) {
+      box.classList.toggle('focusing', !!name);
+      box.querySelectorAll('.line').forEach(function (line) { line.classList.toggle('focus', line.dataset.name === name); });
+    }
+    series.forEach(function (s) {
+      var button = document.createElement('button');
+      button.type = 'button';
+      button.setAttribute('aria-pressed', 'true');
+      var dot = document.createElement('span');
+      dot.className = 'dd-dot';
+      dot.style.setProperty('--tone', s.tone);
+      button.appendChild(dot);
+      button.appendChild(document.createTextNode(s.name + ' · ' + money(s.average) + '/mo'));
+      button.addEventListener('click', function () {
+        shown[s.name] = !shown[s.name];
+        button.setAttribute('aria-pressed', String(shown[s.name]));
+        draw();
+      });
+      button.addEventListener('mouseenter', function () { if (shown[s.name]) focus(s.name); });
+      button.addEventListener('mouseleave', function () { focus(null); });
+      legend.appendChild(button);
+    });
+    function setAll(value) {
+      series.forEach(function (s) { shown[s.name] = value; });
+      legend.querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-pressed', String(value)); });
+      draw();
+    }
+    document.getElementById('trend-all').addEventListener('click', function () { setAll(true); });
+    document.getElementById('trend-none').addEventListener('click', function () { setAll(false); });
+    var drawnWidth = 0;
+    new ResizeObserver(function () {
+      if (box.clientWidth && box.clientWidth !== drawnWidth) { drawnWidth = box.clientWidth; draw(); }
+    }).observe(box);
   })();
 
   (function () {

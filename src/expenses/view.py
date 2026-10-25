@@ -16,6 +16,7 @@ HERE = Path(__file__).parent
 _DAYS_PER_MONTH = 365.25 / 12
 
 _MISC = 'Misc.'
+_ALL_SPENDING = 'All spending'
 
 _WORKDAYS_PER_MONTH = _DAYS_PER_MONTH * 5 / 7
 
@@ -243,6 +244,41 @@ def _monthly_averages(ledger, current) -> tuple[dict, dict]:
     )
 
 
+def _trends(ledger, now: datetime, budgets: dict[str, float]) -> dict:
+    current = ledger.period(now)
+    periods = []
+    period = current
+    while ledger.earliest is not None and period.end > ledger.earliest:
+        periods.append(period)
+        period = ledger.previous(period)
+    periods.reverse()
+    index = {p.start: i for i, p in enumerate(periods)}
+    series: dict[str, list[float]] = {}
+    for entry in ledger.visible:
+        if not entry.spend:
+            continue
+        slot = index.get(ledger.period(entry.tx.at).start)
+        if slot is None:
+            continue
+        for name in (_ALL_SPENDING, entry.category_name or 'Uncategorized'):
+            series.setdefault(name, [0.0] * len(periods))[slot] += entry.aed
+    complete = max(len(periods) - 1, 1)
+    tones = colors_for(c.name for c in ledger.categories)
+    rows = [{
+        'name': name,
+        'tone': 'var(--accent)' if name == _ALL_SPENDING else tones.get(name, 'var(--faint)'),
+        'values': [round(v) for v in values],
+        'total': round(sum(values)),
+        'average': round(sum(values[:-1]) / complete),
+        'budget': round(sum(budgets.values())) if name == _ALL_SPENDING else round(budgets.get(name, 0.0)),
+    } for name, values in series.items()]
+    rows.sort(key=lambda row: (row['name'] != _ALL_SPENDING, -row['total']))
+    return {
+        'periods': [{'label': p.name, 'range': p.range_label} for p in periods],
+        'series': rows,
+    }
+
+
 def _env(ledger):
     return _env_for(tuple(c.name for c in ledger.categories), tuple(ledger.account_names))
 
@@ -340,6 +376,7 @@ def render(services) -> str:
     shown_entries = ledger.all_between(period.start, period.end)
     average, category_averages = _monthly_averages(ledger, period)
     card_sections = _card_sections(config, shown_entries)
+    trends = _trends(ledger, datetime.now(timezone.utc), budgets)
 
     return _env(ledger).get_template('expenses.html').render(
         account_sections=account_sections,
@@ -349,6 +386,7 @@ def render(services) -> str:
         current_period=_period_summary(ledger, period, budgets, current=True),
         average=average,
         card_sections=card_sections,
+        trends=trends,
         all_cards={
             'entries': sorted(shown_entries, key=lambda e: e.tx.at, reverse=True),
             'total': sum(e.aed for e in shown_entries if e.spend and not e.hidden),
