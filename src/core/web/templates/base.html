@@ -55,7 +55,8 @@
 {% set h = self.heading()|trim %}
 <nav class="crumbs">
   <a href="/" id="back-home" class="crumb-brand">Personal Dashboard</a>
-  {% if h %}<span class="crumb-sep">/</span><span class="crumb-current">{{ h }}</span>{% endif %}
+  {% if h %}<span class="crumb-sep">/</span><span class="crumb-current" id="crumb-page">{{ h }}</span>{% endif %}
+  <span class="crumb-sep" id="crumb-tab-sep" hidden>/</span><span class="crumb-current" id="crumb-tab" hidden></span>
 </nav>
 <script>
   (function () {
@@ -354,8 +355,16 @@
     document.querySelectorAll('[role="tablist"][data-tabs]').forEach(function (list) {
       var group = list.dataset.tabs;
       var tabs = Array.prototype.slice.call(list.querySelectorAll('[role="tab"]'));
+      var route = list.dataset.route;
       function show(key) {
         tabs.forEach(function (tab) { tab.setAttribute('aria-selected', String(tab.dataset.tab === key)); });
+        if (route) {
+          var tab = tabs.find(function (t) { return t.dataset.tab === key; });
+          history.replaceState(null, '', route + '/' + key + location.search);
+          var crumb = document.getElementById('crumb-tab');
+          crumb.textContent = tab ? tab.textContent.replace(/\d+$/, '').trim() : '';
+          crumb.hidden = document.getElementById('crumb-tab-sep').hidden = !tab;
+        }
         document.querySelectorAll('[role="tabpanel"][data-tabs="' + group + '"]').forEach(function (panel) {
           panel.hidden = panel.dataset.tab !== key;
         });
@@ -370,7 +379,9 @@
       });
       var remembered;
       try { remembered = sessionStorage.getItem(memory); } catch (e) {}
-      var initial = tabs.some(function (t) { return t.dataset.tab === remembered; }) ? remembered : tabs.length && tabs[0].dataset.tab;
+      var fromPath = route && location.pathname.indexOf(route + '/') === 0 ? location.pathname.slice(route.length + 1) : '';
+      var wanted = tabs.some(function (t) { return t.dataset.tab === fromPath; }) ? fromPath : remembered;
+      var initial = tabs.some(function (t) { return t.dataset.tab === wanted; }) ? wanted : tabs.length && tabs[0].dataset.tab;
       if (initial) show(initial);
     });
   })();

@@ -27,7 +27,8 @@ def make_expenses_bp(services) -> Blueprint:
         return str(error), 404
 
     @bp.get('/expenses')
-    def page():
+    @bp.get('/expenses/<any(spending, transactions, budgets, categorize):tab>')
+    def page(tab=None):
         return render(services)
 
     @bp.get('/expenses/periods')
@@ -64,7 +65,7 @@ def make_expenses_bp(services) -> Blueprint:
         vendor = (payload.get('vendor') or '').strip()
         if not vendor:
             return 'vendor is required', 400
-        tx_service.assign_vendor(services.config, vendor, payload.get('assignments') or [], payload.get('type') or '')
+        tx_service.assign_vendor(services.config, vendor, payload.get('assignments') or [])
         return changed({'vendor': vendor})
 
     @bp.post('/api/categories')

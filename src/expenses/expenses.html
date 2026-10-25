@@ -53,16 +53,16 @@
   .vendor-toolbar { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.7rem; }
   .vendor-toolbar #vendor-search { flex: 1 1 14rem; max-width: 22rem; }
   .vendor-list { padding: 0.3rem 0.9rem; }
-  .vendor { display: grid; grid-template-columns: minmax(10rem, 1fr) minmax(16rem, 1.4fr) auto auto; align-items: center; gap: 0.6rem; padding: 0.45rem 0; border-top: 1px solid var(--border); }
+  .vendor { display: grid; grid-template-columns: minmax(10rem, 1fr) minmax(16rem, 1.6fr) auto; align-items: center; gap: 0.6rem; padding: 0.45rem 0; border-top: 1px solid var(--border); }
   .vendor:first-child { border-top: none; }
   .vendor-main { display: flex; flex-direction: column; min-width: 0; }
+  .vendor-income { font-size: 0.78rem; }
   .vendor-name { color: var(--strong); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .vendor-meta { font-size: 0.74rem; color: var(--muted); }
   .assign-single, .slot-row { display: flex; align-items: center; gap: 0.3rem; min-width: 0; }
   .assign-split { display: flex; flex-direction: column; gap: 0.15rem; }
   .slot-label { width: 2.4rem; flex: none; font-size: 0.72rem; color: var(--muted); }
   .vendor .vnote { flex: 1; min-width: 0; font-size: 0.78rem; }
-  .vendor .vtype + .dd-trigger, .vendor .dd:has(.vtype) .dd-trigger { font-size: 0.74rem; color: var(--muted); }
   .icon-clock { width: 14px; height: 14px; background: currentColor; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E") center / contain no-repeat; }
   .split-toggle[aria-pressed="true"] { color: var(--accent); background: var(--accent-soft); }
   .category-list { display: flex; flex-direction: column; gap: 0.1rem; max-height: 60vh; overflow-y: auto; margin-top: 0.4rem; }
@@ -81,21 +81,21 @@
 
 {% block content %}
 
-<nav role="tablist" data-tabs="budget">
-  <button role="tab" data-tab="progress">Spending</button>
-  <button role="tab" data-tab="cards">Transactions</button>
-  <button role="tab" data-tab="plan">Budgets</button>
-  <button role="tab" data-tab="vendors">Categorize</button>
+<nav role="tablist" data-tabs="budget" data-route="/expenses">
+  <button role="tab" data-tab="spending">Spending</button>
+  <button role="tab" data-tab="transactions">Transactions</button>
+  <button role="tab" data-tab="budgets">Budgets</button>
+  <button role="tab" data-tab="categorize">Categorize</button>
 </nav>
 
-<div role="tabpanel" data-tabs="budget" data-tab="progress">
+<div role="tabpanel" data-tabs="budget" data-tab="spending">
 {% if average.months %}<div class="average" title="Average over {{ average.months }} completed months"><span class="muted">Monthly average</span> <span class="amount">{{ dh }}{{ average.amount | fmt }}</span></div>{% endif %}
 {{ pc.period_card(current_period) }}
 <div id="previous-periods"></div>
 <div class="periods-actions"><button class="btn btn-ghost load-more" type="button" data-url="/expenses/periods?count=3" data-before="{{ current_period.start }}">Previous months</button></div>
 </div>
 
-<div role="tabpanel" data-tabs="budget" data-tab="cards" hidden>
+<div role="tabpanel" data-tabs="budget" data-tab="transactions" hidden>
 <input class="search-input" id="tx-search" type="search" placeholder="Search vendor, note, category or amount" autocomplete="off" aria-label="Search transactions">
 <nav role="tablist" class="sub" data-tabs="card" data-deselect="all">
   <button role="tab" data-tab="all" data-account="" hidden>All</button>
@@ -132,7 +132,7 @@
 {% endfor %}
 </div>
 
-<div role="tabpanel" data-tabs="budget" data-tab="vendors" hidden>
+<div role="tabpanel" data-tabs="budget" data-tab="categorize" hidden>
 {% macro category_select(key) %}{% set cat = categories | selectattr('key', 'equalto', key) | first %}<select class="vcat tone" data-options-from="category-options" aria-label="Category"><option value="{{ key }}" data-tone="{{ tone(cat.name) if cat else 'var(--faint)' }}" selected>{{ cat.name if cat else 'Uncategorized' }}</option></select>{% endmacro %}
 <div class="vendor-toolbar">
   <input type="search" id="vendor-search" placeholder="Search vendors and people" autocomplete="off" aria-label="Search vendors">
@@ -158,14 +158,18 @@
       <span class="vendor-name">{{ v.label }}</span>
       <span class="vendor-meta">{% if v.count %}<span class="amount{% if v.inflow %} inflow{% endif %}">{% if v.inflow %}+{% endif %}{{ dh }}{{ v.total | fmt }}</span> · {{ v.count }}{% if v.last %} · <time data-human="date" datetime="{{ v.last }}">{{ v.last }}</time>{% endif %}{% else %}by transaction type{% endif %}</span>
     </div>
+    {% if v.inflow %}
+    <div class="vendor-assign muted vendor-income">Incoming, not categorized</div>
+    <span></span>
+    {% else %}
     <div class="vendor-assign">
       <div class="assign-single"{% if v.split %} hidden{% endif %}>{{ category_select(v.single[0]) }}<input class="vnote input-quiet" value="{{ v.single[1] }}" placeholder="Note" maxlength="80" aria-label="Note"></div>
       <div class="assign-split"{% if not v.split %} hidden{% endif %}>{% if v.split %}
         {% for s in slots %}{% set a = v.per_slot.get(s.key, ('', '')) %}<div class="slot-row" data-slot="{{ s.key }}"><span class="slot-label" title="{{ s.label }}">{{ s.short }}</span>{{ category_select(a[0]) }}<input class="vnote input-quiet" value="{{ a[1] }}" placeholder="Note" maxlength="80" aria-label="Note"></div>{% endfor %}
       {% endif %}</div>
     </div>
-    <select class="vtype input-quiet" data-options-from="type-options" data-placeholder="As parsed" aria-label="Counts as"><option value="{{ v.type }}" selected>{{ (v.type | replace('_', ' ') | capitalize) if v.type else 'As parsed' }}</option></select>
     <button class="btn btn-ghost btn-sm btn-icon split-toggle" type="button" aria-pressed="{{ 'true' if v.split else 'false' }}" title="Different category by time of day"><i class="icon-clock"></i></button>
+    {% endif %}
   </div>
   {% endfor %}
   <div class="empty" id="vendor-empty" hidden>No matches.</div>
@@ -178,10 +182,6 @@
 <template id="tx-category-options">
   <option value="{{ uncategorized }}" data-tone="var(--faint)">Uncategorized</option>
   {% for cat in categories %}<option value="{{ cat.key }}" data-tone="{{ tone(cat.name) }}">{{ cat.name }}</option>{% endfor %}
-</template>
-<template id="type-options">
-  <option value="">As parsed</option>
-  {% for t in types %}<option value="{{ t }}">{{ t | replace('_', ' ') | capitalize }}</option>{% endfor %}
 </template>
 <dialog class="modal" id="new-category-dialog">
   <form method="dialog">
@@ -227,7 +227,7 @@
 </dialog>
 </div>
 
-<div role="tabpanel" data-tabs="budget" data-tab="plan" hidden>
+<div role="tabpanel" data-tabs="budget" data-tab="budgets" hidden>
 {% for sec in account_sections %}
 <section>
   <details open>
@@ -425,7 +425,7 @@
 
     function saveVendor(row) {
       var chosen = assignments(row);
-      api('/api/vendors/assign', 'POST', { vendor: row.dataset.vendor, assignments: chosen, type: row.querySelector('select.vtype').value })
+      api('/api/vendors/assign', 'POST', { vendor: row.dataset.vendor, assignments: chosen })
         .then(function () {
           var first = chosen[0];
           row.dataset.category = first ? first.category : '';
@@ -436,7 +436,7 @@
     }
 
     vendorList.addEventListener('change', function (e) {
-      if (e.target.matches('select.vcat, select.vtype')) saveVendor(e.target.closest('.vendor'));
+      if (e.target.matches('select.vcat')) saveVendor(e.target.closest('.vendor'));
     });
     vendorList.addEventListener('focusin', function (e) {
       if (e.target.matches('.vnote') && e.target.dataset.saved === undefined) e.target.dataset.saved = e.target.value;

@@ -292,10 +292,11 @@ def rename_category(key: str, name: str) -> Category:
     return category
 
 
-def assign_vendor(config, vendor: str, assignments: list[dict], type_override: str = '') -> None:
-    clock, types = Clock.load(config.db), set(type_keys(config))
-    if type_override and type_override not in types:
-        raise ValueError(f'unknown transaction type {type_override!r}')
+def assign_vendor(config, vendor: str, assignments: list[dict]) -> None:
+    clock = Clock.load(config.db)
+    current = [rule for category in Category.objects.all() for rule in category.rules
+               if rule.match.casefold() == vendor.casefold()]
+    type_override = next((rule.type for rule in current if rule.type), '')
     rules: dict[str, list[Rule]] = {}
     for assignment in assignments:
         slots = list(assignment.get('slots') or [])
