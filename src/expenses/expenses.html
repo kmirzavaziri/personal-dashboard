@@ -564,28 +564,42 @@
     var sentinel = new IntersectionObserver(function (seen) {
       seen.forEach(function (e) { if (e.isIntersecting) load(e.target); });
     }, { rootMargin: '400px' });
+    var warmer = new IntersectionObserver(function (seen) {
+      seen.forEach(function (e) { if (e.isIntersecting) prefetch(e.target); });
+    }, { rootMargin: '600px' });
+    function prefetch(button) {
+      if (!button.dataset.before) return null;
+      if (!button._next || button._next.before !== button.dataset.before) {
+        var before = button.dataset.before;
+        button._next = fetch(button.dataset.url + '&before=' + encodeURIComponent(before)).then(function (r) {
+          if (!r.ok) throw new Error('load failed');
+          return r.text();
+        });
+        button._next.before = before;
+        button._next.catch(function () { button._next = null; });
+      }
+      return button._next;
+    }
     function load(button) {
-      if (button.dataset.loading || !button.dataset.before) return;
-      button.dataset.loading = '1';
-      button.disabled = true;
+      if (button.getAttribute('aria-busy') || !button.dataset.before) return;
       var holder = button.closest('.periods-actions').previousElementSibling;
-      fetch(button.dataset.url + '&before=' + encodeURIComponent(button.dataset.before))
-        .then(function (r) { return r.text(); })
-        .then(function (html) {
-          var chunk = document.createElement('div');
-          chunk.className = 'fade-in';
-          chunk.innerHTML = html;
-          var periods = chunk.querySelectorAll('[data-start]');
-          var more = chunk.querySelector('.lazy-more').dataset.more === 'true';
-          holder.appendChild(chunk);
-          humanizeTimes(chunk);
-          if (periods.length) button.dataset.before = periods[periods.length - 1].dataset.start;
-          if (!more) { button.dataset.before = ''; button.closest('.periods-actions').hidden = true; sentinel.unobserve(button); }
-          else sentinel.observe(button);
-        })
-        .finally(function () { delete button.dataset.loading; button.disabled = false; });
+      busy(button, prefetch(button).then(function (html) {
+        button._next = null;
+        var chunk = document.createElement('div');
+        chunk.className = 'fade-in';
+        chunk.innerHTML = html;
+        var periods = chunk.querySelectorAll('[data-start]');
+        var more = chunk.querySelector('.lazy-more').dataset.more === 'true';
+        holder.appendChild(chunk);
+        humanizeTimes(chunk);
+        if (periods.length) button.dataset.before = periods[periods.length - 1].dataset.start;
+        if (!more) { button.dataset.before = ''; button.closest('.periods-actions').hidden = true; sentinel.unobserve(button); warmer.unobserve(button); return; }
+        sentinel.observe(button);
+        prefetch(button);
+      }));
     }
     document.querySelectorAll('.load-more').forEach(function (button) {
+      warmer.observe(button);
       button.addEventListener('click', function () { load(button); });
     });
   })();

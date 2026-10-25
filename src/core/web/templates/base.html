@@ -469,6 +469,15 @@
     clearTimeout(window.toast.timer);
     window.toast.timer = setTimeout(function () { el.classList.remove('show'); }, 2200);
   };
+  window.busy = function (button, work) {
+    button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
+    return Promise.resolve(work).finally(function () {
+      button.disabled = false;
+      button.removeAttribute('aria-busy');
+    });
+  };
+
   window.api = function (url, method, body) {
     return fetch(url, {
       method: method || 'POST',
