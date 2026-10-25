@@ -86,6 +86,9 @@ class Ledger:
             raise ValueError(f'transaction type {type_key!r} is missing from transactions/types.yaml')
         return bool(kind.get('spend'))
 
+    def category(self, key: str) -> Category | None:
+        return self._by_key.get(key)
+
     @cached_property
     def visible(self) -> list[Entry]:
         return [entry for entry in self.entries if entry.tx.id not in self._hidden]
@@ -97,24 +100,24 @@ class Ledger:
     def between(self, start: datetime, end: datetime) -> list[Entry]:
         return [entry for entry in self.visible if start <= entry.tx.at < end]
 
-    def rule_hits(self) -> Counter:
-        return Counter((e.match.category.key, e.match.index) for e in self.visible if e.match and not e.tx.category_override)
-
     def vendors(self) -> list[str]:
         counts = Counter(entry.tx.vendor for entry in self.visible if entry.tx.vendor)
         return [vendor for vendor, _ in counts.most_common()]
 
-    def uncategorized_vendors(self) -> list[dict]:
-        totals: dict[str, dict] = {}
+    def vendor_summaries(self) -> list[dict]:
+        rows: dict[str, dict] = {}
         for entry in self.visible:
             vendor = entry.tx.vendor
-            if entry.category or not entry.labelable or not vendor:
+            if not vendor or entry.self_transfer or entry.type == 'declined':
                 continue
-            row = totals.setdefault(vendor.casefold(), {'vendor': vendor, 'total': 0.0, 'count': 0, 'last': ''})
+            row = rows.setdefault(vendor.casefold(), {'vendor': vendor, 'total': 0.0, 'count': 0, 'last': '',
+                                                      'inflow': 0, 'categories': Counter()})
             row['total'] += entry.aed
             row['count'] += 1
             row['last'] = max(row['last'], entry.tx.ts[:10])
-        return sorted(totals.values(), key=lambda row: -row['total'])
+            row['inflow'] += entry.is_inflow
+            row['categories'][entry.category.key if entry.category else ''] += 1
+        return list(rows.values())
 
     def _match(self, tx: Transaction) -> Match | None:
         slots_now = self.clock.slot_keys_at(tx.at)

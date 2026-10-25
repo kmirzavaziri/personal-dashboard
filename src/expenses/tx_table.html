@@ -8,10 +8,9 @@
         {% if show_account %}<td class="muted card-col">{{ e.account }}</td>{% endif %}
         <td class="venue">{{ e.tx.venue or e.type | replace('_', ' ') | capitalize }}{% if e.type == 'declined' %} <span class="badge b-clay">Declined</span>{% endif %}{% if e.self_transfer %} <span class="badge">Self</span>{% endif %}</td>
         <td>
-          <select class="tx-cat tone" data-id="{{ e.tx.id }}" aria-label="Category">
-            <option value="" data-tone="{{ tone(e.match.category.name) if e.match else 'var(--faint)' }}">{% if e.match %}{{ e.match.category.name }} · auto{% else %}None{% endif %}</option>
-            <option value="{{ uncategorized }}" data-tone="var(--faint)"{% if e.tx.category_override == uncategorized %} selected{% endif %}>Uncategorized</option>
-            {% for cat in categories %}<option value="{{ cat.key }}" data-tone="{{ tone(cat.name) }}"{% if cat.key == e.tx.category_override %} selected{% endif %}>{{ cat.name }}</option>{% endfor %}
+          <select class="tx-cat tone" data-id="{{ e.tx.id }}" data-options-from="tx-category-options" aria-label="Category">
+            <option value="" data-tone="{{ tone(e.match.category.name) if e.match else 'var(--faint)' }}"{% if not e.tx.category_override %} selected{% endif %}>{% if e.match %}{{ e.match.category.name }} · auto{% else %}None{% endif %}</option>
+            {% if e.tx.category_override %}{% set chosen = categories | selectattr('key', 'equalto', e.tx.category_override) | first %}<option value="{{ e.tx.category_override }}" data-tone="{{ tone(chosen.name) if chosen else 'var(--faint)' }}" selected>{{ chosen.name if chosen else 'Uncategorized' }}</option>{% endif %}
           </select>
         </td>
         <td><input class="tx-note input-quiet" data-id="{{ e.tx.id }}" value="{{ e.tx.note }}" placeholder="{{ e.default_note or 'Note' }}" maxlength="140"></td>

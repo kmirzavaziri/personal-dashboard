@@ -94,20 +94,38 @@ def _card_sections(config, entries) -> list[dict]:
     } for account, entries in cards.items()]
 
 
-def _category_cards(ledger, entries, averages: dict[str, float], rule_averages: dict) -> list[dict]:
-    hits = ledger.rule_hits()
-    period_totals: dict[str, float] = {}
-    for entry in entries:
-        if entry.category and entry.spend:
-            period_totals[entry.category.key] = period_totals.get(entry.category.key, 0.0) + entry.aed
-    return [{
-        'category': category,
-        'period_total': period_totals.get(category.key, 0.0),
-        'average': averages.get(category.key, 0.0),
-        'rules': [{'rule': rule, 'hits': hits[(category.key, index)], 'average': rule_averages.get((category.key, index), 0.0)}
-                  for index, rule in enumerate(category.rules)],
-    } for category in ledger.categories]
-
+def _vendor_rows(ledger, type_keys: list[str]) -> list[dict]:
+    assigned: dict[str, list] = {}
+    for category in ledger.categories:
+        for rule in category.rules:
+            assigned.setdefault(rule.match.casefold(), []).append((category, rule))
+    summaries = {row['vendor'].casefold(): row for row in ledger.vendor_summaries()}
+    for key in type_keys:
+        if key.casefold() in assigned and key.casefold() not in summaries:
+            summaries[key.casefold()] = {'vendor': key, 'total': 0.0, 'count': 0, 'last': '', 'inflow': 0,
+                                         'categories': {}}
+    rows = []
+    for folded, summary in summaries.items():
+        rules = assigned.get(folded, [])
+        split = any(rule.slots for _, rule in rules)
+        per_slot = {slot: (category.key, rule.note) for category, rule in rules for slot in rule.slots}
+        single = next(((category.key, rule.note) for category, rule in rules if not rule.slots), ('', ''))
+        primary = single[0] if not split else next(iter(per_slot.values()), ('', ''))[0]
+        rows.append({
+            'vendor': summary['vendor'],
+            'label': f"Any {summary['vendor'].replace('_', ' ')}" if summary['vendor'] in type_keys else summary['vendor'],
+            'count': summary['count'],
+            'total': abs(summary['total']),
+            'last': summary['last'],
+            'inflow': summary['inflow'] * 2 > summary['count'],
+            'split': split,
+            'single': single,
+            'per_slot': per_slot,
+            'type': next((rule.type for _, rule in rules if rule.type), ''),
+            'category': primary,
+            'category_name': ledger.category(primary).name if ledger.category(primary) else '',
+        })
+    return sorted(rows, key=lambda row: -row['total'])
 
 
 def _planned_accounts(config) -> dict[str, list[dict]]:
@@ -210,10 +228,9 @@ def _period_summary(ledger, period, budgets: dict[str, float], current: bool) ->
     }
 
 
-def _monthly_averages(ledger, current) -> tuple[dict, dict, dict]:
+def _monthly_averages(ledger, current) -> tuple[dict, dict]:
     totals: dict[datetime, float] = {}
     by_category: dict[str, dict[datetime, float]] = {}
-    by_rule: dict[tuple[str, int], dict[datetime, float]] = {}
     for entry in ledger.visible:
         if not entry.spend:
             continue
@@ -221,9 +238,6 @@ def _monthly_averages(ledger, current) -> tuple[dict, dict, dict]:
         totals[start] = totals.get(start, 0.0) + entry.aed
         if entry.category:
             months = by_category.setdefault(entry.category.key, {})
-            months[start] = months.get(start, 0.0) + entry.aed
-        if entry.match and not entry.tx.category_override:
-            months = by_rule.setdefault((entry.match.category.key, entry.match.index), {})
             months[start] = months.get(start, 0.0) + entry.aed
     complete = [start for start in sorted(totals)[1:] if start < current.start]
     count = len(complete) or 1
@@ -234,13 +248,13 @@ def _monthly_averages(ledger, current) -> tuple[dict, dict, dict]:
     return (
         {'amount': average(totals), 'months': len(complete)},
         {key: average(months) for key, months in by_category.items()},
-        {key: average(months) for key, months in by_rule.items()},
     )
 
 
 def _env(ledger):
     tones = colors_for(c.name for c in ledger.categories)
     env = make_env(HERE)
+    env.trim_blocks, env.lstrip_blocks = True, True
     env.globals['tone'] = lambda name: tones.get(name, 'var(--faint)')
     env.globals['uncategorized'] = UNCATEGORIZED
     env.filters['fmt'] = lambda v: f'{v:,.0f}'
@@ -311,7 +325,7 @@ def render(services) -> str:
     clock = ledger.clock
     period = clock.period(datetime.now(timezone.utc))
     period_entries = ledger.between(period.start, period.end)
-    average, category_averages, rule_averages = _monthly_averages(ledger, period)
+    average, category_averages = _monthly_averages(ledger, period)
 
     return _env(ledger).get_template('expenses.html').render(
         account_sections=account_sections,
@@ -327,10 +341,8 @@ def render(services) -> str:
             'count': len(period_entries),
         },
         categories=ledger.categories,
-        category_cards=_category_cards(ledger, period_entries, category_averages, rule_averages),
+        category_averages=category_averages,
+        vendor_rows=_vendor_rows(ledger, tx_service.type_keys(config)),
         slots=clock.slots,
         types=tx_service.type_keys(config),
-        vendors=ledger.vendors(),
-        type_labels={key: f"Any {key.replace('_', ' ')}" for key in tx_service.type_keys(config)},
-        uncategorized=ledger.uncategorized_vendors(),
     )

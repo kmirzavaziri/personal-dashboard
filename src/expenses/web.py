@@ -58,13 +58,14 @@ def make_expenses_bp(services) -> Blueprint:
             return 'transaction not found', 404
         return changed({'id': tx_id, 'note': note})
 
-    @bp.post('/api/vendor/category')
-    def categorize_vendor():
-        vendor, category = body().get('vendor', '').strip(), body().get('category', '').strip()
-        if not vendor or not category:
-            return 'vendor and category are required', 400
-        tx_service.categorize_vendor(vendor, category)
-        return changed({'vendor': vendor, 'category': category})
+    @bp.post('/api/vendors/assign')
+    def assign_vendor():
+        payload = body()
+        vendor = (payload.get('vendor') or '').strip()
+        if not vendor:
+            return 'vendor is required', 400
+        tx_service.assign_vendor(services.config, vendor, payload.get('assignments') or [], payload.get('type') or '')
+        return changed({'vendor': vendor})
 
     @bp.post('/api/categories')
     def create_category():
@@ -72,9 +73,8 @@ def make_expenses_bp(services) -> Blueprint:
         return changed({'key': category.key, 'name': category.name})
 
     @bp.put('/api/categories/<key>')
-    def save_category(key):
-        payload = body()
-        category = tx_service.save_category(services.config, key, payload.get('name', ''), payload.get('rules', []))
+    def rename_category(key):
+        category = tx_service.rename_category(key, body().get('name', ''))
         return changed({'key': category.key, 'name': category.name})
 
     @bp.delete('/api/categories/<key>')

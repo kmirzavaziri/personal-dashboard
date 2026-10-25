@@ -242,14 +242,11 @@
       var source = select.dataset.optionsFrom && document.getElementById(select.dataset.optionsFrom);
       if (!source || select._optionsLoaded) return;
       var chosen = select.value;
-      var known = false;
-      select.innerHTML = '';
-      Array.prototype.forEach.call(source.content.children, function (option) {
-        var copy = option.cloneNode(true);
-        known = known || copy.value === chosen;
-        select.appendChild(copy);
+      var offered = Array.prototype.map.call(source.content.children, function (option) { return option.value; });
+      Array.prototype.slice.call(select.options).forEach(function (option) {
+        if (offered.indexOf(option.value) !== -1) option.remove();
       });
-      if (chosen && !known) select.insertBefore(new Option(chosen, chosen), select.firstChild);
+      Array.prototype.forEach.call(source.content.children, function (option) { select.appendChild(option.cloneNode(true)); });
       select.value = chosen;
       select._optionsLoaded = true;
     }

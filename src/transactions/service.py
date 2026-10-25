@@ -283,22 +283,35 @@ def create_category(name: str) -> Category:
     return category
 
 
-def save_category(config, key: str, name: str, rules: list[dict]) -> Category:
+def rename_category(key: str, name: str) -> Category:
     category = Category.objects.get(key=key)
-    clock, types = Clock.load(config.db), set(type_keys(config))
-    parsed = [Rule.model_validate(rule) for rule in rules]
-    for rule in parsed:
-        if not rule.match.strip():
-            raise ValueError('every rule needs a match')
-        for slot in rule.slots:
-            if clock.slot(slot) is None:
-                raise ValueError(f'unknown time slot {slot!r}')
-        if rule.type and rule.type not in types:
-            raise ValueError(f'unknown transaction type {rule.type!r}')
-    category.name = name.strip() or category.name
-    category.rules = parsed
+    if not name.strip():
+        raise ValueError('category name is empty')
+    category.name = name.strip()
     category.save()
     return category
+
+
+def assign_vendor(config, vendor: str, assignments: list[dict], type_override: str = '') -> None:
+    clock, types = Clock.load(config.db), set(type_keys(config))
+    if type_override and type_override not in types:
+        raise ValueError(f'unknown transaction type {type_override!r}')
+    rules: dict[str, list[Rule]] = {}
+    for assignment in assignments:
+        slots = list(assignment.get('slots') or [])
+        for slot in slots:
+            if clock.slot(slot) is None:
+                raise ValueError(f'unknown time slot {slot!r}')
+        if assignment.get('category'):
+            Category.objects.get(key=assignment['category'])
+            rules.setdefault(assignment['category'], []).append(
+                Rule(match=vendor, slots=slots, note=(assignment.get('note') or '').strip(), type=type_override))
+    for category in Category.objects.all():
+        kept = [rule for rule in category.rules if rule.match.casefold() != vendor.casefold()]
+        updated = kept + rules.get(category.key, [])
+        if updated != category.rules:
+            category.rules = updated
+            category.save()
 
 
 def delete_category(config, key: str, move_rules_to: str = '') -> int:
@@ -317,11 +330,3 @@ def delete_category(config, key: str, move_rules_to: str = '') -> int:
     released = _store(config).update_each(release)
     category.delete()
     return released
-
-
-def categorize_vendor(vendor: str, category_key: str) -> Category:
-    category = Category.objects.get(key=category_key)
-    if not any(rule.match.casefold() == vendor.casefold() and not rule.slots for rule in category.rules):
-        category.rules = category.rules + [Rule(match=vendor)]
-        category.save()
-    return category

@@ -25,8 +25,6 @@
   .dot.lg { width: 0.6rem; height: 0.6rem; margin-right: 0; }
   .amount.red { color: var(--red); }
   .amount.yellow { color: var(--yellow); }
-  .cat-head { display: flex; align-items: center; gap: 0.4rem; }
-  .cat-stat { font-size: 0.74rem; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; cursor: default; }
   .periods-actions { display: flex; justify-content: center; padding: 0.4rem 0 1rem; }
   .periods-actions[hidden] { display: none; }
   .budget-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; font-size: 0.86rem; margin-bottom: 0.3rem; }
@@ -52,29 +50,30 @@
   .card-period .section-head { margin-bottom: 0.3rem; }
   .card-period h3 { margin: 0; }
 
-  .cat-new { display: flex; gap: 0.5rem; margin-bottom: 0.9rem; }
-  .cat-new input { flex: 1; max-width: 22rem; }
-  input.cat-name {
-    font-size: 0.95rem; font-weight: 600; color: var(--strong);
-    height: 1.9rem; flex: 1; min-width: 6rem; margin-left: -0.15rem;
+  .vendor-toolbar { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.7rem; }
+  .vendor-toolbar #vendor-search { flex: 1 1 14rem; max-width: 22rem; }
+  .vendor-list { padding: 0.3rem 0.9rem; }
+  .vendor { display: grid; grid-template-columns: minmax(10rem, 1fr) minmax(16rem, 1.4fr) auto auto; align-items: center; gap: 0.6rem; padding: 0.45rem 0; border-top: 1px solid var(--border); }
+  .vendor:first-child { border-top: none; }
+  .vendor-main { display: flex; flex-direction: column; min-width: 0; }
+  .vendor-name { color: var(--strong); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .vendor-meta { font-size: 0.74rem; color: var(--muted); }
+  .assign-single, .slot-row { display: flex; align-items: center; gap: 0.3rem; min-width: 0; }
+  .assign-split { display: flex; flex-direction: column; gap: 0.15rem; }
+  .slot-label { width: 2.4rem; flex: none; font-size: 0.72rem; color: var(--muted); }
+  .vendor .vnote { flex: 1; min-width: 0; font-size: 0.78rem; }
+  .vendor .vtype + .dd-trigger, .vendor .dd:has(.vtype) .dd-trigger { font-size: 0.74rem; color: var(--muted); }
+  .icon-clock { width: 14px; height: 14px; background: currentColor; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E") center / contain no-repeat; }
+  .split-toggle[aria-pressed="true"] { color: var(--accent); background: var(--accent-soft); }
+  .category-list { display: flex; flex-direction: column; gap: 0.1rem; max-height: 60vh; overflow-y: auto; margin-top: 0.4rem; }
+  .category-item { display: flex; align-items: center; gap: 0.4rem; }
+  .category-item .category-name { flex: 1; font-weight: 500; }
+  .category-avg { font-size: 0.74rem; white-space: nowrap; }
+  #new-category-name { width: 100%; margin-top: 0.4rem; }
+  @media (max-width: 700px) {
+    .vendor { grid-template-columns: 1fr auto; }
+    .vendor-assign { grid-column: 1 / -1; grid-row: 2; }
   }
-  .cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 0.7rem; align-items: start; }
-  .cat-grid > section { margin: 0; padding: 0.75rem 0.8rem 0.6rem; }
-  .rules { display: flex; flex-direction: column; height: 8.5rem; overflow-y: auto; scrollbar-width: thin; margin-top: 0.35rem; }
-  .rules::-webkit-scrollbar { width: 6px; }
-  .rules::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
-  .rule { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 0 0.2rem; padding: 0.15rem 0; border-top: 1px solid var(--border); }
-  .rule .dd:has(select.match) { width: 100%; min-width: 0; }
-  .rule .dd:has(select.match) .dd-trigger { font-size: 0.78rem; color: var(--strong); height: 1.4rem; padding: 0 0.3rem; }
-  .rule .rule-remove { height: 1.2rem; width: 1.2rem; }
-  .rules [data-tip]::after { bottom: auto; top: 50%; right: calc(100% + 6px); transform: translateY(-50%); }
-  .rule .hits { font-size: 0.72rem; font-variant-numeric: tabular-nums; min-width: 1.5rem; text-align: right; }
-  .rule-meta { grid-column: 1 / -1; display: flex; gap: 0.15rem; align-items: center; }
-  .rule-meta .dd { flex: none; }
-  .rule-meta .dd-trigger { font-size: 0.74rem; color: var(--muted); height: 1.2rem !important; padding: 0 0.25rem; }
-  .rule-meta .rule-note { flex: 1; min-width: 0; font-size: 0.74rem; height: 1.2rem; padding: 0 0.25rem; }
-  .cat-foot { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.2rem; }
-  .save-state { font-size: 0.74rem; color: var(--faint); }
   .delete-choice { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.8rem; font-size: 0.84rem; }
   .delete-choice label { display: flex; align-items: center; gap: 0.5rem; }
   .delete-choice .dd { margin-left: 1.45rem; width: 16rem; max-width: calc(100% - 1.45rem); }
@@ -85,9 +84,8 @@
 <nav role="tablist" data-tabs="budget">
   <button role="tab" data-tab="progress">Spending</button>
   <button role="tab" data-tab="cards">Transactions</button>
-  <button role="tab" data-tab="categories">Categories<span class="count">{{ categories | length }}</span></button>
   <button role="tab" data-tab="plan">Budgets</button>
-  <button role="tab" data-tab="uncategorized">Uncategorized{% if uncategorized %}<span class="count">{{ uncategorized | length }}</span>{% endif %}</button>
+  <button role="tab" data-tab="vendors">Categorize</button>
 </nav>
 
 <div role="tabpanel" data-tabs="budget" data-tab="progress">
@@ -134,55 +132,83 @@
 {% endfor %}
 </div>
 
-<div role="tabpanel" data-tabs="budget" data-tab="categories" hidden>
-{% macro rule_row(rule, hits, average, months) %}
-  <div class="rule">
-    <select class="match input-quiet" data-options-from="vendor-options" data-placeholder="Pick a vendor" aria-label="Vendor">
-      {% if rule %}<option value="{{ rule.match }}" selected>{{ type_labels.get(rule.match, rule.match) }}</option>{% else %}<option value="" selected>Pick a vendor</option>{% endif %}
-    </select>
-    <span class="hits muted"{% if rule %} data-tip="Total {{ (average * months) | fmt }} over {{ months }} months"{% endif %}>{% if rule %}{{ dh }}{{ average | compact }}/mo<span class="faint"> · {{ hits }} tx</span>{% endif %}</span>
-    <button class="btn btn-ghost btn-sm btn-icon rule-remove" type="button" aria-label="Remove rule">×</button>
-    <div class="rule-meta">
-      <select class="slot input-quiet" multiple data-placeholder="Any time" aria-label="When">
-        {% for s in slots %}<option value="{{ s.key }}" data-short="{{ s.short }}"{% if rule and s.key in rule.slots %} selected{% endif %}>{{ s.label }}</option>{% endfor %}
-      </select>
-      <select class="type input-quiet" aria-label="Counts as">
-        <option value="">As parsed</option>
-        {% for t in types %}<option value="{{ t }}"{% if rule and t == rule.type %} selected{% endif %}>{{ t | replace('_', ' ') | capitalize }}</option>{% endfor %}
-      </select>
-      <input class="rule-note input-quiet" value="{{ rule.note if rule else '' }}" placeholder="Note" maxlength="80" aria-label="Default note">
-    </div>
-  </div>
-{% endmacro %}
-<form class="cat-new" id="cat-new">
-  <input name="name" placeholder="New category" maxlength="40" required>
-  <button class="btn btn-primary" type="submit">Add</button>
-</form>
-<div class="cat-grid">
-{% for card in category_cards %}
-{% set cat = card.category %}
-<section class="cat-card" data-key="{{ cat.key }}">
-  <div class="cat-head">
-    <span class="dot lg" style="--tone: {{ tone(cat.name) }}"></span>
-    <input class="cat-name input-quiet" value="{{ cat.name }}" maxlength="40" aria-label="Category name">
-    <span class="cat-stat" data-tip="Total {{ (card.average * average.months) | fmt }} over {{ average.months }} months">{{ dh }}{{ card.average | compact }}/mo</span>
-    <button class="btn btn-ghost btn-sm btn-icon cat-delete" type="button" aria-label="Delete category" title="Delete category"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>
-  </div>
-  <div class="rules">
-    {% for r in card.rules %}{{ rule_row(r.rule, r.hits, r.average, average.months) }}{% endfor %}
-  </div>
-  <div class="cat-foot">
-    <button class="btn btn-ghost btn-sm rule-add" type="button">+ Rule</button>
-    <span class="save-state"></span>
-  </div>
-</section>
-{% endfor %}
+<div role="tabpanel" data-tabs="budget" data-tab="vendors" hidden>
+{% macro category_select(key) %}{% set cat = categories | selectattr('key', 'equalto', key) | first %}<select class="vcat tone" data-options-from="category-options" aria-label="Category"><option value="{{ key }}" data-tone="{{ tone(cat.name) if cat else 'var(--faint)' }}" selected>{{ cat.name if cat else 'Uncategorized' }}</option></select>{% endmacro %}
+<div class="vendor-toolbar">
+  <input type="search" id="vendor-search" placeholder="Search vendors and people" autocomplete="off" aria-label="Search vendors">
+  <select id="vendor-filter" class="input-quiet" aria-label="Filter">
+    <option value="*">All categories</option>
+    <option value="">Uncategorized</option>
+    {% for cat in categories %}<option value="{{ cat.key }}">{{ cat.name }}</option>{% endfor %}
+  </select>
+  <select id="vendor-sort" class="input-quiet" aria-label="Sort">
+    <option value="total">Highest amount</option>
+    <option value="count">Most frequent</option>
+    <option value="last">Most recent</option>
+    <option value="category">Category</option>
+  </select>
+  <span class="spacer"></span>
+  <button class="btn btn-sm" id="manage-categories" type="button">Categories</button>
+  <button class="btn btn-sm btn-primary" id="new-category" type="button">New category</button>
 </div>
-<template id="vendor-options">
-  {% for t in types %}<option value="{{ t }}">Any {{ t | replace('_', ' ') }}</option>{% endfor %}
-  {% for v in vendors %}<option value="{{ v }}">{{ v }}</option>{% endfor %}
+<section class="vendor-list">
+  {% for v in vendor_rows %}
+  <div class="vendor" data-vendor="{{ v.vendor }}" data-total="{{ v.total }}" data-count="{{ v.count }}" data-last="{{ v.last }}" data-category="{{ v.category }}" data-category-name="{{ v.category_name }}" data-search="{{ v.label | lower }}">
+    <div class="vendor-main">
+      <span class="vendor-name">{{ v.label }}</span>
+      <span class="vendor-meta">{% if v.count %}<span class="amount{% if v.inflow %} inflow{% endif %}">{% if v.inflow %}+{% endif %}{{ dh }}{{ v.total | fmt }}</span> · {{ v.count }}{% if v.last %} · <time data-human="date" datetime="{{ v.last }}">{{ v.last }}</time>{% endif %}{% else %}by transaction type{% endif %}</span>
+    </div>
+    <div class="vendor-assign">
+      <div class="assign-single"{% if v.split %} hidden{% endif %}>{{ category_select(v.single[0]) }}<input class="vnote input-quiet" value="{{ v.single[1] }}" placeholder="Note" maxlength="80" aria-label="Note"></div>
+      <div class="assign-split"{% if not v.split %} hidden{% endif %}>{% if v.split %}
+        {% for s in slots %}{% set a = v.per_slot.get(s.key, ('', '')) %}<div class="slot-row" data-slot="{{ s.key }}"><span class="slot-label" title="{{ s.label }}">{{ s.short }}</span>{{ category_select(a[0]) }}<input class="vnote input-quiet" value="{{ a[1] }}" placeholder="Note" maxlength="80" aria-label="Note"></div>{% endfor %}
+      {% endif %}</div>
+    </div>
+    <select class="vtype input-quiet" data-options-from="type-options" data-placeholder="As parsed" aria-label="Counts as"><option value="{{ v.type }}" selected>{{ (v.type | replace('_', ' ') | capitalize) if v.type else 'As parsed' }}</option></select>
+    <button class="btn btn-ghost btn-sm btn-icon split-toggle" type="button" aria-pressed="{{ 'true' if v.split else 'false' }}" title="Different category by time of day"><i class="icon-clock"></i></button>
+  </div>
+  {% endfor %}
+  <div class="empty" id="vendor-empty" hidden>No matches.</div>
+</section>
+<template id="slot-rows">{% for s in slots %}<div class="slot-row" data-slot="{{ s.key }}"><span class="slot-label" title="{{ s.label }}">{{ s.short }}</span>{{ category_select('') }}<input class="vnote input-quiet" placeholder="Note" maxlength="80" aria-label="Note"></div>{% endfor %}</template>
+<template id="category-options">
+  <option value="" data-tone="var(--faint)">Uncategorized</option>
+  {% for cat in categories %}<option value="{{ cat.key }}" data-tone="{{ tone(cat.name) }}">{{ cat.name }}</option>{% endfor %}
 </template>
-<template id="rule-row">{{ rule_row(none, 0, 0, 0) }}</template>
+<template id="tx-category-options">
+  <option value="{{ uncategorized }}" data-tone="var(--faint)">Uncategorized</option>
+  {% for cat in categories %}<option value="{{ cat.key }}" data-tone="{{ tone(cat.name) }}">{{ cat.name }}</option>{% endfor %}
+</template>
+<template id="type-options">
+  <option value="">As parsed</option>
+  {% for t in types %}<option value="{{ t }}">{{ t | replace('_', ' ') | capitalize }}</option>{% endfor %}
+</template>
+<dialog class="modal" id="new-category-dialog">
+  <form method="dialog">
+    <h2>New category</h2>
+    <input id="new-category-name" placeholder="Name" maxlength="40" autocomplete="off">
+    <div class="modal-actions">
+      <button class="btn" value="cancel">Cancel</button>
+      <button class="btn btn-primary" value="confirm">Create</button>
+    </div>
+  </form>
+</dialog>
+<dialog class="modal" id="categories-dialog">
+  <form method="dialog">
+    <h2>Categories</h2>
+    <div class="category-list">
+      {% for cat in categories %}
+      <div class="category-item" data-key="{{ cat.key }}">
+        <span class="dot lg" style="--tone: {{ tone(cat.name) }}"></span>
+        <input class="category-name input-quiet" value="{{ cat.name }}" maxlength="40" aria-label="Category name">
+        <span class="muted category-avg" data-tip="Monthly average">{{ dh }}{{ category_averages.get(cat.key, 0) | compact }}/mo</span>
+        <button class="btn btn-ghost btn-sm btn-icon category-delete" type="button" aria-label="Delete category"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="modal-actions"><button class="btn" value="close">Done</button></div>
+  </form>
+</dialog>
 <dialog class="modal" id="delete-dialog">
   <form method="dialog">
     <h2>Delete <span id="delete-name"></span>?</h2>
@@ -263,42 +289,6 @@
     </tbody>
   </table>
   </details>
-</section>
-</div>
-
-<div role="tabpanel" data-tabs="budget" data-tab="uncategorized" hidden>
-<section>
-  <div class="section-head">
-    <h2>Uncategorized vendors</h2>
-    <select id="vendor-sort" class="input-quiet" aria-label="Sort vendors">
-      <option value="total">Highest spend</option>
-      <option value="count">Most frequent</option>
-      <option value="last">Most recent</option>
-    </select>
-  </div>
-  {% if uncategorized %}
-  <table>
-    <thead><tr><th>Vendor</th><th class="num">Count</th><th>Last</th><th class="num">{{ dh }}</th><th>Category</th></tr></thead>
-    <tbody>
-      {% for v in uncategorized %}
-      <tr data-total="{{ v.total }}" data-count="{{ v.count }}" data-last="{{ v.last }}">
-        <td class="venue">{{ v.vendor }}</td>
-        <td class="num muted">{{ v.count }}</td>
-        <td class="when"><time data-human="date" datetime="{{ v.last }}">{{ v.last }}</time></td>
-        <td class="num amount">{{ v.total | fmt }}</td>
-        <td>
-          <select class="vendor-cat tone" data-vendor="{{ v.vendor }}" aria-label="Category">
-            <option value="">Choose</option>
-            {% for cat in categories %}<option value="{{ cat.key }}" data-tone="{{ tone(cat.name) }}">{{ cat.name }}</option>{% endfor %}
-          </select>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <div class="empty">Every vendor has a category.</div>
-  {% endif %}
 </section>
 </div>
 
@@ -386,88 +376,145 @@
         .then(function () { toast(sel.value ? 'Category set' : 'Back to automatic'); });
     });
 
+    var vendorRows = Array.prototype.slice.call(document.querySelectorAll('.vendor'));
+    var vendorList = document.querySelector('.vendor-list');
+    var vendorSearch = document.getElementById('vendor-search');
+    var vendorFilter = document.getElementById('vendor-filter');
     var vendorSort = document.getElementById('vendor-sort');
-    if (vendorSort) vendorSort.addEventListener('change', function () {
+    var vendorEmpty = document.getElementById('vendor-empty');
+
+    function refreshVendors() {
+      var needle = vendorSearch.value.trim().toLowerCase();
+      var category = vendorFilter.value;
       var key = vendorSort.value;
-      var body = vendorSort.closest('section').querySelector('tbody');
-      Array.prototype.slice.call(body.rows)
-        .sort(function (a, b) {
-          var x = a.dataset[key], y = b.dataset[key];
-          return key === 'last' ? y.localeCompare(x) : Number(y) - Number(x);
-        })
-        .forEach(function (row) { body.appendChild(row); });
-    });
-
-    document.querySelectorAll('select.vendor-cat').forEach(function (sel) {
-      sel.addEventListener('change', function () {
-        if (!sel.value) return;
-        var name = sel.options[sel.selectedIndex].text;
-        api('/api/vendor/category', 'POST', { vendor: sel.dataset.vendor, category: sel.value })
-          .then(function () { sel.closest('tr').remove(); toast(sel.dataset.vendor + ' → ' + name); });
+      var shown = 0;
+      vendorRows.sort(function (a, b) {
+        if (key === 'last') return (b.dataset.last || '').localeCompare(a.dataset.last || '');
+        if (key === 'category') {
+          var byName = (a.dataset.categoryName || '\uffff').localeCompare(b.dataset.categoryName || '\uffff');
+          if (byName) return byName;
+          key = 'total';
+        }
+        return Number(b.dataset[key]) - Number(a.dataset[key]);
+      }).forEach(function (row) {
+        var visible = (!needle || row.dataset.search.indexOf(needle) !== -1)
+          && (category === '*' || row.dataset.category === category);
+        row.hidden = !visible;
+        shown += visible;
+        vendorList.insertBefore(row, vendorEmpty);
       });
+      key = vendorSort.value;
+      vendorEmpty.hidden = shown > 0;
+    }
+    var searchTimer;
+    vendorSearch.addEventListener('input', function () { clearTimeout(searchTimer); searchTimer = setTimeout(refreshVendors, 150); });
+    vendorFilter.addEventListener('change', refreshVendors);
+    vendorSort.addEventListener('change', refreshVendors);
+
+    function assignments(row) {
+      var split = row.querySelector('.split-toggle').getAttribute('aria-pressed') === 'true';
+      var parts = split ? row.querySelectorAll('.slot-row') : [row.querySelector('.assign-single')];
+      return Array.prototype.map.call(parts, function (part) {
+        return {
+          slots: split ? [part.dataset.slot] : [],
+          category: part.querySelector('select.vcat').value,
+          note: part.querySelector('.vnote').value.trim(),
+        };
+      }).filter(function (a) { return a.category; });
+    }
+
+    function saveVendor(row) {
+      var chosen = assignments(row);
+      api('/api/vendors/assign', 'POST', { vendor: row.dataset.vendor, assignments: chosen, type: row.querySelector('select.vtype').value })
+        .then(function () {
+          var first = chosen[0];
+          row.dataset.category = first ? first.category : '';
+          var option = first && document.querySelector('#category-options option[value="' + CSS.escape(first.category) + '"]');
+          row.dataset.categoryName = option ? option.textContent : '';
+          toast('Saved');
+        });
+    }
+
+    vendorList.addEventListener('change', function (e) {
+      if (e.target.matches('select.vcat, select.vtype')) saveVendor(e.target.closest('.vendor'));
+    });
+    vendorList.addEventListener('focusin', function (e) {
+      if (e.target.matches('.vnote') && e.target.dataset.saved === undefined) e.target.dataset.saved = e.target.value;
+    });
+    vendorList.addEventListener('focusout', function (e) {
+      var input = e.target;
+      if (!input.matches('.vnote') || input.value === input.dataset.saved) return;
+      input.dataset.saved = input.value;
+      saveVendor(input.closest('.vendor'));
+    });
+    vendorList.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && e.target.matches('.vnote')) e.target.blur();
+    });
+    vendorList.addEventListener('click', function (e) {
+      var toggle = e.target.closest('.split-toggle');
+      if (!toggle) return;
+      var row = toggle.closest('.vendor');
+      var split = toggle.getAttribute('aria-pressed') !== 'true';
+      toggle.setAttribute('aria-pressed', String(split));
+      var single = row.querySelector('.assign-single');
+      var perSlot = row.querySelector('.assign-split');
+      if (split && !perSlot.querySelector('.slot-row')) perSlot.appendChild(document.getElementById('slot-rows').content.cloneNode(true));
+      if (split) {
+        var category = single.querySelector('select.vcat').value;
+        var note = single.querySelector('.vnote').value;
+        perSlot.querySelectorAll('.slot-row').forEach(function (slotRow) {
+          var select = slotRow.querySelector('select.vcat');
+          if (!select.value && category) {
+            select.appendChild(new Option(single.querySelector('select.vcat').selectedOptions[0].text, category));
+            select.value = category;
+          }
+          var input = slotRow.querySelector('.vnote');
+          if (!input.value) input.value = note;
+        });
+      }
+      single.hidden = split;
+      perSlot.hidden = !split;
+      saveVendor(row);
     });
 
-    document.getElementById('cat-new').addEventListener('submit', function (e) {
-      e.preventDefault();
-      var name = e.target.elements.name.value.trim();
-      if (!name) return;
+    var newDialog = document.getElementById('new-category-dialog');
+    var newName = document.getElementById('new-category-name');
+    document.getElementById('new-category').addEventListener('click', function () { newName.value = ''; newDialog.showModal(); newName.focus(); });
+    newDialog.addEventListener('close', function () {
+      var name = newName.value.trim();
+      if (newDialog.returnValue !== 'confirm' || !name) return;
       api('/api/categories', 'POST', { name: name }).then(function () { location.reload(); });
     });
 
-    function collect(card) {
-      return {
-        name: card.querySelector('.cat-name').value.trim(),
-        rules: Array.prototype.map.call(card.querySelectorAll('.rule'), function (row) {
-          return {
-            match: row.querySelector('.match').value.trim(),
-            slots: Array.prototype.map.call(row.querySelector('.slot').selectedOptions, function (o) { return o.value; }),
-            note: row.querySelector('.rule-note').value.trim(),
-            type: row.querySelector('.type').value,
-          };
-        }).filter(function (rule) { return rule.match; }),
-      };
-    }
-
-    function save(card) {
-      var state = card.querySelector('.save-state');
-      state.textContent = 'Saving…';
-      api('/api/categories/' + card.dataset.key, 'PUT', collect(card))
-        .then(function () { state.textContent = 'Saved'; })
-        .catch(function () { state.textContent = 'Not saved'; });
-    }
-
-    document.querySelectorAll('.cat-card').forEach(function (card) {
-      var timer;
-      function soon() { clearTimeout(timer); timer = setTimeout(function () { save(card); }, 500); }
-      card.addEventListener('change', function (e) { if (e.target.matches('input, select')) soon(); });
-      card.addEventListener('keydown', function (e) { if (e.key === 'Enter' && e.target.matches('input')) e.target.blur(); });
-      card.addEventListener('click', function (e) {
-        if (e.target.closest('.rule-remove')) { e.target.closest('.rule').remove(); save(card); }
-        if (e.target.closest('.rule-add')) {
-          var row = document.getElementById('rule-row').content.firstElementChild.cloneNode(true);
-          card.querySelector('.rules').appendChild(row);
-          var trigger = row.querySelector('.dd-trigger'); if (trigger) trigger.click();
-        }
-        if (e.target.closest('.cat-delete')) openDelete(card);
-      });
+    var categoriesDialog = document.getElementById('categories-dialog');
+    document.getElementById('manage-categories').addEventListener('click', function () { categoriesDialog.showModal(); });
+    categoriesDialog.addEventListener('change', function (e) {
+      if (!e.target.matches('.category-name')) return;
+      var item = e.target.closest('.category-item');
+      api('/api/categories/' + item.dataset.key, 'PUT', { name: e.target.value.trim() }).then(function () { toast('Renamed'); });
+    });
+    categoriesDialog.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && e.target.matches('.category-name')) { e.preventDefault(); e.target.blur(); }
     });
 
-    var dialog = document.getElementById('delete-dialog');
-    var target = document.getElementById('delete-target');
+    var deleteDialog = document.getElementById('delete-dialog');
+    var deleteTarget = document.getElementById('delete-target');
     var deleting;
-    function openDelete(card) {
-      deleting = card;
-      document.getElementById('delete-name').textContent = card.querySelector('.cat-name').value;
-      Array.prototype.forEach.call(target.options, function (o) { o.hidden = o.value === card.dataset.key; });
-      var first = Array.prototype.find.call(target.options, function (o) { return !o.hidden; });
-      if (first) target.value = first.value;
-      dialog.showModal();
-    }
-    target.addEventListener('change', function () { dialog.querySelector('input[value="move"]').checked = true; });
-    dialog.addEventListener('close', function () {
-      if (dialog.returnValue !== 'confirm' || !deleting) return;
-      var move = dialog.querySelector('input[name="fate"]:checked').value === 'move';
-      api('/api/categories/' + deleting.dataset.key, 'DELETE', { move_rules_to: move ? target.value : '' })
+    categoriesDialog.addEventListener('click', function (e) {
+      var button = e.target.closest('.category-delete');
+      if (!button) return;
+      deleting = button.closest('.category-item');
+      document.getElementById('delete-name').textContent = deleting.querySelector('.category-name').value;
+      Array.prototype.forEach.call(deleteTarget.options, function (o) { o.hidden = o.value === deleting.dataset.key; });
+      var first = Array.prototype.find.call(deleteTarget.options, function (o) { return !o.hidden; });
+      if (first) deleteTarget.value = first.value;
+      deleteDialog.showModal();
+    });
+    deleteTarget.addEventListener('change', function () { deleteDialog.querySelector('input[value="move"]').checked = true; });
+    deleteDialog.addEventListener('close', function () {
+      if (deleteDialog.returnValue !== 'confirm' || !deleting) return;
+      var move = deleteDialog.querySelector('input[name="fate"]:checked').value === 'move';
+      api('/api/categories/' + deleting.dataset.key, 'DELETE', { move_rules_to: move ? deleteTarget.value : '' })
         .then(function () { location.reload(); });
     });
   })();
