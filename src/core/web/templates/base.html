@@ -471,6 +471,11 @@
     clearTimeout(window.toast.timer);
     window.toast.timer = setTimeout(function () { el.classList.remove('show'); }, 2200);
   };
+  document.addEventListener('click', function (e) {
+    var dismiss = e.target.closest && e.target.closest('dialog [data-dismiss]');
+    if (dismiss) dismiss.closest('dialog').close('cancel');
+  });
+
   window.busy = function (button, work) {
     button.disabled = true;
     button.setAttribute('aria-busy', 'true');
