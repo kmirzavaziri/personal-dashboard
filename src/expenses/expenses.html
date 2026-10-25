@@ -135,6 +135,10 @@
 
 <div role="tabpanel" data-tabs="budget" data-tab="transactions" hidden>
 <div class="tx-toolbar">
+  <select id="tx-card" class="input-quiet tone" aria-label="Card">
+    <option value="all" data-account="" data-tone="var(--faint)">All cards</option>
+    {% for c in card_sections %}<option value="card-{{ loop.index }}" data-account="{{ c.account }}" data-tone="{{ card_tones[c.account] }}">{{ c.account }}</option>{% endfor %}
+  </select>
   <input class="search-input" id="tx-search" type="search" placeholder="Search description, note, category or amount" autocomplete="off" aria-label="Search transactions">
   <select id="tx-category" class="input-quiet" aria-label="Category filter">
     <option value="*">All categories</option>
@@ -143,12 +147,8 @@
   </select>
   <label class="toggle"><input type="checkbox" id="show-self"><span class="toggle-track" aria-hidden="true"></span>Show hidden</label>
 </div>
-<nav role="tablist" class="sub" data-tabs="card" data-deselect="all">
-  <button role="tab" data-tab="all" data-account="" hidden>All</button>
-  {% for c in card_sections %}<button role="tab" data-tab="card-{{ loop.index }}" data-account="{{ c.account }}">{{ c.account }}</button>{% endfor %}
-</nav>
 <section id="search-panel" hidden><div id="search-results"></div></section>
-<section role="tabpanel" data-tabs="card" data-tab="all" hidden>
+<section role="tabpanel" data-tabs="card" data-tab="all">
   {{ pd.period_divider(current_period.key, current_period.name, current_period.range, all_cards.total, all_cards.count) }}
   {% if all_cards.entries %}
   {{ tt.tx_table(all_cards.entries, categories, show_account=true) }}
@@ -565,12 +565,12 @@
     var input = document.getElementById('tx-search');
     var panel = document.getElementById('search-panel');
     var results = document.getElementById('search-results');
-    var chips = document.querySelector('[role="tablist"][data-tabs="card"]');
+    var cardSelect = document.getElementById('tx-card');
     var timer, latest = 0;
     function cardPanels() { return document.querySelectorAll('[role="tabpanel"][data-tabs="card"]'); }
-    function selectedAccount() {
-      var tab = chips.querySelector('[role="tab"][aria-selected="true"]');
-      return tab ? tab.dataset.account : '';
+    function selectedAccount() { return cardSelect.options[cardSelect.selectedIndex].dataset.account; }
+    function showCard() {
+      cardPanels().forEach(function (p) { p.hidden = p.dataset.tab !== cardSelect.value; });
     }
     function run() {
       var query = input.value.trim();
@@ -588,17 +588,17 @@
         });
     }
     input.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(function () { setQuery('q', input.value.trim()); run(); }, 250); });
-    chips.addEventListener('click', function () {
-      setTimeout(function () { setQuery('card', selectedAccount()); if (input.value.trim()) run(); }, 0);
+    cardSelect.addEventListener('change', function () {
+      showCard();
+      setQuery('card', selectedAccount());
+      if (input.value.trim()) run();
     });
     (function restore() {
       if (location.pathname.indexOf('/transactions') === -1) return;
       var params = new URLSearchParams(location.search);
       var card = params.get('card');
-      if (card) {
-        var chip = Array.prototype.find.call(chips.querySelectorAll('[role="tab"]'), function (t) { return t.dataset.account === card; });
-        if (chip && chip.getAttribute('aria-selected') !== 'true') chip.click();
-      }
+      var option = card && Array.prototype.find.call(cardSelect.options, function (o) { return o.dataset.account === card; });
+      if (option) { cardSelect.value = option.value; showCard(); }
       if (params.get('q')) { input.value = params.get('q'); run(); }
     })();
   })();

@@ -337,6 +337,7 @@ def render(services) -> str:
     period_entries = ledger.between(period.start, period.end)
     shown_entries = ledger.all_between(period.start, period.end)
     average, category_averages = _monthly_averages(ledger, period)
+    card_sections = _card_sections(config, shown_entries)
 
     return _env(ledger).get_template('expenses.html').render(
         account_sections=account_sections,
@@ -345,7 +346,8 @@ def render(services) -> str:
         by_category=sorted(budgets.items(), key=lambda kv: -kv[1]),
         current_period=_period_summary(ledger, period, budgets, current=True),
         average=average,
-        card_sections=_card_sections(config, shown_entries),
+        card_sections=card_sections,
+        card_tones=colors_for(section['account'] for section in card_sections),
         all_cards={
             'entries': sorted(shown_entries, key=lambda e: e.tx.at, reverse=True),
             'total': sum(e.aed for e in shown_entries if e.spend and not e.hidden),
