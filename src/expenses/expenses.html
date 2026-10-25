@@ -2,6 +2,7 @@
 {% import "period_card.html" as pc %}
 {% import "tx_table.html" as tt %}
 {% import "period_divider.html" as pd with context %}
+{% from "category_select.html" import category_select with context %}
 
 {% block title %}Budget{% endblock %}
 {% block heading %}Budget{% endblock %}
@@ -167,7 +168,6 @@
 </div>
 
 <div role="tabpanel" data-tabs="budget" data-tab="categorize" hidden>
-{% macro category_select(key) %}{% set cat = categories | selectattr('key', 'equalto', key) | first %}<select class="vcat tone" data-options-from="category-options" aria-label="Category"><option value="{{ key }}" data-tone="{{ tone(cat.name) if cat else 'var(--faint)' }}" selected>{{ cat.name if cat else 'Uncategorized' }}</option></select>{% endmacro %}
 <div class="vendor-toolbar">
   <input type="search" id="vendor-search" placeholder="Search descriptions" autocomplete="off" aria-label="Search descriptions">
   <select id="vendor-filter" class="input-quiet" aria-label="Filter">
@@ -195,30 +195,6 @@
     <button type="button" class="vh" data-sort="last">Last seen</button>
     <button type="button" class="vh" data-sort="category">Category</button>
   </div>
-  {% for v in vendor_rows %}
-  <div class="vendor{% if v.hidden %} hidden-vendor{% endif %}" data-vendor="{{ v.vendor }}" data-total="{{ v.total }}" data-count="{{ v.count }}" data-last="{{ v.last }}" data-category="{{ v.category }}" data-category-name="{{ v.category_name }}" data-search="{{ v.label | lower }}">
-    <div class="vendor-main">
-      <span class="vendor-name">{{ v.label }}</span>
-      <span class="vendor-meta">{% if v.count %}<span class="amount{% if v.inflow %} inflow{% endif %}">{% if v.inflow %}+{% endif %}{{ dh }}{{ v.total | fmt }}</span> · {{ v.count }}{% if v.last %} · <time data-human="date" datetime="{{ v.last }}">{{ v.last }}</time>{% endif %}{% else %}by transaction type{% endif %}</span>
-    </div>
-    <span class="vcol num amount{% if v.inflow %} inflow{% endif %}">{% if v.count %}{% if v.inflow %}+{% endif %}{{ v.total | fmt }}{% endif %}</span>
-    <span class="vcol num muted">{{ v.count or '' }}</span>
-    <span class="vcol when">{% if v.last %}<time data-human="date" datetime="{{ v.last }}">{{ v.last }}</time>{% endif %}</span>
-    {% if v.inflow %}
-    <div class="vendor-assign"></div>
-    {% else %}
-    <div class="vendor-assign">
-      <div class="assign-blocks">
-      <div class="assign-single"{% if v.split %} hidden{% endif %}>{{ category_select(v.single[0]) }}<input class="vnote input-quiet" value="{{ v.single[1] }}" placeholder="Note" maxlength="80" aria-label="Note"></div>
-      <div class="assign-split"{% if not v.split %} hidden{% endif %}>{% if v.split %}
-        {% for s in slots %}{% set a = v.per_slot.get(s.key, ('', '')) %}<div class="slot-row" data-slot="{{ s.key }}"><span class="slot-label" title="{{ s.label }}">{{ s.short }}</span>{{ category_select(a[0]) }}<input class="vnote input-quiet" value="{{ a[1] }}" placeholder="Note" maxlength="80" aria-label="Note"></div>{% endfor %}
-      {% endif %}</div>
-      </div>
-      <button class="btn btn-ghost btn-sm btn-icon split-toggle" type="button" aria-pressed="{{ 'true' if v.split else 'false' }}" title="Different category by time of day"><i class="icon-clock"></i></button>
-    </div>
-    {% endif %}
-  </div>
-  {% endfor %}
   <div class="empty" id="vendor-empty" hidden>No matches.</div>
 </section>
 
@@ -634,7 +610,7 @@
         .then(function () { toast(sel.value ? 'Category set' : 'Back to automatic'); });
     });
 
-    var vendorRows = Array.prototype.slice.call(document.querySelectorAll('.vendor:not(.vendor-head)'));
+    var vendorRows = [];
     var vendorList = document.querySelector('.vendor-list');
     var vendorSearch = document.getElementById('vendor-search');
     var vendorFilter = document.getElementById('vendor-filter');
@@ -685,7 +661,12 @@
         if (params.get('sort')) vendorSort.value = params.get('sort');
         showHidden.checked = params.get('hidden') === '1';
       }
-      refreshVendors();
+      fetch('/expenses/categorize/rows').then(function (r) { return r.text(); }).then(function (html) {
+        vendorEmpty.insertAdjacentHTML('beforebegin', html);
+        vendorRows = Array.prototype.slice.call(vendorList.querySelectorAll('.vendor:not(.vendor-head)'));
+        humanizeTimes(vendorList);
+        refreshVendors();
+      });
     })();
     vendorList.addEventListener('vendors-refreshed', saveQuery);
     var searchTimer;

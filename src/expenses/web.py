@@ -3,7 +3,7 @@ from pydantic import ValidationError
 
 import transactions.service as tx_service
 from transactions.ledger import Ledger
-from expenses.view import render, render_card_periods, render_previous_periods, render_search
+from expenses.view import render, render_card_periods, render_previous_periods, render_search, render_vendor_rows
 from pkg.model.base import DoesNotExist
 
 
@@ -31,6 +31,10 @@ def make_expenses_bp(services) -> Blueprint:
     @bp.get('/expenses/<any(spending, transactions, budgets, categorize):tab>')
     def page(tab=None):
         return render(services)
+
+    @bp.get('/expenses/categorize/rows')
+    def vendor_rows():
+        return render_vendor_rows(services)
 
     @bp.get('/expenses/periods')
     def previous_periods():

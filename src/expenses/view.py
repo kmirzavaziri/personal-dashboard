@@ -1,5 +1,5 @@
-
 from datetime import datetime, timedelta, timezone
+from functools import lru_cache
 from pathlib import Path
 
 import transactions.service as tx_service
@@ -244,7 +244,12 @@ def _monthly_averages(ledger, current) -> tuple[dict, dict]:
 
 
 def _env(ledger):
-    tones = colors_for(c.name for c in ledger.categories)
+    return _env_for(tuple(c.name for c in ledger.categories))
+
+
+@lru_cache(maxsize=4)
+def _env_for(category_names: tuple[str, ...]):
+    tones = colors_for(category_names)
     env = make_env(HERE)
     env.trim_blocks, env.lstrip_blocks = True, True
     env.globals['tone'] = lambda name: tones.get(name, 'var(--faint)')
@@ -311,6 +316,16 @@ def render_search(services, query: str, account: str, limit: int) -> str:
     )
 
 
+def render_vendor_rows(services) -> str:
+    config = services.config
+    ledger = Ledger.load(config)
+    return _env(ledger).get_template('vendor_rows.html').render(
+        vendor_rows=_vendor_rows(ledger, tx_service.type_keys(config)),
+        categories=ledger.categories,
+        slots=ledger.clock.slots,
+    )
+
+
 def render(services) -> str:
     config = services.config
     accounts = _planned_accounts(config)
@@ -338,7 +353,6 @@ def render(services) -> str:
         },
         categories=ledger.categories,
         category_averages=category_averages,
-        vendor_rows=_vendor_rows(ledger, tx_service.type_keys(config)),
         slots=clock.slots,
         slot_json=[{'key': slot.key, 'label': slot.label, 'short': slot.short} for slot in clock.slots],
         types=tx_service.type_keys(config),

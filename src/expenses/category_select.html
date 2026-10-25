@@ -1,0 +1,1 @@
+{% macro category_select(key) %}{% set cat = categories | selectattr('key', 'equalto', key) | first %}<select class="vcat tone" data-options-from="category-options" aria-label="Category"><option value="{{ key }}" data-tone="{{ tone(cat.name) if cat else 'var(--faint)' }}" selected>{{ cat.name if cat else 'Uncategorized' }}</option></select>{% endmacro %}

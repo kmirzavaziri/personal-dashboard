@@ -1,0 +1,25 @@
+{% from "category_select.html" import category_select with context %}
+  {% for v in vendor_rows %}
+  <div class="vendor{% if v.hidden %} hidden-vendor{% endif %}" data-vendor="{{ v.vendor }}" data-total="{{ v.total }}" data-count="{{ v.count }}" data-last="{{ v.last }}" data-category="{{ v.category }}" data-category-name="{{ v.category_name }}" data-search="{{ v.label | lower }}">
+    <div class="vendor-main">
+      <span class="vendor-name">{{ v.label }}</span>
+      <span class="vendor-meta">{% if v.count %}<span class="amount{% if v.inflow %} inflow{% endif %}">{% if v.inflow %}+{% endif %}{{ dh }}{{ v.total | fmt }}</span> · {{ v.count }}{% if v.last %} · <time data-human="date" datetime="{{ v.last }}">{{ v.last }}</time>{% endif %}{% else %}by transaction type{% endif %}</span>
+    </div>
+    <span class="vcol num amount{% if v.inflow %} inflow{% endif %}">{% if v.count %}{% if v.inflow %}+{% endif %}{{ v.total | fmt }}{% endif %}</span>
+    <span class="vcol num muted">{{ v.count or '' }}</span>
+    <span class="vcol when">{% if v.last %}<time data-human="date" datetime="{{ v.last }}">{{ v.last }}</time>{% endif %}</span>
+    {% if v.inflow %}
+    <div class="vendor-assign"></div>
+    {% else %}
+    <div class="vendor-assign">
+      <div class="assign-blocks">
+      <div class="assign-single"{% if v.split %} hidden{% endif %}>{{ category_select(v.single[0]) }}<input class="vnote input-quiet" value="{{ v.single[1] }}" placeholder="Note" maxlength="80" aria-label="Note"></div>
+      <div class="assign-split"{% if not v.split %} hidden{% endif %}>{% if v.split %}
+        {% for s in slots %}{% set a = v.per_slot.get(s.key, ('', '')) %}<div class="slot-row" data-slot="{{ s.key }}"><span class="slot-label" title="{{ s.label }}">{{ s.short }}</span>{{ category_select(a[0]) }}<input class="vnote input-quiet" value="{{ a[1] }}" placeholder="Note" maxlength="80" aria-label="Note"></div>{% endfor %}
+      {% endif %}</div>
+      </div>
+      <button class="btn btn-ghost btn-sm btn-icon split-toggle" type="button" aria-pressed="{{ 'true' if v.split else 'false' }}" title="Different category by time of day"><i class="icon-clock"></i></button>
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
