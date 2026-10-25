@@ -29,6 +29,8 @@ class Entry:
     spend: bool
     refunds: tuple[Transaction, ...] = ()
     self_transfer: bool = False
+    hidden: bool = False
+    refund_of: str = ''
 
     @property
     def aed(self) -> float:
@@ -77,6 +79,10 @@ class Ledger:
                                 spend=entry.spend and entry.tx.id not in own)
                         for entry in resolved]
         self._hidden |= {entry.tx.id for entry in self.entries if entry.refunds and not entry.partially_refunded}
+        self._hidden |= {entry.tx.id for entry in self.entries if entry.tx.voided}
+        refund_of = {refund.id: entry.tx.id for entry in self.entries for refund in entry.refunds}
+        self.entries = [replace(entry, hidden=entry.tx.id in self._hidden, refund_of=refund_of.get(entry.tx.id, ''))
+                        for entry in self.entries]
         self._boundaries = self._period_boundaries(period_starts)
 
     @classmethod
@@ -143,6 +149,9 @@ class Ledger:
     def earliest(self) -> datetime | None:
         return self.entries[0].tx.at if self.entries else None
 
+    def all_between(self, start: datetime, end: datetime) -> list[Entry]:
+        return [entry for entry in self.entries if start <= entry.tx.at < end]
+
     def between(self, start: datetime, end: datetime) -> list[Entry]:
         return [entry for entry in self.visible if start <= entry.tx.at < end]
 
@@ -152,17 +161,20 @@ class Ledger:
 
     def vendor_summaries(self) -> list[dict]:
         rows: dict[str, dict] = {}
-        for entry in self.visible:
+        for entry in self.entries:
             vendor = entry.tx.vendor
-            if not vendor or entry.self_transfer or entry.type == 'declined':
+            if not vendor or entry.type == 'declined':
                 continue
-            row = rows.setdefault(vendor.casefold(), {'vendor': vendor, 'total': 0.0, 'count': 0, 'last': '',
-                                                      'inflow': 0, 'categories': Counter()})
+            row = rows.setdefault(vendor.casefold(), {'vendor': vendor, 'total': 0.0, 'count': 0, 'last': '', 'inflow': 0,
+                                                      'hidden_total': 0.0, 'hidden_count': 0})
+            row['last'] = max(row['last'], entry.tx.ts[:10])
+            if entry.hidden or entry.self_transfer:
+                row['hidden_total'] += entry.aed
+                row['hidden_count'] += 1
+                continue
             row['total'] += entry.aed
             row['count'] += 1
-            row['last'] = max(row['last'], entry.tx.ts[:10])
             row['inflow'] += entry.is_inflow
-            row['categories'][entry.category.key if entry.category else ''] += 1
         return list(rows.values())
 
     def _match(self, tx: Transaction) -> Match | None:

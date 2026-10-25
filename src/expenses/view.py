@@ -88,8 +88,8 @@ def _card_sections(config, entries) -> list[dict]:
         cards.setdefault(entry.account or 'Unknown', []).append(entry)
     return [{
         'account': account,
-        'total': sum(e.aed for e in entries if e.spend),
-        'count': len(entries),
+        'total': sum(e.aed for e in entries if e.spend and not e.hidden),
+        'count': sum(1 for e in entries if not e.hidden and not e.self_transfer),
         'entries': sorted(entries, key=lambda e: e.tx.ts, reverse=True),
     } for account, entries in cards.items()]
 
@@ -103,7 +103,7 @@ def _vendor_rows(ledger, type_keys: list[str]) -> list[dict]:
     for key in type_keys:
         if key.casefold() in assigned and key.casefold() not in summaries:
             summaries[key.casefold()] = {'vendor': key, 'total': 0.0, 'count': 0, 'last': '', 'inflow': 0,
-                                         'categories': {}}
+                                         'hidden_total': 0.0, 'hidden_count': 0}
     rows = []
     for folded, summary in summaries.items():
         rules = assigned.get(folded, [])
@@ -111,13 +111,15 @@ def _vendor_rows(ledger, type_keys: list[str]) -> list[dict]:
         per_slot = {slot: (category.key, rule.note) for category, rule in rules for slot in rule.slots}
         single = next(((category.key, rule.note) for category, rule in rules if not rule.slots), ('', ''))
         primary = single[0] if not split else next(iter(per_slot.values()), ('', ''))[0]
+        hidden = summary['count'] == 0 and summary['hidden_count'] > 0
         rows.append({
+            'hidden': hidden,
             'vendor': summary['vendor'],
             'label': f"Any {summary['vendor'].replace('_', ' ')}" if summary['vendor'] in type_keys else summary['vendor'],
-            'count': summary['count'],
-            'total': abs(summary['total']),
+            'count': summary['hidden_count'] if hidden else summary['count'],
+            'total': abs(summary['hidden_total'] if hidden else summary['total']),
             'last': summary['last'],
-            'inflow': summary['inflow'] * 2 > summary['count'],
+            'inflow': summary['inflow'] * 2 > summary['count'] if summary['count'] else summary['hidden_total'] < 0,
             'split': split,
             'single': single,
             'per_slot': per_slot,
@@ -284,7 +286,7 @@ def render_card_periods(services, account: str, before: str, count: int) -> str:
     periods = []
     period = ledger.period(datetime.fromisoformat(before) - timedelta(seconds=1))
     while len(periods) < count and earliest is not None and period.end > earliest:
-        entries = sorted((e for e in ledger.between(period.start, period.end) if not account or e.account == account),
+        entries = sorted((e for e in ledger.all_between(period.start, period.end) if not account or e.account == account),
                          key=lambda e: e.tx.ts, reverse=True)
         if entries:
             periods.append({
@@ -292,7 +294,8 @@ def render_card_periods(services, account: str, before: str, count: int) -> str:
                 'key': period.key,
                 'range': period.range_label,
                 'start': period.start.isoformat(),
-                'total': sum(e.aed for e in entries if e.spend),
+                'total': sum(e.aed for e in entries if e.spend and not e.hidden),
+                'count': sum(1 for e in entries if not e.hidden and not e.self_transfer),
                 'entries': entries,
             })
         period = ledger.previous(period)
@@ -328,6 +331,7 @@ def render(services) -> str:
     clock = ledger.clock
     period = ledger.period(datetime.now(timezone.utc))
     period_entries = ledger.between(period.start, period.end)
+    shown_entries = ledger.all_between(period.start, period.end)
     average, category_averages = _monthly_averages(ledger, period)
 
     return _env(ledger).get_template('expenses.html').render(
@@ -337,11 +341,11 @@ def render(services) -> str:
         by_category=sorted(budgets.items(), key=lambda kv: -kv[1]),
         current_period=_period_summary(ledger, period, budgets, current=True),
         average=average,
-        card_sections=_card_sections(config, period_entries),
+        card_sections=_card_sections(config, shown_entries),
         all_cards={
-            'entries': sorted(period_entries, key=lambda e: e.tx.ts, reverse=True),
-            'total': sum(e.aed for e in period_entries if e.spend),
-            'count': len(period_entries),
+            'entries': sorted(shown_entries, key=lambda e: e.tx.ts, reverse=True),
+            'total': sum(e.aed for e in shown_entries if e.spend and not e.hidden),
+            'count': sum(1 for e in shown_entries if not e.hidden and not e.self_transfer),
         },
         categories=ledger.categories,
         category_averages=category_averages,

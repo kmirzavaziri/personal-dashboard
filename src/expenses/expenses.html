@@ -36,7 +36,7 @@
 
   .amount { font-variant-numeric: tabular-nums; white-space: nowrap; }
   .amount.inflow { color: var(--green); }
-  tr.self-transfer td { opacity: 0.5; }
+  tr.hidden-tx td { opacity: 0.5; }
   .refund-mark { margin-left: 0.25rem; color: var(--green); font-size: 0.72rem; }
   .amount.declined { color: var(--faint); text-decoration: line-through; }
   .when { color: var(--muted); white-space: nowrap; font-size: 0.8rem; }
@@ -61,7 +61,7 @@
   tr.drop-target td { box-shadow: inset 0 -2px 0 var(--accent); }
   .tx-toolbar { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.7rem; }
   .tx-toolbar .search-input { flex: 1; }
-  [data-tab="transactions"]:not(.show-self) tr.self-transfer { display: none; }
+  [data-tab="transactions"]:not(.show-self) tr.hidden-tx { display: none; }
   .search-hidden { display: none !important; }
   .search-meta { font-size: 0.76rem; margin: 0 0 0.3rem 0.2rem; }
   .card-col { font-size: 0.78rem; white-space: nowrap; }
@@ -71,7 +71,7 @@
   .vendor-toolbar { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.7rem; }
   .vendor-toolbar #vendor-search { flex: 1 1 14rem; max-width: 22rem; }
   .vendor-list { padding: 0.3rem 0.9rem; }
-  .vendor { display: grid; grid-template-columns: minmax(10rem, 1.3fr) 7.5rem 5rem 7.5rem minmax(12rem, 1fr) auto; align-items: center; gap: 0.6rem 1.4rem; padding: 0.45rem 0; border-top: 1px solid var(--border); }
+  .vendor { display: grid; grid-template-columns: minmax(10rem, 1.3fr) 7.5rem 5rem 7.5rem minmax(14rem, 1.1fr); align-items: center; gap: 0.6rem 1.4rem; padding: 0.45rem 0; border-top: 1px solid var(--border); }
   .vendor:first-child { border-top: none; }
   .vendor-main { display: flex; flex-direction: column; min-width: 0; }
   .vendor-meta { display: none; }
@@ -81,13 +81,19 @@
   .vh { all: unset; cursor: pointer; font-size: 0.74rem; color: var(--muted); }
   .vh.num { text-align: right; }
   .vh:hover, .vh[aria-sort] { color: var(--strong); }
+  .vendor.hidden-vendor > * { opacity: 0.55; }
   .vendor-income { font-size: 0.78rem; }
   .vendor-name { color: var(--strong); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .vendor-meta { font-size: 0.74rem; color: var(--muted); }
+  .vendor-assign { display: flex; align-items: flex-start; gap: 0.2rem; min-width: 0; }
+  .assign-blocks { flex: 1; min-width: 0; }
   .assign-single, .slot-row { display: flex; align-items: center; gap: 0.3rem; min-width: 0; }
+  .vendor-assign .dd.tone { flex: none; width: 8.5rem; }
+  .vendor-assign .dd.tone .dd-trigger { width: 100%; justify-content: flex-start; }
+  .vendor-assign .dd.tone .dd-label { flex: 1; }
   .assign-split { display: flex; flex-direction: column; gap: 0.15rem; }
   .slot-label { width: 2.4rem; flex: none; font-size: 0.72rem; color: var(--muted); }
-  .vendor .vnote { flex: 1; min-width: 3rem; max-width: 9rem; font-size: 0.72rem; color: var(--muted); }
+  .vendor .vnote { flex: 1; min-width: 3rem; font-size: 0.72rem; color: var(--muted); }
   .icon-clock { width: 14px; height: 14px; background: currentColor; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E") center / contain no-repeat; }
   .split-toggle[aria-pressed="true"] { color: var(--accent); background: var(--accent-soft); }
   .category-list { display: flex; flex-direction: column; gap: 0.1rem; max-height: 60vh; overflow-y: auto; margin-top: 0.4rem; }
@@ -132,7 +138,7 @@
 <div role="tabpanel" data-tabs="budget" data-tab="transactions" hidden>
 <div class="tx-toolbar">
   <input class="search-input" id="tx-search" type="search" placeholder="Search description, note, category or amount" autocomplete="off" aria-label="Search transactions">
-  <label class="toggle"><input type="checkbox" id="show-self"><span class="toggle-track" aria-hidden="true"></span>Self-transfers</label>
+  <label class="toggle"><input type="checkbox" id="show-self"><span class="toggle-track" aria-hidden="true"></span>Show hidden</label>
 </div>
 <nav role="tablist" class="sub" data-tabs="card" data-deselect="all">
   <button role="tab" data-tab="all" data-account="" hidden>All</button>
@@ -179,6 +185,7 @@
     <option value="category">Category</option>
     <option value="name">Name</option>
   </select>
+  <label class="toggle"><input type="checkbox" id="vendor-show-hidden"><span class="toggle-track" aria-hidden="true"></span>Show hidden</label>
   <span class="spacer"></span>
   <button class="btn btn-sm" id="manage-categories" type="button">Categories</button>
   <button class="btn btn-sm btn-primary" id="new-category" type="button">New category</button>
@@ -190,10 +197,9 @@
     <button type="button" class="vh num" data-sort="count">Count</button>
     <button type="button" class="vh" data-sort="last">Last seen</button>
     <button type="button" class="vh" data-sort="category">Category</button>
-    <span></span>
   </div>
   {% for v in vendor_rows %}
-  <div class="vendor" data-vendor="{{ v.vendor }}" data-total="{{ v.total }}" data-count="{{ v.count }}" data-last="{{ v.last }}" data-category="{{ v.category }}" data-category-name="{{ v.category_name }}" data-search="{{ v.label | lower }}">
+  <div class="vendor{% if v.hidden %} hidden-vendor{% endif %}" data-vendor="{{ v.vendor }}" data-total="{{ v.total }}" data-count="{{ v.count }}" data-last="{{ v.last }}" data-category="{{ v.category }}" data-category-name="{{ v.category_name }}" data-search="{{ v.label | lower }}">
     <div class="vendor-main">
       <span class="vendor-name">{{ v.label }}</span>
       <span class="vendor-meta">{% if v.count %}<span class="amount{% if v.inflow %} inflow{% endif %}">{% if v.inflow %}+{% endif %}{{ dh }}{{ v.total | fmt }}</span> · {{ v.count }}{% if v.last %} · <time data-human="date" datetime="{{ v.last }}">{{ v.last }}</time>{% endif %}{% else %}by transaction type{% endif %}</span>
@@ -203,87 +209,25 @@
     <span class="vcol when">{% if v.last %}<time data-human="date" datetime="{{ v.last }}">{{ v.last }}</time>{% endif %}</span>
     {% if v.inflow %}
     <div class="vendor-assign"></div>
-    <span></span>
     {% else %}
     <div class="vendor-assign">
+      <div class="assign-blocks">
       <div class="assign-single"{% if v.split %} hidden{% endif %}>{{ category_select(v.single[0]) }}<input class="vnote input-quiet" value="{{ v.single[1] }}" placeholder="Note" maxlength="80" aria-label="Note"></div>
       <div class="assign-split"{% if not v.split %} hidden{% endif %}>{% if v.split %}
         {% for s in slots %}{% set a = v.per_slot.get(s.key, ('', '')) %}<div class="slot-row" data-slot="{{ s.key }}"><span class="slot-label" title="{{ s.label }}">{{ s.short }}</span>{{ category_select(a[0]) }}<input class="vnote input-quiet" value="{{ a[1] }}" placeholder="Note" maxlength="80" aria-label="Note"></div>{% endfor %}
       {% endif %}</div>
+      </div>
+      <button class="btn btn-ghost btn-sm btn-icon split-toggle" type="button" aria-pressed="{{ 'true' if v.split else 'false' }}" title="Different category by time of day"><i class="icon-clock"></i></button>
     </div>
-    <button class="btn btn-ghost btn-sm btn-icon split-toggle" type="button" aria-pressed="{{ 'true' if v.split else 'false' }}" title="Different category by time of day"><i class="icon-clock"></i></button>
     {% endif %}
   </div>
   {% endfor %}
   <div class="empty" id="vendor-empty" hidden>No matches.</div>
 </section>
-<template id="slot-rows">{% for s in slots %}<div class="slot-row" data-slot="{{ s.key }}"><span class="slot-label" title="{{ s.label }}">{{ s.short }}</span>{{ category_select('') }}<input class="vnote input-quiet" placeholder="Note" maxlength="80" aria-label="Note"></div>{% endfor %}</template>
-<template id="category-options">
-  <option value="" data-tone="var(--faint)">Uncategorized</option>
-  {% for cat in categories %}<option value="{{ cat.key }}" data-tone="{{ tone(cat.name) }}">{{ cat.name }}</option>{% endfor %}
-</template>
-<template id="tx-category-options">
-  <option value="{{ uncategorized }}" data-tone="var(--faint)">Uncategorized</option>
-  {% for cat in categories %}<option value="{{ cat.key }}" data-tone="{{ tone(cat.name) }}">{{ cat.name }}</option>{% endfor %}
-</template>
-<dialog class="modal" id="describe-dialog">
-  <form method="dialog">
-    <h2>Description</h2>
-    <label class="field describe-rename">This transaction<input id="describe-name" maxlength="80" autocomplete="off"></label>
-    <div class="describe-categorize">
-      <div class="muted describe-sub">Category for every transaction with this description</div>
-      <div class="describe-body"></div>
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost split-mode" type="button">Split by time</button>
-      <span class="spacer"></span>
-      <button class="btn" value="cancel">Cancel</button>
-      <button class="btn btn-primary" value="confirm">Save</button>
-    </div>
-  </form>
-</dialog>
-<dialog class="modal" id="new-category-dialog">
-  <form method="dialog">
-    <h2>New category</h2>
-    <input id="new-category-name" placeholder="Name" maxlength="40" autocomplete="off">
-    <div class="modal-actions">
-      <button class="btn" value="cancel">Cancel</button>
-      <button class="btn btn-primary" value="confirm">Create</button>
-    </div>
-  </form>
-</dialog>
-<dialog class="modal" id="categories-dialog">
-  <form method="dialog">
-    <h2>Categories</h2>
-    <div class="category-list">
-      {% for cat in categories %}
-      <div class="category-item" data-key="{{ cat.key }}">
-        <span class="dot lg" style="--tone: {{ tone(cat.name) }}"></span>
-        <input class="category-name input-quiet" value="{{ cat.name }}" maxlength="40" aria-label="Category name">
-        <span class="muted category-avg" data-tip="Monthly average">{{ dh }}{{ category_averages.get(cat.key, 0) | compact }}/mo</span>
-        <button class="btn btn-ghost btn-sm btn-icon category-delete" type="button" aria-label="Delete category"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>
-      </div>
-      {% endfor %}
-    </div>
-    <div class="modal-actions"><button class="btn" value="close">Done</button></div>
-  </form>
-</dialog>
-<dialog class="modal" id="delete-dialog">
-  <form method="dialog">
-    <h2>Delete <span id="delete-name"></span>?</h2>
-    <div class="delete-choice">
-      <label><input type="radio" name="fate" value="move" checked> Move its rules to</label>
-      <select id="delete-target">
-        {% for cat in categories %}<option value="{{ cat.key }}">{{ cat.name }}</option>{% endfor %}
-      </select>
-      <label><input type="radio" name="fate" value="drop"> Drop its rules</label>
-    </div>
-    <div class="modal-actions">
-      <button class="btn" value="cancel">Cancel</button>
-      <button class="btn btn-danger" value="confirm">Delete</button>
-    </div>
-  </form>
-</dialog>
+
+
+
+
 </div>
 
 <div role="tabpanel" data-tabs="budget" data-tab="budgets" hidden>
@@ -351,10 +295,88 @@
 </section>
 </div>
 
+<template id="category-options">
+  <option value="" data-tone="var(--faint)">Uncategorized</option>
+  {% for cat in categories %}<option value="{{ cat.key }}" data-tone="{{ tone(cat.name) }}">{{ cat.name }}</option>{% endfor %}
+</template>
+
+<template id="tx-category-options">
+  <option value="{{ uncategorized }}" data-tone="var(--faint)">Uncategorized</option>
+  {% for cat in categories %}<option value="{{ cat.key }}" data-tone="{{ tone(cat.name) }}">{{ cat.name }}</option>{% endfor %}
+</template>
+
+<template id="slot-rows">{% for s in slots %}<div class="slot-row" data-slot="{{ s.key }}"><span class="slot-label" title="{{ s.label }}">{{ s.short }}</span>{{ category_select('') }}<input class="vnote input-quiet" placeholder="Note" maxlength="80" aria-label="Note"></div>{% endfor %}</template>
+
+<dialog class="modal" id="describe-dialog">
+  <form method="dialog">
+    <h2>Description</h2>
+    <label class="field describe-rename">This transaction<input id="describe-name" maxlength="80" autocomplete="off"></label>
+    <div class="describe-categorize">
+      <div class="muted describe-sub">Category for every transaction with this description</div>
+      <div class="describe-body"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-danger void-tx" type="button" title="Hide it and leave it out of totals, e.g. a card check that was reversed">Didn't happen</button>
+      <button class="btn btn-ghost split-mode" type="button">Split by time</button>
+      <span class="spacer"></span>
+      <button class="btn" value="cancel">Cancel</button>
+      <button class="btn btn-primary" value="confirm">Save</button>
+    </div>
+  </form>
+</dialog>
+<dialog class="modal" id="new-category-dialog">
+  <form method="dialog">
+    <h2>New category</h2>
+    <input id="new-category-name" placeholder="Name" maxlength="40" autocomplete="off">
+    <div class="modal-actions">
+      <button class="btn" value="cancel">Cancel</button>
+      <button class="btn btn-primary" value="confirm">Create</button>
+    </div>
+  </form>
+</dialog>
+<dialog class="modal" id="categories-dialog">
+  <form method="dialog">
+    <h2>Categories</h2>
+    <div class="category-list">
+      {% for cat in categories %}
+      <div class="category-item" data-key="{{ cat.key }}">
+        <span class="dot lg" style="--tone: {{ tone(cat.name) }}"></span>
+        <input class="category-name input-quiet" value="{{ cat.name }}" maxlength="40" aria-label="Category name">
+        <span class="muted category-avg" data-tip="Monthly average">{{ dh }}{{ category_averages.get(cat.key, 0) | compact }}/mo</span>
+        <button class="btn btn-ghost btn-sm btn-icon category-delete" type="button" aria-label="Delete category"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="modal-actions"><button class="btn" value="close">Done</button></div>
+  </form>
+</dialog>
+<dialog class="modal" id="delete-dialog">
+  <form method="dialog">
+    <h2>Delete <span id="delete-name"></span>?</h2>
+    <div class="delete-choice">
+      <label><input type="radio" name="fate" value="move" checked> Move its rules to</label>
+      <select id="delete-target">
+        {% for cat in categories %}<option value="{{ cat.key }}">{{ cat.name }}</option>{% endfor %}
+      </select>
+      <label><input type="radio" name="fate" value="drop"> Drop its rules</label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" value="cancel">Cancel</button>
+      <button class="btn btn-danger" value="confirm">Delete</button>
+    </div>
+  </form>
+</dialog>
 {% endblock %}
 
 {% block scripts %}
 <script>
+  window.setQuery = function (name, value) {
+    var params = new URLSearchParams(location.search);
+    if (value) params.set(name, value); else params.delete(name);
+    var query = params.toString();
+    history.replaceState(null, '', location.pathname + (query ? '?' + query : ''));
+  };
+
   var SLOTS = {{ slot_json | tojson }};
   (function () {
     var dialog = document.getElementById('describe-dialog');
@@ -440,12 +462,21 @@
       originalName = cell.dataset.txDesc;
       nameInput.value = originalName;
       categorize = cell.dataset.categorize === 'true';
+      voided = cell.dataset.voided === 'true';
+      voidButton.textContent = voided ? 'It happened' : "Didn't happen";
       categorizeBlock.hidden = !categorize;
       splitButton.hidden = !categorize;
       var row = Array.prototype.find.call(document.querySelectorAll('.vendor'), function (r) { return r.dataset.vendor === vendor; });
       split = !!row && row.querySelector('.split-toggle') && row.querySelector('.split-toggle').getAttribute('aria-pressed') === 'true';
       render(current(row));
       dialog.showModal();
+    });
+
+    var voidButton = dialog.querySelector('.void-tx');
+    var voided = false;
+    voidButton.addEventListener('click', function () {
+      api('/api/transaction/' + txId + '/voided', 'POST', { voided: !voided })
+        .then(function () { dialog.close('cancel'); toast(voided ? 'Restored' : 'Marked as not happened'); setTimeout(function () { location.reload(); }, 400); });
     });
 
     splitButton.addEventListener('click', function () {
@@ -472,11 +503,13 @@
   (function () {
     var toggle = document.getElementById('show-self');
     var panel = document.querySelector('[role="tabpanel"][data-tab="transactions"]');
-    try { toggle.checked = localStorage.getItem('show-self-transfers') === '1'; } catch (e) {}
+    try { toggle.checked = localStorage.getItem('show-hidden-transactions') === '1'; } catch (e) {}
     function apply() { panel.classList.toggle('show-self', toggle.checked); }
+    if (new URLSearchParams(location.search).get('hidden') === '1') toggle.checked = true;
     toggle.addEventListener('change', function () {
       apply();
-      try { localStorage.setItem('show-self-transfers', toggle.checked ? '1' : '0'); } catch (e) {}
+      setQuery('hidden', toggle.checked ? '1' : '');
+      try { localStorage.setItem('show-hidden-transactions', toggle.checked ? '1' : '0'); } catch (e) {}
     });
     apply();
   })();
@@ -538,8 +571,20 @@
           humanizeTimes(results);
         });
     }
-    input.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(run, 250); });
-    chips.addEventListener('click', function () { if (input.value.trim()) setTimeout(run, 0); });
+    input.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(function () { setQuery('q', input.value.trim()); run(); }, 250); });
+    chips.addEventListener('click', function () {
+      setTimeout(function () { setQuery('card', selectedAccount()); if (input.value.trim()) run(); }, 0);
+    });
+    (function restore() {
+      if (location.pathname.indexOf('/transactions') === -1) return;
+      var params = new URLSearchParams(location.search);
+      var card = params.get('card');
+      if (card) {
+        var chip = Array.prototype.find.call(chips.querySelectorAll('[role="tab"]'), function (t) { return t.dataset.account === card; });
+        if (chip && chip.getAttribute('aria-selected') !== 'true') chip.click();
+      }
+      if (params.get('q')) { input.value = params.get('q'); run(); }
+    })();
   })();
 
   (function () {
@@ -598,6 +643,7 @@
     var vendorFilter = document.getElementById('vendor-filter');
     var vendorSort = document.getElementById('vendor-sort');
     var vendorEmpty = document.getElementById('vendor-empty');
+    var showHidden = document.getElementById('vendor-show-hidden');
 
     function refreshVendors() {
       var needle = vendorSearch.value.trim().toLowerCase();
@@ -615,18 +661,40 @@
         return Number(b.dataset[key]) - Number(a.dataset[key]);
       }).forEach(function (row) {
         var visible = (!needle || row.dataset.search.indexOf(needle) !== -1)
-          && (category === '*' || row.dataset.category === category);
+          && (category === '*' || row.dataset.category === category)
+          && (showHidden.checked || !row.classList.contains('hidden-vendor'));
         row.hidden = !visible;
         shown += visible;
         vendorList.insertBefore(row, vendorEmpty);
       });
       key = vendorSort.value;
       vendorEmpty.hidden = shown > 0;
+      if (location.pathname.indexOf('/categorize') !== -1) vendorList.dispatchEvent(new Event('vendors-refreshed'));
     }
+    function saveQuery() {
+      var params = new URLSearchParams(location.search);
+      [['q', vendorSearch.value.trim(), ''], ['category', vendorFilter.value, '*'], ['sort', vendorSort.value, 'total'],
+       ['hidden', showHidden.checked ? '1' : '', '']].forEach(function (pair) {
+        if (pair[1] && pair[1] !== pair[2]) params.set(pair[0], pair[1]); else params.delete(pair[0]);
+      });
+      var query = params.toString();
+      history.replaceState(null, '', location.pathname + (query ? '?' + query : ''));
+    }
+    (function restoreQuery() {
+      var params = new URLSearchParams(location.search);
+      if (location.pathname.indexOf('/categorize') === -1) return;
+      if (params.get('q')) vendorSearch.value = params.get('q');
+      if (params.has('category')) vendorFilter.value = params.get('category');
+      if (params.get('sort')) vendorSort.value = params.get('sort');
+      showHidden.checked = params.get('hidden') === '1';
+      refreshVendors();
+    })();
+    vendorList.addEventListener('vendors-refreshed', saveQuery);
     var searchTimer;
     vendorSearch.addEventListener('input', function () { clearTimeout(searchTimer); searchTimer = setTimeout(refreshVendors, 150); });
     vendorFilter.addEventListener('change', refreshVendors);
     vendorSort.addEventListener('change', refreshVendors);
+    showHidden.addEventListener('change', refreshVendors);
     document.querySelector('.vendor-head').addEventListener('click', function (e) {
       var head = e.target.closest('.vh');
       if (!head) return;

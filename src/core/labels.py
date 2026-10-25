@@ -1,5 +1,6 @@
 PALETTE = (
-    'var(--c-clay)', 'var(--c-mauve)', 'var(--c-slate)', 'var(--c-sand)', 'var(--c-sage)', 'var(--blue)',
+    'var(--c-clay)', 'var(--c-indigo)', 'var(--c-sage)', 'var(--c-rose)', 'var(--c-cyan)', 'var(--c-amber)', 'var(--c-plum)',
+    'var(--c-slate)', 'var(--c-coral)', 'var(--c-olive)', 'var(--c-mauve)', 'var(--c-pine)', 'var(--c-sand)', 'var(--blue)',
 )
 
 UNLABELED = 'General'

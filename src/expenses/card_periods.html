@@ -2,7 +2,7 @@
 {% import "period_divider.html" as pd with context %}
 {% for p in periods %}
 <div class="card-period" data-start="{{ p.start }}">
-  {{ pd.period_divider(p.key, p.name, p.range, p.total, p.entries | length) }}
+  {{ pd.period_divider(p.key, p.name, p.range, p.total, p.count) }}
   {{ tt.tx_table(p.entries, categories, show_account=show_account) }}
 </div>
 {% endfor %}

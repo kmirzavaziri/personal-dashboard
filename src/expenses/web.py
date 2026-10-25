@@ -60,6 +60,13 @@ def make_expenses_bp(services) -> Blueprint:
             return 'transaction not found', 404
         return changed({'id': tx_id, 'description': description})
 
+    @bp.post('/api/transaction/<tx_id>/voided')
+    def set_transaction_voided(tx_id):
+        voided = bool(body().get('voided', True))
+        if not tx_service.set_voided(services.config, tx_id, voided):
+            return 'transaction not found', 404
+        return changed({'id': tx_id, 'voided': voided})
+
     @bp.post('/api/transaction/<tx_id>/note')
     def set_transaction_note(tx_id):
         note = body().get('note', '').strip()

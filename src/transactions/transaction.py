@@ -29,6 +29,7 @@ class Transaction(BaseModel):
     raw_ref: str = ''
     category_override: str = ''
     description_override: str = ''
+    voided: bool = False
     note: str = ''
 
     @property

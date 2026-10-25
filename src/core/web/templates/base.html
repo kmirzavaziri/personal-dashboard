@@ -360,7 +360,8 @@
         tabs.forEach(function (tab) { tab.setAttribute('aria-selected', String(tab.dataset.tab === key)); });
         if (route) {
           var tab = tabs.find(function (t) { return t.dataset.tab === key; });
-          history.replaceState(null, '', route + '/' + key + location.search);
+          var path = route + '/' + key;
+          history.replaceState(null, '', path + (location.pathname === path ? location.search : ''));
           var crumb = document.getElementById('crumb-tab');
           crumb.textContent = tab ? tab.textContent.replace(/\d+$/, '').trim() : '';
           crumb.hidden = document.getElementById('crumb-tab-sep').hidden = !tab;
