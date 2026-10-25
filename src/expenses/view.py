@@ -4,11 +4,12 @@ from pathlib import Path
 
 import transactions.service as tx_service
 from transactions.ledger import Ledger
+from transactions.rules import Category
 from transactions.transaction import UNCATEGORIZED
 from core.item.schedule import build_pool
 from core.labels import colors_for
 from core.web.templating import make_env
-from expenses.reference import category_account, category_display, expense_accounts
+from expenses.reference import expense_accounts, expense_category
 from pkg.model.io import read_yaml
 
 HERE = Path(__file__).parent
@@ -46,11 +47,12 @@ def _budget_status(budget: float, actual: float, fraction: float) -> tuple[str, 
 
 
 def _budget_rows(entries, cat_totals: dict[str, float], period) -> list[dict]:
+    names = _category_names()
     actual_by_cat: dict[str, float] = {}
     for entry in entries:
         if entry.spend:
-            name = entry.category_name or 'Uncategorized'
-            actual_by_cat[name] = actual_by_cat.get(name, 0.0) + entry.aed
+            key = entry.category.key if entry.category else ''
+            actual_by_cat[key] = actual_by_cat.get(key, 0.0) + entry.aed
 
     budgeted = {cat for cat, budget in cat_totals.items() if budget > 0}
     misc = sum(actual for cat, actual in actual_by_cat.items() if cat not in budgeted)
@@ -60,7 +62,7 @@ def _budget_rows(entries, cat_totals: dict[str, float], period) -> list[dict]:
         actual = actual_by_cat.get(cat, 0.0)
         status, _ = _budget_status(budget, actual, period.fraction)
         rows.append({
-            'category': cat,
+            'category': names[cat],
             'budget': budget,
             'actual': actual,
             'pct': min(actual / budget * 100, 100) if budget > 0 else 0,
@@ -130,14 +132,14 @@ def _planned_accounts(config) -> dict[str, list[dict]]:
         ppm = item.price_per_month
         if ppm is None or item.servings_per_week == 0:
             continue
-        category = item.metadata.edible.category
-        account = category_account(category)
-        if account is None:
+        expense = expense_category(item.metadata.edible.category)
+        if expense is None:
             continue
         src = item.chosen_source
-        accounts[account].append({
+        accounts[expense.account].append({
             'name':     item.short_name,
-            'category': category_display(category),
+            'category_key': expense.category,
+            'category': _category_name(expense.category),
             'store':    src.store.display if src else '',
             'url':      item.url or '',
             'image':    item.image or '',
@@ -153,7 +155,8 @@ def _planned_accounts(config) -> dict[str, list[dict]]:
         monthly = _to_monthly(cost, freq)
         accounts.setdefault(entry.get('account', 'other'), []).append({
             'name':      entry.get('name', ''),
-            'category':  entry.get('category', ''),
+            'category_key': entry['category'],
+            'category':  _category_name(entry['category']),
             'store':     entry.get('store', ''),
             'url':       '',
             'image':     '',
@@ -165,12 +168,22 @@ def _planned_accounts(config) -> dict[str, list[dict]]:
     return accounts
 
 
+def _category_names() -> dict[str, str]:
+    return {category.key: category.name for category in Category.objects.all()}
+
+
+def _category_name(key: str) -> str:
+    names = _category_names()
+    if key not in names:
+        raise ValueError(f'budget category {key!r} is not a transactions category')
+    return names[key]
+
+
 def _category_budgets(accounts: dict[str, list[dict]]) -> dict[str, float]:
     totals: dict[str, float] = {}
     for rows in accounts.values():
         for r in rows:
-            cat = r.get('category') or 'Other'
-            totals[cat] = totals.get(cat, 0.0) + r['monthly']
+            totals[r['category_key']] = totals.get(r['category_key'], 0.0) + r['monthly']
     return totals
 
 
@@ -260,18 +273,19 @@ def _trends(ledger, now: datetime, budgets: dict[str, float]) -> dict:
         slot = index.get(ledger.period(entry.tx.at).start)
         if slot is None:
             continue
-        for name in (_ALL_SPENDING, entry.category_name or 'Uncategorized'):
-            series.setdefault(name, [0.0] * len(periods))[slot] += entry.aed
+        for key in (_ALL_SPENDING, entry.category.key if entry.category else ''):
+            series.setdefault(key, [0.0] * len(periods))[slot] += entry.aed
     complete = max(len(periods) - 1, 1)
     tones = colors_for(c.name for c in ledger.categories)
+    names = {category.key: category.name for category in ledger.categories} | {_ALL_SPENDING: _ALL_SPENDING, '': 'Uncategorized'}
     rows = [{
-        'name': name,
-        'tone': 'var(--accent)' if name == _ALL_SPENDING else tones.get(name, 'var(--faint)'),
+        'name': names[key],
+        'tone': 'var(--accent)' if key == _ALL_SPENDING else tones.get(names[key], 'var(--faint)'),
         'values': [round(v) for v in values],
         'total': round(sum(values)),
         'average': round(sum(values[:-1]) / complete),
-        'budget': round(sum(budgets.values())) if name == _ALL_SPENDING else round(budgets.get(name, 0.0)),
-    } for name, values in series.items()]
+        'budget': round(sum(budgets.values())) if key == _ALL_SPENDING else round(budgets.get(key, 0.0)),
+    } for key, values in series.items()]
     rows.sort(key=lambda row: (row['name'] != _ALL_SPENDING, -row['total']))
     return {
         'periods': [{'label': p.name, 'range': p.range_label} for p in periods],
@@ -382,7 +396,7 @@ def render(services) -> str:
         account_sections=account_sections,
         grand_total=sum(s['total'] for s in account_sections),
         grand_daily=sum(s['daily_total'] for s in account_sections),
-        by_category=sorted(budgets.items(), key=lambda kv: -kv[1]),
+        by_category=sorted(((_category_name(key), total) for key, total in budgets.items()), key=lambda kv: -kv[1]),
         current_period=_period_summary(ledger, period, budgets, current=True),
         average=average,
         card_sections=card_sections,

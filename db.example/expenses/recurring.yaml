@@ -1,17 +1,13 @@
-# Ad-hoc recurring expenses
-# frequency: daily | workday | weekly | biweekly | monthly | yearly
-# account:   daily | monthly | other
-
 - name: Sample Coffee
   account: daily
-  category: Food
+  category: coffee
   cost_aed: 10
   frequency: daily
   notes: ''
 
 - name: Sample Subscription
   account: monthly
-  category: Subscription
+  category: subscriptions
   store: Example Service
   cost_aed: 40
   frequency: monthly

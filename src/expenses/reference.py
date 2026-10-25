@@ -8,7 +8,7 @@ class ExpenseCategory(Model):
 
     key: str
     account: str
-    display: str
+    category: str
 
 
 class ExpenseAccount(Model):
@@ -29,14 +29,8 @@ def _accounts() -> tuple[ExpenseAccount, ...]:
     return tuple(sorted(ExpenseAccount.objects.all(), key=lambda a: a.order))
 
 
-def category_account(category: str) -> str | None:
-    c = _categories().get(category)
-    return c.account if c else None
-
-
-def category_display(category: str) -> str:
-    c = _categories().get(category)
-    return c.display if c else category.capitalize()
+def expense_category(item_category: str) -> ExpenseCategory | None:
+    return _categories().get(item_category)
 
 
 def expense_accounts() -> tuple[ExpenseAccount, ...]:

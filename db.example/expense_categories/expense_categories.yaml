@@ -1,12 +1,12 @@
 - key: snack
   account: daily
-  display: Snack
+  category: coffee
 - key: supplement
   account: monthly
-  display: Self care
+  category: self_care
 - key: care
   account: monthly
-  display: Self care
+  category: self_care
 - key: hygiene
   account: monthly
-  display: Self care
+  category: self_care
