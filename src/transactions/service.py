@@ -237,8 +237,9 @@ def _same_account_and_amount(row: Transaction, tx: Transaction, patterns: dict, 
 def _overrides(config) -> dict[str, dict]:
     return {
         tx.id: {'category_override': tx.category_override, 'note': tx.note,
-                'description_override': tx.description_override, 'voided': tx.voided}
-        for tx in _store(config).all() if tx.category_override or tx.note or tx.description_override or tx.voided
+                'description_override': tx.description_override, 'voided': tx.voided, 'marked_settled': tx.marked_settled}
+        for tx in _store(config).all()
+        if tx.category_override or tx.note or tx.description_override or tx.voided or tx.marked_settled
     }
 
 
@@ -281,6 +282,10 @@ def set_description(config, tx_id: str, description: str) -> bool:
 
 def set_voided(config, tx_id: str, voided: bool) -> bool:
     return _store(config).update(tx_id, voided=voided)
+
+
+def set_settled(config, tx_id: str, settled: bool) -> bool:
+    return _store(config).update(tx_id, marked_settled=settled)
 
 
 def set_note(config, tx_id: str, note: str) -> bool:

@@ -324,6 +324,7 @@
       <div class="describe-body"></div>
     </div>
     <div class="modal-actions">
+      <button class="btn btn-ghost settle-tx" type="button" title="Paid back outside the bank, e.g. in cash; hides it and leaves it out of totals">Settled</button>
       <button class="btn btn-ghost btn-danger void-tx" type="button" title="Hide it and leave it out of totals, e.g. a card check that was reversed">Didn't happen</button>
       <button class="btn btn-ghost split-mode" type="button">Split by time</button>
       <span class="spacer"></span>
@@ -472,6 +473,9 @@
       categorize = cell.dataset.categorize === 'true';
       voided = cell.dataset.voided === 'true';
       voidButton.textContent = voided ? 'It happened' : "Didn't happen";
+      settled = cell.dataset.settled === 'true';
+      settleButton.hidden = cell.dataset.settleable !== 'true';
+      settleButton.textContent = settled ? 'Not settled' : 'Settled';
       categorizeBlock.hidden = !categorize;
       splitButton.hidden = !categorize;
       var row = Array.prototype.find.call(document.querySelectorAll('.vendor'), function (r) { return r.dataset.vendor === vendor; });
@@ -482,6 +486,12 @@
 
     var voidButton = dialog.querySelector('.void-tx');
     var voided = false;
+    var settleButton = dialog.querySelector('.settle-tx');
+    var settled = false;
+    settleButton.addEventListener('click', function () {
+      busy(settleButton, api('/api/transaction/' + txId + '/settled', 'POST', { settled: !settled })
+        .then(function () { dialog.close('cancel'); toast(settled ? 'No longer settled' : 'Marked as settled'); setTimeout(function () { location.reload(); }, 400); }));
+    });
     voidButton.addEventListener('click', function () {
       api('/api/transaction/' + txId + '/voided', 'POST', { voided: !voided })
         .then(function () { dialog.close('cancel'); toast(voided ? 'Restored' : 'Marked as not happened'); setTimeout(function () { location.reload(); }, 400); });

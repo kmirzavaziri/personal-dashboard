@@ -83,6 +83,7 @@ class Ledger:
         self._hidden = {tx.id for txs in refunds.values() for tx in txs}
         own = _self_transfers(resolved, set(self._accounts.values()), owner, matching.self_transfer)
         settled = _settled_transfers([entry for entry in resolved if entry.tx.id not in own], matching.settlement)
+        settled |= {entry.tx.id for entry in resolved if entry.tx.marked_settled}
         self.entries = [replace(entry, refunds=tuple(refunds.get(entry.tx.id, ())), self_transfer=entry.tx.id in own,
                                 settled=entry.tx.id in settled, spend=entry.spend and entry.tx.id not in own)
                         for entry in resolved]

@@ -71,6 +71,13 @@ def make_expenses_bp(services) -> Blueprint:
             return 'transaction not found', 404
         return changed({'id': tx_id, 'voided': voided})
 
+    @bp.post('/api/transaction/<tx_id>/settled')
+    def set_transaction_settled(tx_id):
+        settled = bool(body().get('settled', True))
+        if not tx_service.set_settled(services.config, tx_id, settled):
+            return 'transaction not found', 404
+        return changed({'id': tx_id, 'settled': settled})
+
     @bp.post('/api/transaction/<tx_id>/note')
     def set_transaction_note(tx_id):
         note = body().get('note', '').strip()

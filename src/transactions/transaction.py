@@ -31,6 +31,7 @@ class Transaction(BaseModel):
     description_override: str = ''
     statement_description: str = Field(default='', exclude=True)
     voided: bool = False
+    marked_settled: bool = False
     note: str = ''
 
     @property
