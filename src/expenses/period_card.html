@@ -17,7 +17,6 @@
         <span class="amount {{ r.status }}">{{ r.actual | fmt }}{% if r.budget > 0 %}<span class="muted"> / {{ r.budget | fmt }}</span>{% endif %}</span>
       </div>
       {% if r.budget > 0 %}<div class="paced"><div class="bar thin toned" style="--tone: {{ tone(r.category) }}"><span style="width: {{ r.pct }}%"></span></div>{% if p.current %}<i class="pace" style="left: {{ p.pace }}%"></i>{% endif %}</div>{% endif %}
-      {% if p.current and r.note %}<div class="bnote {{ r.status }}">{{ r.note }}</div>{% endif %}
     </div>
     {% endfor %}
   </div>

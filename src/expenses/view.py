@@ -57,28 +57,17 @@ def _budget_rows(entries, cat_totals: dict[str, float], period) -> list[dict]:
     for cat in budgeted:
         budget = cat_totals[cat]
         actual = actual_by_cat.get(cat, 0.0)
-        status, projected = _budget_status(budget, actual, period.fraction)
-        note = ''
-        if status == 'red':
-            note = f'{actual - budget:,.0f} over'
-        elif status == 'yellow':
-            daily_rate = actual / period.elapsed_days
-            exhaust_day = budget / daily_rate if daily_rate else 0
-            if 0 < exhaust_day <= period.length_days:
-                note = f'runs out {period.day(max(1, round(exhaust_day))):%b %-d} · projected {projected:,.0f}'
-            else:
-                note = f'projected {projected:,.0f}'
+        status, _ = _budget_status(budget, actual, period.fraction)
         rows.append({
             'category': cat,
             'budget': budget,
             'actual': actual,
             'pct': min(actual / budget * 100, 100) if budget > 0 else 0,
             'status': status,
-            'note': note,
         })
     rows.sort(key=lambda r: ({'red': 0, 'yellow': 1, 'green': 2, 'none': 3}[r['status']], -r['actual']))
     if misc:
-        rows.append({'category': _MISC, 'budget': 0.0, 'actual': misc, 'pct': 0, 'status': 'none', 'note': ''})
+        rows.append({'category': _MISC, 'budget': 0.0, 'actual': misc, 'pct': 0, 'status': 'none'})
     return rows
 
 
