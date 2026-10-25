@@ -101,15 +101,18 @@
   table:last-child { margin-bottom: 0; }
   th {
     color: var(--muted); font-size: 0.74rem; font-weight: 500; text-align: left;
-    padding: 0.3rem 0.6rem; border-bottom: 1px solid var(--border);
+    padding: 0.25rem 0.6rem; border-bottom: 1px solid var(--border);
   }
-  td { padding: 0.3rem 0.6rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  td { padding: 0.18rem 0.6rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
   th:first-child, td:first-child { padding-left: 0.5rem; }
   th:last-child, td:last-child { padding-right: 0.5rem; }
   tbody tr:last-child td { border-bottom: none; }
-  tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--text) 3.5%, transparent); }
+  :root { --stripe: color-mix(in srgb, var(--text) 3.5%, transparent); }
+  tbody tr:nth-child(even) td { background: var(--stripe); }
   .restriped tbody tr:nth-child(even) td { background: none; }
-  .restriped tbody tr.alt td { background: color-mix(in srgb, var(--text) 3.5%, transparent); }
+  .restriped tbody tr.alt td { background: var(--stripe); }
+  td .input-quiet, td .dd.quiet .dd-trigger { height: 1.45rem; }
+  td .dd.tone .dd-trigger { height: 1.35rem; }
   @media (hover: hover) { tbody tr:hover td, .restriped tbody tr:hover td { background: var(--hover); } }
   .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   tbody tr:target td { background: var(--accent-soft); }

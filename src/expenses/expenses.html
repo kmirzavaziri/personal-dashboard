@@ -68,8 +68,12 @@
 
   .vendor-toolbar { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.7rem; }
   .vendor-toolbar #vendor-search { flex: 1 1 14rem; max-width: 22rem; }
-  .vendor-list { padding: 0.3rem 0.9rem; }
-  .vendor { display: grid; grid-template-columns: minmax(10rem, 1.3fr) 7.5rem 5rem 7.5rem minmax(14rem, 1.1fr); align-items: center; gap: 0.6rem 1.4rem; padding: 0.45rem 0; border-top: 1px solid var(--border); }
+  .vendor-list { padding: 0.3rem 0.4rem; }
+  .vendor { display: grid; grid-template-columns: minmax(10rem, 1.3fr) 7.5rem 5rem 7.5rem minmax(14rem, 1.1fr); align-items: center; gap: 0.15rem 1.4rem; padding: 0.18rem 0.5rem; border-top: 1px solid var(--border); }
+  .vendor.alt { background: var(--stripe); }
+  @media (hover: hover) { .vendor:not(.vendor-head):hover { background: var(--hover); } }
+  .vendor .input-quiet { height: 1.45rem; }
+  .vendor .dd.tone .dd-trigger { height: 1.35rem; }
   .vendor:first-child { border-top: none; }
   .vendor-main { display: flex; flex-direction: column; min-width: 0; }
   .vendor-meta { display: none; }
@@ -713,6 +717,7 @@
           && (category === '*' || row.dataset.category === category)
           && (showHidden.checked || !row.classList.contains('hidden-vendor'));
         row.hidden = !visible;
+        row.classList.toggle('alt', visible && shown % 2 === 1);
         shown += visible;
         vendorList.insertBefore(row, vendorEmpty);
       });
