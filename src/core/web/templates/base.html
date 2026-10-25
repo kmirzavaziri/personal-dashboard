@@ -476,6 +476,13 @@
     if (dismiss) dismiss.closest('dialog').close('cancel');
   });
 
+  window.compactDirhams = function (value) {
+    var abs = Math.abs(value);
+    var text = abs >= 1e6 ? (abs / 1e6).toFixed(2).replace(/\.?0+$/, '') + 'M'
+      : abs >= 1000 ? (abs / 1000).toFixed(abs >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'k' : String(Math.round(abs));
+    return 'Đ' + text;
+  };
+
   window.busy = function (button, work) {
     button.disabled = true;
     button.setAttribute('aria-busy', 'true');

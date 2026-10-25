@@ -1,6 +1,6 @@
 {% from "category_select.html" import category_select with context %}
   {% for v in vendor_rows %}
-  <tr class="vendor{% if v.hidden or v.inflow %} hidden-vendor{% endif %}" data-vendor="{{ v.vendor }}" data-total="{{ v.total }}" data-count="{{ v.count }}" data-last="{{ v.last }}" data-category="{{ v.category }}" data-category-name="{{ v.category_name }}" data-search="{{ v.label | lower }}">
+  <tr class="vendor{% if v.hidden or v.inflow %} hidden-vendor{% endif %}" data-vendor="{{ v.vendor }}" data-total="{{ v.total }}" data-inflow="{{ 'true' if v.inflow else 'false' }}" data-count="{{ v.count }}" data-last="{{ v.last }}" data-category="{{ v.category }}" data-category-name="{{ v.category_name }}" data-search="{{ v.label | lower }}">
     <td class="cell-title vendor-main">
       <span class="vendor-name">{{ v.label }}</span>
       <span class="vendor-meta mobile-only">{% if v.count %}<span class="amount{% if v.inflow %} inflow{% endif %}">{% if v.inflow %}+{% endif %}{{ dh }}{{ v.total | fmt }}</span> · {{ v.count }}{% if v.last %} · <time data-human="date" datetime="{{ v.last }}">{{ v.last }}</time>{% endif %}{% else %}by transaction type{% endif %}</span>

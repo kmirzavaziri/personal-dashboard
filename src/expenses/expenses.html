@@ -534,13 +534,18 @@
     }
     function apply() {
       pending = false;
-      var hits = { '*': 0 };
+      var hits = { '*': 0 }, totals = { '*': 0 };
       shownRows().forEach(function (row) {
         if (!toggle.checked && row.classList.contains('hidden-tx')) return;
+        var aed = Number(row.dataset.aed) || 0;
         hits[row.dataset.category] = (hits[row.dataset.category] || 0) + 1;
+        totals[row.dataset.category] = (totals[row.dataset.category] || 0) + aed;
         hits['*'] += 1;
+        totals['*'] += aed;
       });
-      Array.prototype.forEach.call(select.options, function (option) { option.dataset.count = hits[option.value] || 0; });
+      Array.prototype.forEach.call(select.options, function (option) {
+        option.dataset.count = (hits[option.value] || 0) + ' · ' + compactDirhams(totals[option.value] || 0);
+      });
       panel.querySelectorAll('tr[data-category]').forEach(function (row) {
         row.classList.toggle('category-filtered', select.value !== '*' && row.dataset.category !== select.value);
       });
@@ -874,14 +879,19 @@
     var showHidden = document.getElementById('vendor-show-hidden');
 
     function countHitsByCategory() {
-      var hits = { '*': 0 };
+      var hits = { '*': 0 }, totals = { '*': 0 };
       vendorRows.forEach(function (row) {
         if (!showHidden.checked && row.classList.contains('hidden-vendor')) return;
         var count = Number(row.dataset.count) || 0;
+        var total = row.dataset.inflow === 'true' ? 0 : Number(row.dataset.total) || 0;
         hits[row.dataset.category] = (hits[row.dataset.category] || 0) + count;
+        totals[row.dataset.category] = (totals[row.dataset.category] || 0) + total;
         hits['*'] += count;
+        totals['*'] += total;
       });
-      Array.prototype.forEach.call(vendorFilter.options, function (option) { option.dataset.count = hits[option.value] || 0; });
+      Array.prototype.forEach.call(vendorFilter.options, function (option) {
+        option.dataset.count = (hits[option.value] || 0) + ' · ' + compactDirhams(totals[option.value] || 0);
+      });
     }
 
     function refreshVendors() {
