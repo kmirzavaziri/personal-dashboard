@@ -315,31 +315,38 @@ def counterparty_name(account: str, counterparties: list[dict]) -> str:
 
 def _with_statement_descriptions(transactions: list[Transaction], lines: list[StatementLine], counterparties: list[dict],
                                  accounts: dict[str, str], matching: Matching, clock: Clock) -> list[Transaction]:
-    index: dict[tuple, list[StatementLine]] = defaultdict(list)
-    by_amount: dict[float, list[StatementLine]] = defaultdict(list)
+    by_account: dict[str, list[StatementLine]] = defaultdict(list)
     for line in lines:
-        index[(accounts.get(line.last4, ''), round(line.amount, 2))].append(line)
-        by_amount[round(line.amount, 2)].append(line)
+        by_account[accounts.get(line.last4, '')].append(line)
     used: set[int] = set()
-    window = matching.statement_days
     named = []
     for tx in transactions:
-        description = ''
+        line = None
         if not tx.description_override and matching.is_generic(tx.vendor):
             account = accounts.get(tx.last4 or '', tx.account)
-            day = clock.local(tx.at).date()
-            pool = by_amount if account == _UNKNOWN_ACCOUNT else None
-            options = pool.get(round(tx.amount, 2), []) if pool is not None else index.get((account, round(tx.amount, 2)), [])
-            candidates = [line for line in options if id(line) not in used and abs((line.day - day).days) <= window]
-            line = min(candidates, key=lambda l: abs((l.day - day).days), default=None)
-            if line is not None:
-                used.add(id(line))
-                name = (counterparty_name(line.counterparty_account, counterparties) or line.counterparty_name
-                        or (f'account …{line.counterparty_account[-4:]}' if line.counterparty_account else ''))
-                if name:
-                    description = f"Transfer {'from' if line.is_inflow else 'to'} {name}"
-        named.append(tx.model_copy(update={'statement_description': description}) if description else tx)
+            pool = lines if account == _UNKNOWN_ACCOUNT else by_account.get(account, [])
+            line = _statement_line_for(tx, [l for l in pool if id(l) not in used], matching, clock)
+        name = _statement_counterparty(line, counterparties, matching) if line is not None else ''
+        if line is not None:
+            used.add(id(line))
+        named.append(tx.model_copy(update={'statement_description': f"Transfer {'from' if line.is_inflow else 'to'} {name}"})
+                     if name else tx)
     return named
+
+
+def _statement_line_for(tx: Transaction, pool: list[StatementLine], matching: Matching, clock: Clock) -> StatementLine | None:
+    day = clock.local(tx.at).date()
+    candidates = [line for line in pool
+                  if (line.amount < 0) == (tx.amount < 0)
+                  and 0 <= round(abs(tx.amount) - abs(line.amount), 2) <= matching.charges_aed
+                  and abs((line.day - day).days) <= matching.statement_days]
+    return min(candidates, key=lambda l: (round(abs(tx.amount) - abs(l.amount), 2), abs((l.day - day).days)), default=None)
+
+
+def _statement_counterparty(line: StatementLine, counterparties: list[dict], matching: Matching) -> str:
+    account = '' if line.counterparty_account in matching.clearing_accounts else line.counterparty_account
+    return (counterparty_name(account, counterparties) or line.counterparty_name
+            or (f'account …{account[-4:]}' if account else ''))
 
 
 def _fingerprint(directory: Path) -> tuple:

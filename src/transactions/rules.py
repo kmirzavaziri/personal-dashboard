@@ -131,6 +131,7 @@ class Matching(BaseModel):
     fx_refund_ratio: float
     statement_days: int
     generic_descriptions: list[str]
+    clearing_accounts: list[str] = []
 
     @classmethod
     def load(cls, db) -> 'Matching':

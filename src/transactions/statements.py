@@ -5,8 +5,11 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict
 
-_MASHREQ_LINE = re.compile(
-    r'^(\d{2}/\d{2}/\d{4}) (?:VALUE DATE: \S+ )?(.+?) (\S+) ([\d,]+\.\d{3}) ([\d,]+\.\d{3}) ([\d,]+\.\d{3})$')
+_MASHREQ_DATE = re.compile(r'^\d{2}/\d{2}/\d{4}(?:\s|$)')
+_MASHREQ_ENTRY = re.compile(
+    r'^(?P<day>\d{2}/\d{2}/\d{4}) (?:VALUE DATE: \S+ )?(?P<kind>.+?) (?P<ref>\S+) (?P<debit>[\d,]+\.\d{3}) '
+    r'(?P<credit>[\d,]+\.\d{3}) (?P<balance>[\d,]+\.\d{3})(?P<extra>.*)$')
+_IBAN_ACCOUNT = re.compile(r'AE\d{2}\d{3}(\d{16})')
 _MASHREQ_ACCOUNT_VALUE = re.compile(r'^(\d{9,})\s+AED\b')
 _MASHREQ_TRANSFERS = ('Account to Account', 'IPP TRANSFER', 'Online Local Fund Transfer', 'Instant Card Payment')
 _ENBD_START = re.compile(r'^(\d{2}[A-Z]{3}\d{2}) (.+)$')
@@ -45,33 +48,36 @@ def parse_mashreq(text: str) -> list[StatementLine]:
     lines: list[StatementLine] = []
     first = re.search(r'Account (\d{12}) AED', text)
     own = first.group(1) if first else ''
-    current: dict | None = None
+    rows = [raw.strip() for raw in text.splitlines()]
+    entry: list[str] = []
 
     def flush():
-        if current and current['kind'].startswith(_MASHREQ_TRANSFERS):
-            lines.append(_mashreq_line(current, own))
+        parsed = _MASHREQ_ENTRY.match(' '.join(entry))
+        if parsed and parsed.group('kind').startswith(_MASHREQ_TRANSFERS):
+            amount = _number(parsed.group('debit')) - _number(parsed.group('credit'))
+            if amount:
+                lines.append(_mashreq_line({'day': datetime.strptime(parsed.group('day'), '%d/%m/%Y').date(),
+                                            'kind': parsed.group('kind').strip(), 'amount': amount,
+                                            'extra': parsed.group('extra')}, own))
 
-    previous = ''
-    for raw in text.splitlines():
-        account = _MASHREQ_ACCOUNT_VALUE.match(raw.strip())
+    for previous, row in zip([''] + rows, rows):
+        account = _MASHREQ_ACCOUNT_VALUE.match(row)
         if previous == 'Account No' and account:
             own = account.group(1)
-        previous = raw.strip()
-        match = _MASHREQ_LINE.match(raw.strip())
-        if match:
+        if _MASHREQ_DATE.match(row):
             flush()
-            day, kind, _, debit, credit, _ = match.groups()
-            current = {'day': datetime.strptime(day, '%d/%m/%Y').date(), 'kind': kind.strip(),
-                       'amount': _number(debit) - _number(credit), 'extra': ''}
-        elif current is not None:
-            current['extra'] += ' ' + raw.strip()
+            entry = [row]
+        elif entry:
+            entry.append(row)
     flush()
-    return [line for line in lines if line.amount]
+    return lines
 
 
 def _mashreq_line(entry: dict, own: str) -> StatementLine:
     kind, extra = entry['kind'], entry['extra']
-    accounts = [a for a in re.findall(r'(?:ACCOUNT No:|A/C ?No:|IPP TRANSFER)\s*(\d{6,})', kind + ' ' + extra) if a != own]
+    details = kind + ' ' + extra
+    ibans = [account.lstrip('0') for account in _IBAN_ACCOUNT.findall(details) if not own or not account.endswith(own)]
+    accounts = ibans or [a for a in re.findall(r'(?:ACCOUNT No:|A/C ?No:|IPP TRANSFER)\s*(\d{6,})', details) if a != own]
     name = ''
     named = re.match(r'Online Local Fund Transfer, (.+?), A/C', kind)
     if named:
