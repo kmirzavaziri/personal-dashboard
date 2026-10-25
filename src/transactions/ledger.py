@@ -1,3 +1,4 @@
+import re
 from bisect import bisect_right
 from collections import Counter, defaultdict
 from dataclasses import dataclass, replace
@@ -7,9 +8,11 @@ from pathlib import Path
 
 from pkg.model.io import read_yaml
 from transactions.rules import Category, Clock, Matching, Period, Rule, _shift_month
+from transactions.statements import StatementLine
 from transactions.transaction import Transaction, TransactionStore
 
 _MOVEMENT_TYPES = {'transfer', 'income'}
+_UNKNOWN_ACCOUNT = 'Unknown'
 
 
 @dataclass(frozen=True)
@@ -65,13 +68,15 @@ class Entry:
 class Ledger:
     def __init__(self, transactions: list[Transaction], categories: list[Category], clock: Clock,
                  types: dict[str, dict], cards: list[dict], owner: dict, matching: Matching,
-                 period_starts: dict[str, str]):
+                 period_starts: dict[str, str], statement_lines: list[StatementLine], counterparties: list[dict]):
         self.categories = sorted(categories, key=lambda c: c.name.casefold())
         self._by_key = {c.key: c for c in self.categories}
         self.clock = clock
         self._types = types
         self._accounts = {card['last4']: card['display'] for card in cards if card.get('last4')}
-        resolved = [self._resolve(tx) for tx in sorted(transactions, key=lambda t: t.at)]
+        named = _with_statement_descriptions(sorted(transactions, key=lambda t: t.at), statement_lines, counterparties,
+                                             self._accounts, matching, clock)
+        resolved = [self._resolve(tx) for tx in named]
         refunds = _refunds_by_purchase(resolved, matching)
         self._hidden = {tx.id for txs in refunds.values() for tx in txs}
         own = _self_transfers(resolved, set(self._accounts.values()), owner, matching.self_transfer)
@@ -264,6 +269,44 @@ def _self_transfers(entries: list[Entry], own_accounts: set[str], owner: dict, w
     return paired | to_owner
 
 
+def counterparty_name(account: str, counterparties: list[dict]) -> str:
+    digits = re.sub(r'\D', '', account)
+    for party in counterparties:
+        for known in party.get('accounts') or []:
+            if digits and (digits in known or known in digits):
+                return party['name']
+    return ''
+
+
+def _with_statement_descriptions(transactions: list[Transaction], lines: list[StatementLine], counterparties: list[dict],
+                                 accounts: dict[str, str], matching: Matching, clock: Clock) -> list[Transaction]:
+    index: dict[tuple, list[StatementLine]] = defaultdict(list)
+    by_amount: dict[float, list[StatementLine]] = defaultdict(list)
+    for line in lines:
+        index[(accounts.get(line.last4, ''), round(line.amount, 2))].append(line)
+        by_amount[round(line.amount, 2)].append(line)
+    used: set[int] = set()
+    window = matching.statement_days
+    named = []
+    for tx in transactions:
+        description = ''
+        if not tx.description_override and matching.is_generic(tx.vendor):
+            account = accounts.get(tx.last4 or '', tx.account)
+            day = clock.local(tx.at).date()
+            pool = by_amount if account == _UNKNOWN_ACCOUNT else None
+            options = pool.get(round(tx.amount, 2), []) if pool is not None else index.get((account, round(tx.amount, 2)), [])
+            candidates = [line for line in options if id(line) not in used and abs((line.day - day).days) <= window]
+            line = min(candidates, key=lambda l: abs((l.day - day).days), default=None)
+            if line is not None:
+                used.add(id(line))
+                name = (counterparty_name(line.counterparty_account, counterparties) or line.counterparty_name
+                        or (f'account …{line.counterparty_account[-4:]}' if line.counterparty_account else ''))
+                if name:
+                    description = f"Transfer {'from' if line.is_inflow else 'to'} {name}"
+        named.append(tx.model_copy(update={'statement_description': description}) if description else tx)
+    return named
+
+
 def _fingerprint(directory: Path) -> tuple:
     return tuple((path.name, stat.st_mtime_ns, stat.st_size)
                  for path in sorted(directory.rglob('*')) if path.is_file() and (stat := path.stat()))
@@ -274,5 +317,9 @@ def _load(db: Path, fingerprint: tuple) -> Ledger:
     types = {t['key']: t for t in read_yaml(db / 'transactions' / 'types.yaml') or []}
     cards = read_yaml(db / 'transactions' / 'cards.yaml') or []
     owner = read_yaml(db / 'transactions' / 'owner.yaml') or {}
+    statement_path = db / 'transactions' / 'statements' / 'lines.jsonl'
+    statement_lines = [StatementLine.model_validate_json(line) for line in statement_path.read_text().splitlines()
+                       if line.strip()] if statement_path.exists() else []
     return Ledger(TransactionStore(db / 'transactions').all(), Category.objects.all(), Clock.load(db), types, cards, owner,
-                  Matching.load(db), read_yaml(db / 'transactions' / 'period_starts.yaml') or {})
+                  Matching.load(db), read_yaml(db / 'transactions' / 'period_starts.yaml') or {}, statement_lines,
+                  read_yaml(db / 'transactions' / 'counterparties.yaml') or [])

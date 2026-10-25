@@ -3,3 +3,9 @@ charges_aed: 5
 self_transfer_days: 3
 refund_days: 120
 fx_refund_ratio: 0.05
+statement_days: 2
+generic_descriptions:
+- Account to Account Transfer
+- Local bank transfer
+- Mashreq transfer
+- Transfer in

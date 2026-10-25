@@ -60,7 +60,8 @@ def text_of(payload) -> str:
 
 def _sent_at(payload) -> datetime:
     sent = payload.get('sent_at') if isinstance(payload, dict) else None
-    return datetime.fromisoformat(sent) if sent else datetime.now(timezone.utc)
+    at = datetime.fromisoformat(sent) if sent else datetime.now(timezone.utc)
+    return at.astimezone(timezone.utc).replace(microsecond=0)
 
 
 def _month_path(config, at: datetime):

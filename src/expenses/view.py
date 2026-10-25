@@ -79,7 +79,7 @@ def _card_sections(config, entries) -> list[dict]:
         'account': account,
         'total': sum(e.aed for e in entries if e.spend and not e.hidden),
         'count': sum(1 for e in entries if not e.hidden and not e.self_transfer),
-        'entries': sorted(entries, key=lambda e: e.tx.ts, reverse=True),
+        'entries': sorted(entries, key=lambda e: e.tx.at, reverse=True),
     } for account, entries in cards.items()]
 
 
@@ -276,7 +276,7 @@ def render_card_periods(services, account: str, before: str, count: int) -> str:
     period = ledger.period(datetime.fromisoformat(before) - timedelta(seconds=1))
     while len(periods) < count and earliest is not None and period.end > earliest:
         entries = sorted((e for e in ledger.all_between(period.start, period.end) if not account or e.account == account),
-                         key=lambda e: e.tx.ts, reverse=True)
+                         key=lambda e: e.tx.at, reverse=True)
         if entries:
             periods.append({
                 'name': period.name,
@@ -332,7 +332,7 @@ def render(services) -> str:
         average=average,
         card_sections=_card_sections(config, shown_entries),
         all_cards={
-            'entries': sorted(shown_entries, key=lambda e: e.tx.ts, reverse=True),
+            'entries': sorted(shown_entries, key=lambda e: e.tx.at, reverse=True),
             'total': sum(e.aed for e in shown_entries if e.spend and not e.hidden),
             'count': sum(1 for e in shown_entries if not e.hidden and not e.self_transfer),
         },

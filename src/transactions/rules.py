@@ -128,6 +128,8 @@ class Matching(BaseModel):
     self_transfer_days: int
     refund_days: int
     fx_refund_ratio: float
+    statement_days: int
+    generic_descriptions: list[str]
 
     @classmethod
     def load(cls, db) -> 'Matching':
@@ -144,6 +146,9 @@ class Matching(BaseModel):
     @property
     def refund(self) -> timedelta:
         return timedelta(days=self.refund_days)
+
+    def is_generic(self, description: str) -> bool:
+        return description.casefold() in {generic.casefold() for generic in self.generic_descriptions}
 
 
 class Rule(BaseModel):

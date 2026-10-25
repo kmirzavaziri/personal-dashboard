@@ -98,11 +98,15 @@ def _account(parsed, cards):
     return f"card …{parsed['last4']}" if parsed.get('last4') else _UNKNOWN_ACCOUNT
 
 
+def _received_at(entry) -> datetime:
+    return datetime.fromisoformat(entry['received_at'])
+
+
 def _repeated(config, entry, text):
-    ts = entry.get('received_at') or ''
+    at = _received_at(entry)
     return any(
-        e.get('received_at', '') < ts and messaging.text_of(e.get('payload')) == text
-        for e in messaging.inbox(config, ts[:7] or None)
+        _received_at(e) < at and messaging.text_of(e.get('payload')) == text
+        for e in messaging.inbox(config, f'{at:%Y-%m}')
     )
 
 
@@ -136,7 +140,7 @@ def ingest(config, entry, notify=True):
 
 
 def _is_live(entry, now: datetime) -> bool:
-    return now - datetime.fromisoformat(entry['received_at']) <= _LIVE_WINDOW
+    return now - _received_at(entry) <= _LIVE_WINDOW
 
 
 def receive(config, source: str, payloads: list) -> Counter:
@@ -156,7 +160,7 @@ def _store(config) -> TransactionStore:
 
 
 def _record(config, entry, text, parsed, account) -> Transaction | None:
-    ts = entry.get('received_at') or datetime.now(timezone.utc).isoformat()
+    ts = Clock.load(config.db).local(_received_at(entry)).isoformat()
     rate = fx.rate(config, parsed['currency'], ts[:10])
     tx = Transaction(
         id=hashlib.sha1(f"{ts}|{text}".encode()).hexdigest()[:12],
@@ -243,7 +247,7 @@ def backfill(config, rebuild=False):
     if rebuild:
         _store(config).clear()
     results = [ingest(config, entry, notify=False)
-               for entry in sorted(messaging.all_entries(config), key=lambda e: e.get('received_at', ''))]
+               for entry in sorted(messaging.all_entries(config), key=_received_at)]
     for tx_id, fields in overrides.items():
         _store(config).update(tx_id, **fields)
     counts = Counter(r['action'] for r in results)

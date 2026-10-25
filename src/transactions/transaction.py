@@ -3,7 +3,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 _LOCATION_SUFFIX = re.compile(r',[^,]*$')
 UNCATEGORIZED = '-'
@@ -29,6 +29,7 @@ class Transaction(BaseModel):
     raw_ref: str = ''
     category_override: str = ''
     description_override: str = ''
+    statement_description: str = Field(default='', exclude=True)
     voided: bool = False
     note: str = ''
 
@@ -42,7 +43,7 @@ class Transaction(BaseModel):
 
     @property
     def description(self) -> str:
-        return self.description_override or self.venue
+        return self.description_override or self.statement_description or self.venue
 
     @property
     def vendor(self) -> str:
