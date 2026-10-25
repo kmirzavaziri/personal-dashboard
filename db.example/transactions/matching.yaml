@@ -10,3 +10,4 @@ generic_descriptions:
 - Local bank transfer
 - Mashreq transfer
 - Transfer in
+repeat_gap_minutes: 5

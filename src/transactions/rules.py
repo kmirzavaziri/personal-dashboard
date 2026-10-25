@@ -132,6 +132,7 @@ class Matching(BaseModel):
     statement_days: int
     generic_descriptions: list[str]
     clearing_accounts: list[str] = []
+    repeat_gap_minutes: int = 5
 
     @classmethod
     def load(cls, db) -> 'Matching':
@@ -144,6 +145,10 @@ class Matching(BaseModel):
     @property
     def self_transfer(self) -> timedelta:
         return timedelta(days=self.self_transfer_days)
+
+    @property
+    def repeat_gap(self) -> timedelta:
+        return timedelta(minutes=self.repeat_gap_minutes)
 
     @property
     def settlement(self) -> timedelta:

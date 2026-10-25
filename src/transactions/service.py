@@ -203,17 +203,22 @@ def _same_movement(config, store: TransactionStore, tx: Transaction) -> Transact
     window = matching.same_movement
     months = {f'{tx.at + shift:%Y-%m}' for shift in (-window, timedelta(), window)}
     rows = [row for month in sorted(months) for row in store.read_month(month)]
-    exact = next((row for row in rows if row.signature == tx.signature), None)
+    exact = next((row for row in rows if row.signature == tx.signature and not _distinct_events(row, tx, matching)), None)
     if exact is not None:
         return exact
     patterns = {pattern['name']: pattern for pattern in _patterns(config)}
     banks = {card['display']: card.get('bank', '') for card in _cards(config)}
     return next((row for row in rows
                  if (row.remaining is None or tx.remaining is None)
-                 and row.pattern != tx.pattern
+                 and not _distinct_events(row, tx, matching)
                  and abs(row.at - tx.at) <= window
                  and _compatible_types(row, tx, patterns)
                  and _same_account_and_amount(row, tx, patterns, banks, matching.charges_aed)), None)
+
+
+def _distinct_events(row: Transaction, tx: Transaction, matching: Matching) -> bool:
+    return (row.pattern == tx.pattern and row.remaining is None and tx.remaining is None
+            and abs(row.at - tx.at) > matching.repeat_gap)
 
 
 def _compatible_types(row: Transaction, tx: Transaction, patterns: dict) -> bool:
