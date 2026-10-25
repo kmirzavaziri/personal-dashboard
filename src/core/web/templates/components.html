@@ -85,6 +85,8 @@
     color: var(--muted); font-size: 0.8rem; margin-bottom: 0.9rem;
   }
   .empty { color: var(--muted); font-size: 0.84rem; padding: 0.6rem 0; }
+  .loading { display: flex; align-items: center; gap: 0.5rem; color: var(--muted); font-size: 0.84rem; padding: 0.6rem 0; }
+  .loading::before { content: ''; width: 0.85em; height: 0.85em; border: 1.5px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin 0.7s linear infinite; }
 
   a.link, .link { color: var(--accent); text-decoration: none; }
   a.link:hover, .link:hover { text-decoration: underline; text-underline-offset: 2px; }

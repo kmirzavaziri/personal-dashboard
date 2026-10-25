@@ -141,7 +141,7 @@
   </select>
   <label class="toggle"><input type="checkbox" id="show-self"><span class="toggle-track" aria-hidden="true"></span>Show hidden</label>
 </div>
-<section id="search-panel" hidden><div id="search-results"></div></section>
+<section id="search-panel" hidden><div id="search-results"></div><div class="empty" id="search-all-hidden" hidden></div></section>
 <section role="tabpanel" data-tabs="card" data-tab="all">
   {{ pd.period_divider(current_period.key, current_period.name, current_period.range, all_cards.total, all_cards.count) }}
   {% if all_cards.entries %}
@@ -512,6 +512,13 @@
       panel.querySelectorAll('tr[data-category]').forEach(function (row) {
         row.classList.toggle('category-filtered', select.value !== '*' && row.dataset.category !== select.value);
       });
+      var searchRows = searchPanel.querySelectorAll('tr[data-category]');
+      var searchShown = Array.prototype.filter.call(searchRows, function (row) {
+        return !row.classList.contains('category-filtered') && (toggle.checked || !row.classList.contains('hidden-tx'));
+      }).length;
+      var allHidden = document.getElementById('search-all-hidden');
+      allHidden.hidden = searchPanel.hidden || !searchRows.length || searchShown > 0;
+      allHidden.textContent = searchRows.length + ' match' + (searchRows.length === 1 ? '' : 'es') + ' hidden by your filters or Show hidden.';
       panel.querySelectorAll('table.restriped tbody').forEach(function (body) {
         var shown = 0;
         Array.prototype.forEach.call(body.rows, function (row) {
@@ -523,7 +530,7 @@
     function schedule() {
       if (pending) return;
       pending = true;
-      requestAnimationFrame(apply);
+      setTimeout(apply, 0);
     }
     if (location.pathname.indexOf('/transactions') !== -1) {
       var chosen = new URLSearchParams(location.search).get('category');
@@ -584,6 +591,7 @@
       panel.hidden = !searching;
       cardPanels().forEach(function (p) { p.classList.toggle('search-hidden', searching); });
       if (!searching) { results.innerHTML = ''; return; }
+      results.innerHTML = '<div class="loading">Searching…</div>';
       fetch('/expenses/search?q=' + encodeURIComponent(query) + '&account=' + encodeURIComponent(selectedAccount()))
         .then(function (r) { return r.text(); })
         .then(function (html) {
@@ -592,7 +600,15 @@
           humanizeTimes(results);
         });
     }
-    input.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(function () { setQuery('q', input.value.trim()); run(); }, 250); });
+    input.addEventListener('input', function () {
+      clearTimeout(timer);
+      if (input.value.trim()) {
+        panel.hidden = false;
+        cardPanels().forEach(function (p) { p.classList.add('search-hidden'); });
+        results.innerHTML = '<div class="loading">Searching…</div>';
+      }
+      timer = setTimeout(function () { setQuery('q', input.value.trim()); run(); }, 250);
+    });
     cardSelect.addEventListener('change', function () {
       showCard();
       setQuery('card', selectedAccount());
