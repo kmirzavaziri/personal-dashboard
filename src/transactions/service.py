@@ -210,6 +210,7 @@ def _same_movement(config, store: TransactionStore, tx: Transaction) -> Transact
     banks = {card['display']: card.get('bank', '') for card in _cards(config)}
     return next((row for row in rows
                  if (row.remaining is None or tx.remaining is None)
+                 and row.pattern != tx.pattern
                  and abs(row.at - tx.at) <= window
                  and _compatible_types(row, tx, patterns)
                  and _same_account_and_amount(row, tx, patterns, banks, matching.charges_aed)), None)
