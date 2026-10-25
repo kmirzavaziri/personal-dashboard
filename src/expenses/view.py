@@ -123,6 +123,7 @@ def _vendor_rows(ledger, type_keys: list[str]) -> list[dict]:
 
 
 def _planned_accounts(config) -> dict[str, list[dict]]:
+    names = _category_names()
     pool = build_pool(config)
     accounts: dict[str, list[dict]] = {a.key: [] for a in expense_accounts()}
 
@@ -139,7 +140,7 @@ def _planned_accounts(config) -> dict[str, list[dict]]:
         accounts[expense.account].append({
             'name':     item.short_name,
             'category_key': expense.category,
-            'category': _category_name(expense.category),
+            'category': _category_name(expense.category, names),
             'store':    src.store.display if src else '',
             'url':      item.url or '',
             'image':    item.image or '',
@@ -156,7 +157,7 @@ def _planned_accounts(config) -> dict[str, list[dict]]:
         accounts.setdefault(entry.get('account', 'other'), []).append({
             'name':      entry.get('name', ''),
             'category_key': entry['category'],
-            'category':  _category_name(entry['category']),
+            'category':  _category_name(entry['category'], names),
             'store':     entry.get('store', ''),
             'url':       '',
             'image':     '',
@@ -172,8 +173,7 @@ def _category_names() -> dict[str, str]:
     return {category.key: category.name for category in Category.objects.all()}
 
 
-def _category_name(key: str) -> str:
-    names = _category_names()
+def _category_name(key: str, names: dict[str, str]) -> str:
     if key not in names:
         raise ValueError(f'budget category {key!r} is not a transactions category')
     return names[key]
@@ -391,13 +391,14 @@ def render(services) -> str:
     shown_entries = ledger.all_between(period.start, period.end)
     average, category_averages = _monthly_averages(ledger, period)
     card_sections = _card_sections(config, shown_entries)
+    category_names = {category.key: category.name for category in ledger.categories}
     trends = _trends(ledger, datetime.now(timezone.utc), budgets)
 
     return _env(ledger).get_template('expenses.html').render(
         account_sections=account_sections,
         grand_total=sum(s['total'] for s in account_sections),
         grand_daily=sum(s['daily_total'] for s in account_sections),
-        by_category=sorted(((_category_name(key), total) for key, total in budgets.items()), key=lambda kv: -kv[1]),
+        by_category=sorted(((_category_name(key, category_names), total) for key, total in budgets.items()), key=lambda kv: -kv[1]),
         current_period=_period_summary(ledger, period, budgets, current=True),
         average=average,
         card_sections=card_sections,

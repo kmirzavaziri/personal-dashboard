@@ -232,14 +232,10 @@ def _vendor_stem(vendor: str) -> str:
     return ''.join(ch for ch in first.casefold() if ch.isalnum())
 
 
-def _same_vendor(refund: Entry, purchase: Entry) -> bool:
-    stem = _vendor_stem(refund.tx.vendor)
-    return len(stem) >= 3 and _vendor_stem(purchase.tx.vendor).startswith(stem)
-
-
 def _refunds_by_purchase(entries: list[Entry], matching: Matching) -> dict[str, list[Transaction]]:
     open_purchases: dict[str, list[Entry]] = defaultdict(list)
     remaining: dict[str, float] = {}
+    stems: dict[str, str] = {}
     refunds: dict[str, list[Transaction]] = defaultdict(list)
     for entry in entries:
         if entry.type != 'refund':
@@ -249,17 +245,24 @@ def _refunds_by_purchase(entries: list[Entry], matching: Matching) -> dict[str, 
             continue
         open_purchases[entry.account] = [p for p in open_purchases[entry.account]
                                          if entry.tx.at - p.tx.at <= matching.refund]
+        stem = _vendor_stem(entry.tx.vendor)
         candidates = [p for p in open_purchases[entry.account] if _within_window(entry, p, matching.refund)]
+
+        def same_vendor(purchase: Entry) -> bool:
+            if purchase.tx.id not in stems:
+                stems[purchase.tx.id] = _vendor_stem(purchase.tx.vendor)
+            return len(stem) >= 3 and stems[purchase.tx.id].startswith(stem)
+
         full = [p for p in candidates if _fully_refunds(entry, p, matching.fx_refund_ratio)]
-        partial = [p for p in candidates if _same_vendor(entry, p) and remaining[p.tx.id] > abs(entry.tx.aed)]
-        preferred = [p for p in full if _same_vendor(entry, p)] or full or partial
+        partial = [p for p in candidates if same_vendor(p) and remaining[p.tx.id] > abs(entry.tx.aed)]
+        preferred = [p for p in full if same_vendor(p)] or full or partial
         if not preferred:
             continue
         purchase = preferred[-1]
         refunds[purchase.tx.id].append(entry.tx)
         remaining[purchase.tx.id] -= abs(entry.tx.aed)
-        if purchase in full:
-            open_purchases[entry.account].remove(purchase)
+        if any(p.tx.id == purchase.tx.id for p in full):
+            open_purchases[entry.account] = [p for p in open_purchases[entry.account] if p.tx.id != purchase.tx.id]
     return refunds
 
 
