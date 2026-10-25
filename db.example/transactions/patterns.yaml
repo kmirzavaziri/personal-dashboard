@@ -32,3 +32,8 @@
   set:
     type: transfer
   regex: '{currency} {amount} has been debited from your account {account_no} for (?P<venue>[^.]+)'
+- name: apple_pay_wallet
+  set:
+    type: purchase
+    currency: AED
+  regex: '^Apple Pay: spent \D*?{amount}\D*? at (?P<venue>.+?) with (?P<card_name>.+)$'

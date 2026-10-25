@@ -155,6 +155,11 @@ def receive(config, source: str, payloads: list) -> Counter:
     return outcome
 
 
+def receive_wallet(config, merchant: str, amount, card: str) -> Counter:
+    text = f'Apple Pay: spent {str(amount).strip()} at {str(merchant).strip()} with {str(card).strip()}'
+    return receive(config, 'wallet', [{'text': text, 'sender': 'Apple Wallet'}])
+
+
 def _store(config) -> TransactionStore:
     return TransactionStore(_dir(config))
 

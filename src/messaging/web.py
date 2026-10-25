@@ -16,4 +16,15 @@ def make_messaging_bp(services) -> Blueprint:
             services.git.mark_dirty()
         return {'ok': True, 'outcome': dict(outcome)}
 
+    @bp.post('/api/ingest/wallet/transaction')
+    def wallet_transaction():
+        body = request.get_json(silent=True) or {}
+        missing = [field for field in ('merchant', 'amount', 'card') if not str(body.get(field) or '').strip()]
+        if missing:
+            return f"missing {', '.join(missing)}", 400
+        outcome = transactions.receive_wallet(services.config, body['merchant'], body['amount'], body['card'])
+        if services.git is not None:
+            services.git.mark_dirty()
+        return {'ok': True, 'outcome': dict(outcome)}
+
     return bp
