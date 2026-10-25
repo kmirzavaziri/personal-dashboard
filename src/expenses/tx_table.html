@@ -4,6 +4,13 @@
     <thead><tr><th>When</th>{% if show_account %}<th>Card</th>{% endif %}<th>Description</th><th>Category</th><th>Note</th><th class="num">{{ dh }}</th></tr></thead>
     <tbody>
       {% for e in entries %}
+      {{ tx_row(e, categories, show_account) }}
+      {% endfor %}
+    </tbody>
+  </table>
+{% endmacro %}
+
+{% macro tx_row(e, categories, show_account=false) %}
       <tr data-tx-id="{{ e.tx.id }}" data-aed="{{ e.aed if e.spend and not e.is_inflow else 0 }}" data-category="{{ (e.category.key if e.category else '') if e.labelable else 'n/a' }}"{% if e.self_transfer or e.hidden or e.is_inflow %} class="hidden-tx"{% endif %}>
         <td class="when"><time data-human datetime="{{ e.tx.ts }}">{{ e.tx.ts[:16] }}</time></td>
         {% if show_account %}<td class="muted card-col"><span class="dd-dot" style="--tone: {{ card_tone(e.account) }}"></span>{{ e.account }}</td>{% endif %}
@@ -22,7 +29,4 @@
         {% endif %}
         <td class="num amount{% if e.is_inflow %} inflow{% endif %}{% if e.type == 'declined' %} declined{% endif %}"{% if e.partially_refunded %} data-tip="{{ e.tx.aed | fmt }} − {{ (e.tx.aed - e.aed) | fmt }} refunded"{% elif e.tx.currency and e.tx.currency != 'AED' %} data-tip="{{ e.tx.currency }} {{ e.tx.amount | abs }}"{% endif %}>{% if e.is_inflow %}+{% endif %}{{ e.aed | abs | fmt }}{% if e.partially_refunded %}<span class="refund-mark" aria-label="partially refunded">↩</span>{% endif %}</td>
       </tr>
-      {% endfor %}
-    </tbody>
-  </table>
 {% endmacro %}

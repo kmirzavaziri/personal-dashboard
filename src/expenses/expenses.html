@@ -463,6 +463,32 @@
     var originalName = '';
     var categorize = true;
     var overridden = false;
+    function refreshRows(ids) {
+      var unique = ids.filter(function (id, i) { return id && ids.indexOf(id) === i; });
+      var rows = unique.reduce(function (all, id) {
+        return all.concat(Array.prototype.slice.call(document.querySelectorAll('tr[data-tx-id="' + CSS.escape(id) + '"]')));
+      }, []);
+      var groups = { '0': [], '1': [] };
+      rows.forEach(function (row) { groups[row.closest('table').querySelector('col.c-card') ? '1' : '0'].push(row); });
+      return Promise.all(Object.keys(groups).filter(function (key) { return groups[key].length; }).map(function (key) {
+        var wanted = groups[key].map(function (row) { return row.dataset.txId; });
+        return fetch('/expenses/rows?account=' + key + '&ids=' + encodeURIComponent(wanted.filter(function (id, i) { return wanted.indexOf(id) === i; }).join(',')))
+          .then(function (r) { return r.text(); })
+          .then(function (html) {
+            var holder = document.createElement('tbody');
+            holder.innerHTML = html;
+            var fresh = {};
+            Array.prototype.forEach.call(holder.querySelectorAll('tr[data-tx-id]'), function (row) { fresh[row.dataset.txId] = row; });
+            groups[key].forEach(function (row) {
+              var replacement = fresh[row.dataset.txId];
+              if (!replacement) return;
+              var copy = replacement.cloneNode(true);
+              row.replaceWith(copy);
+              humanizeTimes(copy);
+            });
+          });
+      }));
+    }
     function vendorOf(text) { return text.replace(/,[^,]*$/, '').split(/\s+/).filter(Boolean).join(' '); }
 
     document.addEventListener('click', function (e) {
@@ -493,11 +519,11 @@
     var settled = false;
     settleButton.addEventListener('click', function () {
       busy(settleButton, api('/api/transaction/' + txId + '/settled', 'POST', { settled: !settled })
-        .then(function () { dialog.close('cancel'); toast(settled ? 'No longer settled' : 'Marked as settled'); setTimeout(function () { location.reload(); }, 400); }));
+        .then(function () { dialog.close('cancel'); toast(settled ? 'No longer settled' : 'Marked as settled'); return refreshRows([txId]); }));
     });
     voidButton.addEventListener('click', function () {
       api('/api/transaction/' + txId + '/voided', 'POST', { voided: !voided })
-        .then(function () { dialog.close('cancel'); toast(voided ? 'Restored' : 'Marked as not happened'); setTimeout(function () { location.reload(); }, 400); });
+        .then(function () { dialog.close('cancel'); toast(voided ? 'Restored' : 'Marked as not happened'); return refreshRows([txId]); });
     });
 
     splitButton.addEventListener('click', function () {
@@ -518,7 +544,10 @@
       if (renamed) steps = steps.then(function () { return api('/api/transaction/' + txId + '/description', 'POST', { description: name }); });
       if (categorize) steps = steps.then(function () { return api('/api/vendors/assign', 'POST', { vendor: target, assignments: assignments }); });
       if (categorize && overridden) steps = steps.then(function () { return api('/api/transaction/' + txId + '/category', 'POST', { category: '' }); });
-      steps.then(function () { toast('Saved'); setTimeout(function () { location.reload(); }, 400); });
+      var affected = Array.prototype.map.call(document.querySelectorAll('td.venue'), function (cell) { return cell; })
+        .filter(function (cell) { return cell.dataset.vendor === vendor || cell.dataset.vendor === target; })
+        .map(function (cell) { return cell.closest('tr').dataset.txId; });
+      steps.then(function () { toast('Saved'); return refreshRows(affected.concat([txId])); });
     });
   })();
 

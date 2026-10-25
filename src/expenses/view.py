@@ -361,6 +361,13 @@ def _matches_query(entry, terms: list[str]) -> bool:
     return all(term in haystack for term in terms)
 
 
+def render_rows(services, ids: list[str], show_account: bool) -> str:
+    ledger = Ledger.load(services.config)
+    by_id = {entry.tx.id: entry for entry in ledger.entries}
+    return _env(ledger).get_template('rows.html').render(
+        entries=[by_id[tx_id] for tx_id in ids if tx_id in by_id], categories=ledger.categories, show_account=show_account)
+
+
 def render_search(services, query: str, account: str, limit: int) -> str:
     ledger = Ledger.load(services.config)
     terms = query.casefold().split()

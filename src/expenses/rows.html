@@ -1,0 +1,2 @@
+{% import "tx_table.html" as tt %}
+{% for e in entries %}{{ tt.tx_row(e, categories, show_account) }}{% endfor %}
