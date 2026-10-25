@@ -462,6 +462,7 @@
     var txId = null;
     var originalName = '';
     var categorize = true;
+    var overridden = false;
     function vendorOf(text) { return text.replace(/,[^,]*$/, '').split(/\s+/).filter(Boolean).join(' '); }
 
     document.addEventListener('click', function (e) {
@@ -472,6 +473,7 @@
       originalName = cell.dataset.txDesc;
       nameInput.value = originalName;
       categorize = cell.dataset.categorize === 'true';
+      overridden = cell.dataset.overridden === 'true';
       voided = cell.dataset.voided === 'true';
       voidButton.textContent = voided ? 'It happened' : "Didn't happen";
       settled = cell.dataset.settled === 'true';
@@ -515,6 +517,7 @@
       var steps = Promise.resolve();
       if (renamed) steps = steps.then(function () { return api('/api/transaction/' + txId + '/description', 'POST', { description: name }); });
       if (categorize) steps = steps.then(function () { return api('/api/vendors/assign', 'POST', { vendor: target, assignments: assignments }); });
+      if (categorize && overridden) steps = steps.then(function () { return api('/api/transaction/' + txId + '/category', 'POST', { category: '' }); });
       steps.then(function () { toast('Saved'); setTimeout(function () { location.reload(); }, 400); });
     });
   })();
