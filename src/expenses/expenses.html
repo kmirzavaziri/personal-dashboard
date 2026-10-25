@@ -60,7 +60,7 @@
   .vendor-toolbar { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.7rem; }
   .vendor-toolbar #vendor-search { flex: 1 1 14rem; max-width: 22rem; }
   .vendor-list { padding: 0.3rem 0.9rem; }
-  .vendor { display: grid; grid-template-columns: minmax(10rem, 1.3fr) 6.5rem 3.5rem 6rem minmax(16rem, 1.7fr) auto; align-items: center; gap: 0.6rem; padding: 0.45rem 0; border-top: 1px solid var(--border); }
+  .vendor { display: grid; grid-template-columns: minmax(12rem, 2fr) 6rem 3.5rem 5.5rem minmax(11rem, 1fr) auto; align-items: center; gap: 0.6rem; padding: 0.45rem 0; border-top: 1px solid var(--border); }
   .vendor:first-child { border-top: none; }
   .vendor-main { display: flex; flex-direction: column; min-width: 0; }
   .vendor-meta { display: none; }
@@ -76,7 +76,7 @@
   .assign-single, .slot-row { display: flex; align-items: center; gap: 0.3rem; min-width: 0; }
   .assign-split { display: flex; flex-direction: column; gap: 0.15rem; }
   .slot-label { width: 2.4rem; flex: none; font-size: 0.72rem; color: var(--muted); }
-  .vendor .vnote { flex: 1; min-width: 0; font-size: 0.78rem; }
+  .vendor .vnote { flex: 1; min-width: 3rem; max-width: 9rem; font-size: 0.72rem; color: var(--muted); }
   .icon-clock { width: 14px; height: 14px; background: currentColor; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E") center / contain no-repeat; }
   .split-toggle[aria-pressed="true"] { color: var(--accent); background: var(--accent-soft); }
   .category-list { display: flex; flex-direction: column; gap: 0.1rem; max-height: 60vh; overflow-y: auto; margin-top: 0.4rem; }
@@ -145,7 +145,7 @@
 <div role="tabpanel" data-tabs="budget" data-tab="categorize" hidden>
 {% macro category_select(key) %}{% set cat = categories | selectattr('key', 'equalto', key) | first %}<select class="vcat tone" data-options-from="category-options" aria-label="Category"><option value="{{ key }}" data-tone="{{ tone(cat.name) if cat else 'var(--faint)' }}" selected>{{ cat.name if cat else 'Uncategorized' }}</option></select>{% endmacro %}
 <div class="vendor-toolbar">
-  <input type="search" id="vendor-search" placeholder="Search vendors and people" autocomplete="off" aria-label="Search vendors">
+  <input type="search" id="vendor-search" placeholder="Search descriptions" autocomplete="off" aria-label="Search descriptions">
   <select id="vendor-filter" class="input-quiet" aria-label="Filter">
     <option value="*">All categories</option>
     <option value="">Uncategorized</option>
@@ -164,11 +164,11 @@
 </div>
 <section class="vendor-list">
   <div class="vendor vendor-head">
-    <button type="button" class="vh" data-sort="name">Vendor</button>
+    <button type="button" class="vh" data-sort="name">Description</button>
     <button type="button" class="vh num" data-sort="total">{{ dh }}</button>
     <button type="button" class="vh num" data-sort="count">Count</button>
     <button type="button" class="vh" data-sort="last">Last seen</button>
-    <button type="button" class="vh" data-sort="category">Category and note</button>
+    <button type="button" class="vh" data-sort="category">Category</button>
     <span></span>
   </div>
   {% for v in vendor_rows %}
