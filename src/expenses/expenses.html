@@ -50,7 +50,10 @@
   .pd-name { color: var(--strong); font-weight: 600; }
   .pd-grip { width: 8px; height: 12px; flex: none; opacity: 0.45; background: radial-gradient(circle, currentColor 1px, transparent 1.3px) 0 0 / 4px 4px; }
   tr.drop-target td { box-shadow: inset 0 -2px 0 var(--accent); }
-  .search-input { width: 100%; margin-bottom: 0.7rem; }
+  .tx-toolbar { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.7rem; }
+  .tx-toolbar .search-input { flex: 1; }
+  .switch { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: var(--muted); white-space: nowrap; cursor: pointer; }
+  [data-tab="transactions"]:not(.show-self) tr.self-transfer { display: none; }
   .search-hidden { display: none !important; }
   .search-meta { font-size: 0.76rem; margin: 0 0 0.3rem 0.2rem; }
   .card-col { font-size: 0.78rem; white-space: nowrap; }
@@ -112,7 +115,10 @@
 </div>
 
 <div role="tabpanel" data-tabs="budget" data-tab="transactions" hidden>
-<input class="search-input" id="tx-search" type="search" placeholder="Search vendor, note, category or amount" autocomplete="off" aria-label="Search transactions">
+<div class="tx-toolbar">
+  <input class="search-input" id="tx-search" type="search" placeholder="Search description, note, category or amount" autocomplete="off" aria-label="Search transactions">
+  <label class="switch"><input type="checkbox" id="show-self"> Self-transfers</label>
+</div>
 <nav role="tablist" class="sub" data-tabs="card" data-deselect="all">
   <button role="tab" data-tab="all" data-account="" hidden>All</button>
   {% for c in card_sections %}<button role="tab" data-tab="card-{{ loop.index }}" data-account="{{ c.account }}">{{ c.account }}</button>{% endfor %}
@@ -318,6 +324,18 @@
 
 {% block scripts %}
 <script>
+  (function () {
+    var toggle = document.getElementById('show-self');
+    var panel = document.querySelector('[role="tabpanel"][data-tab="transactions"]');
+    try { toggle.checked = localStorage.getItem('show-self-transfers') === '1'; } catch (e) {}
+    function apply() { panel.classList.toggle('show-self', toggle.checked); }
+    toggle.addEventListener('change', function () {
+      apply();
+      try { localStorage.setItem('show-self-transfers', toggle.checked ? '1' : '0'); } catch (e) {}
+    });
+    apply();
+  })();
+
   (function () {
     var dragging = null;
     document.addEventListener('dragstart', function (e) {
