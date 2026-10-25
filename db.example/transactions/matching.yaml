@@ -1,6 +1,7 @@
 same_movement_hours: 24
 charges_aed: 5
 self_transfer_days: 3
+settlement_days: 90
 refund_days: 120
 fx_refund_ratio: 0.05
 statement_days: 2

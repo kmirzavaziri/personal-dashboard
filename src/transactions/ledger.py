@@ -12,6 +12,7 @@ from transactions.statements import StatementLine
 from transactions.transaction import Transaction, TransactionStore
 
 _MOVEMENT_TYPES = {'transfer', 'income'}
+_NAMED_TRANSFER = re.compile(r'^Transfer (?:to|from) (.+)$')
 _UNKNOWN_ACCOUNT = 'Unknown'
 
 
@@ -32,6 +33,7 @@ class Entry:
     spend: bool
     refunds: tuple[Transaction, ...] = ()
     self_transfer: bool = False
+    settled: bool = False
     hidden: bool = False
     refund_of: str = ''
 
@@ -80,9 +82,11 @@ class Ledger:
         refunds = _refunds_by_purchase(resolved, matching)
         self._hidden = {tx.id for txs in refunds.values() for tx in txs}
         own = _self_transfers(resolved, set(self._accounts.values()), owner, matching.self_transfer)
+        settled = _settled_transfers([entry for entry in resolved if entry.tx.id not in own], matching.settlement)
         self.entries = [replace(entry, refunds=tuple(refunds.get(entry.tx.id, ())), self_transfer=entry.tx.id in own,
-                                spend=entry.spend and entry.tx.id not in own)
+                                settled=entry.tx.id in settled, spend=entry.spend and entry.tx.id not in own)
                         for entry in resolved]
+        self._hidden |= settled
         self._hidden |= {entry.tx.id for entry in self.entries if entry.refunds and not entry.partially_refunded}
         self._hidden |= {entry.tx.id for entry in self.entries if entry.tx.voided}
         refund_of = {refund.id: entry.tx.id for entry in self.entries for refund in entry.refunds}
@@ -253,12 +257,18 @@ def _pairs_with(out: Entry, inc: Entry, window: timedelta) -> bool:
             and abs(inc.tx.at - out.tx.at) <= window)
 
 
+def _counterparty(entry: Entry) -> str:
+    named = _NAMED_TRANSFER.match(entry.tx.description) if entry.type in _MOVEMENT_TYPES else None
+    return named.group(1) if named else ''
+
+
 def _self_transfers(entries: list[Entry], own_accounts: set[str], owner: dict, window: timedelta) -> set[str]:
     markers = [text.casefold() for text in (owner.get('names') or []) + (owner.get('movements') or [])]
     to_owner = {e.tx.id for e in entries
                 if e.type in _MOVEMENT_TYPES and any(marker in e.tx.description.casefold() for marker in markers)}
-    outgoing = [e for e in entries if e.type == 'transfer' and e.tx.amount > 0 and e.account in own_accounts]
-    incoming = [e for e in entries if e.type in _MOVEMENT_TYPES and e.tx.amount < 0 and e.account in own_accounts]
+    pairable = [e for e in entries if e.account in own_accounts and (e.tx.id in to_owner or not _counterparty(e))]
+    outgoing = [e for e in pairable if e.type == 'transfer' and e.tx.amount > 0]
+    incoming = [e for e in pairable if e.type in _MOVEMENT_TYPES and e.tx.amount < 0]
     candidates = {out.tx.id: [inc for inc in incoming if _pairs_with(out, inc, window)] for out in outgoing}
     paired: set[str] = set()
     for out in sorted(outgoing, key=lambda o: (len(candidates[o.tx.id]), o.tx.at)):
@@ -267,6 +277,30 @@ def _self_transfers(entries: list[Entry], own_accounts: set[str], owner: dict, w
         if match is not None:
             paired |= {out.tx.id, match.tx.id}
     return paired | to_owner
+
+
+def _settled_transfers(entries: list[Entry], window: timedelta) -> set[str]:
+    by_person: dict[str, list[Entry]] = defaultdict(list)
+    for entry in entries:
+        if _counterparty(entry):
+            by_person[_counterparty(entry).casefold()].append(entry)
+    settled: set[str] = set()
+    for movements in by_person.values():
+        for start, first in enumerate(movements):
+            if first.tx.id in settled:
+                continue
+            balance, span = 0.0, []
+            for movement in movements[start:]:
+                if movement.tx.at - first.tx.at > window:
+                    break
+                if movement.tx.id in settled:
+                    continue
+                balance += movement.tx.aed
+                span.append(movement)
+                if len(span) > 1 and abs(balance) < 0.005:
+                    settled |= {entry.tx.id for entry in span}
+                    break
+    return settled
 
 
 def counterparty_name(account: str, counterparties: list[dict]) -> str:

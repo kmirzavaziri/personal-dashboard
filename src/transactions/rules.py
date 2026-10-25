@@ -126,6 +126,7 @@ class Matching(BaseModel):
     same_movement_hours: int
     charges_aed: float
     self_transfer_days: int
+    settlement_days: int
     refund_days: int
     fx_refund_ratio: float
     statement_days: int
@@ -142,6 +143,10 @@ class Matching(BaseModel):
     @property
     def self_transfer(self) -> timedelta:
         return timedelta(days=self.self_transfer_days)
+
+    @property
+    def settlement(self) -> timedelta:
+        return timedelta(days=self.settlement_days)
 
     @property
     def refund(self) -> timedelta:
