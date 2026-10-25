@@ -92,7 +92,7 @@ def _vendor_rows(ledger, type_keys: list[str]) -> list[dict]:
     for key in type_keys:
         if key.casefold() in assigned and key.casefold() not in summaries:
             summaries[key.casefold()] = {'vendor': key, 'total': 0.0, 'count': 0, 'last': '', 'inflow': 0,
-                                         'hidden_total': 0.0, 'hidden_count': 0}
+                                         'hidden_total': 0.0, 'hidden_count': 0, 'overridden': 0}
     rows = []
     for folded, summary in summaries.items():
         rules = assigned.get(folded, [])
@@ -102,7 +102,7 @@ def _vendor_rows(ledger, type_keys: list[str]) -> list[dict]:
         primary = single[0] if not split else next(iter(per_slot.values()), ('', ''))[0]
         hidden = summary['count'] == 0 and summary['hidden_count'] > 0
         rows.append({
-            'hidden': hidden,
+            'hidden': hidden or (not rules and summary['count'] > 0 and summary['overridden'] == summary['count']),
             'vendor': summary['vendor'],
             'label': f"Any {summary['vendor'].replace('_', ' ')}" if summary['vendor'] in type_keys else summary['vendor'],
             'count': summary['hidden_count'] if hidden else summary['count'],

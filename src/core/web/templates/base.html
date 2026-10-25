@@ -362,12 +362,14 @@
       var group = list.dataset.tabs;
       var tabs = Array.prototype.slice.call(list.querySelectorAll('[role="tab"]'));
       var route = list.dataset.route;
+      var queries = {};
       function show(key) {
         tabs.forEach(function (tab) { tab.setAttribute('aria-selected', String(tab.dataset.tab === key)); });
         if (route) {
           var tab = tabs.find(function (t) { return t.dataset.tab === key; });
           var path = route + '/' + key;
-          history.replaceState(null, '', path + (location.pathname === path ? location.search : ''));
+          queries[location.pathname] = location.search;
+          history.replaceState(null, '', path + (queries[path] || ''));
           var crumb = document.getElementById('crumb-tab');
           crumb.textContent = tab ? tab.textContent.replace(/\d+$/, '').trim() : '';
           crumb.hidden = document.getElementById('crumb-tab-sep').hidden = !tab;

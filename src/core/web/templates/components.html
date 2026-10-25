@@ -114,6 +114,7 @@
   td .input-quiet, td .dd.quiet .dd-trigger { height: 1.45rem; }
   td .dd.tone .dd-trigger { height: 1.35rem; }
   @media (hover: hover) { tbody tr:hover td, .restriped tbody tr:hover td { background: var(--hover); } }
+  .mobile-only { display: none; }
   .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   tbody tr:target td { background: var(--accent-soft); }
   .thumb-col { width: 60px; padding: 0.2rem 0.3rem; }
@@ -340,8 +341,11 @@
     table.stacked thead { display: none; }
     table.stacked tr {
       display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 0.7rem;
-      padding: 0.6rem 0.1rem; border-bottom: 1px solid var(--border);
+      padding: 0.45rem 0.5rem; border-bottom: 1px solid var(--border);
     }
+    table.stacked tbody tr td, table.stacked.restriped tbody tr.alt td { background: none; }
+    table.stacked tbody tr:nth-child(even), table.stacked.restriped tbody tr.alt { background: var(--stripe); }
+    table.stacked.restriped tbody tr:nth-child(even):not(.alt) { background: none; }
     table.stacked tr:last-child { border-bottom: none; }
     table.stacked td {
       display: flex; align-items: baseline; gap: 0.4rem;
@@ -356,6 +360,10 @@
     table.stacked td.cell-bare:empty { display: none; }
     table.stacked td.cell-title::before, table.stacked td.cell-bare::before, table.stacked td[colspan]::before { content: none; }
     table.stacked td[colspan] { display: block; flex: 1 1 auto; text-align: left; }
+    table.stacked td.desktop-only { display: none; }
+    table.stacked td.cell-wide { display: block; flex: 1 1 100%; text-align: left; }
+    table.stacked td.cell-wide::before { content: none; }
+    table.stacked .mobile-only { display: block; }
     table.stacked td[colspan].num { text-align: right; }
     table.stacked tr:has(td[colspan]) td { background: none; border: none; }
     table.stacked tr.subtotal-row { background: var(--raised); color: var(--muted); }
