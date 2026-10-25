@@ -1,5 +1,6 @@
 {% macro tx_table(entries, categories, show_account=false) %}
   <table class="tx-table">
+    <colgroup><col class="c-when">{% if show_account %}<col class="c-card">{% endif %}<col class="c-where"><col class="c-cat"><col class="c-note"><col class="c-amount"></colgroup>
     <thead><tr><th>When</th>{% if show_account %}<th>Card</th>{% endif %}<th>Where</th><th>Category</th><th>Note</th><th class="num">{{ dh }}</th></tr></thead>
     <tbody>
       {% for e in entries %}

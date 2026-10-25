@@ -42,7 +42,16 @@
   .when { color: var(--muted); white-space: nowrap; font-size: 0.8rem; }
   .venue { color: var(--strong); }
 
-  .tx-table .tx-note { width: 100%; min-width: 8rem; }
+  .tx-table { table-layout: fixed; }
+  .tx-table .c-when { width: 8.5rem; }
+  .tx-table .c-card { width: 10rem; }
+  .tx-table .c-cat { width: 12rem; }
+  .tx-table .c-note { width: 11rem; }
+  .tx-table .c-amount { width: 6.5rem; }
+  .tx-table td { overflow: hidden; text-overflow: ellipsis; }
+  .tx-table td.venue, .tx-table td.card-col { white-space: nowrap; }
+  .tx-table .tx-note { width: 100%; min-width: 0; }
+  .tx-table .dd { max-width: 100%; }
   .card-period { margin-top: 1rem; }
   .period-divider { display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.4rem; margin: 0 -0.4rem 0.2rem; border-radius: var(--radius-sm); cursor: grab; user-select: none; font-size: 0.82rem; }
   .period-divider:hover { background: var(--hover); }
