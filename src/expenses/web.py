@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 from pydantic import ValidationError
 
 import transactions.service as tx_service
+from transactions.ledger import Ledger
 from expenses.view import render, render_card_periods, render_previous_periods, render_search
 from pkg.model.base import DoesNotExist
 
@@ -58,6 +59,11 @@ def make_expenses_bp(services) -> Blueprint:
         if not tx_service.set_note(services.config, tx_id, note):
             return 'transaction not found', 404
         return changed({'id': tx_id, 'note': note})
+
+    @bp.post('/api/periods/<period_key>/last')
+    def end_period_at(period_key):
+        following = tx_service.end_period_at(services.config, Ledger.load(services.config), period_key, body().get('tx_id', ''))
+        return changed({'period': period_key, 'following': following})
 
     @bp.post('/api/vendors/assign')
     def assign_vendor():

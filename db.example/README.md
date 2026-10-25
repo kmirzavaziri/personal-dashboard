@@ -31,7 +31,7 @@ cp -r db.example db && dash server up
 - `transactions/` — message parsing rules: `patterns.yaml` (regex per message
   template, `action: record | alert | ignore`), `cards.yaml` (last4/name →
   account display), `categories/` (one file per category with its rules: an exact vendor name or a transaction type such as `cash_withdrawal`, optional
-  time `slot`, default `note`, and `type` override), `time.yaml` (timezone, when the day starts, the day of the month a budget period starts, weekend days and
+  time `slot`, default `note`, and `type` override), `time.yaml` (timezone, when the day starts, the day of the month a budget period starts and the incoming vendor, such as Salary, that marks a period start when it lands within `period_marker_window_days` of it, weekend days and
   the time slots rules can target), `owner.yaml` (your own names and the wording of movements between your own accounts, such as card bill payments, so they count as self-transfers), `matching.yaml` (how close two messages must be to count as the same movement, and the refund and self-transfer windows), `fx.yaml` (pegged rates), `types.yaml` (transaction types and which count as
   spending). Categories, notes and refunds are derived live from these rules; a transaction stores only its
   manual `category_override` and `note`.

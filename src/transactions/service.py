@@ -4,6 +4,7 @@ from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 
 import messaging.service as messaging
+import yaml
 
 from pkg.model.io import read_yaml
 from transactions import fx
@@ -23,6 +24,7 @@ _AMOUNT_HINT = re.compile(r'\b(?:[A-Z]{3} ?(?:\d[\d,]*)?\.\d{2}|\d[\d,]*\.\d{2} 
 _TXN_HINT = re.compile(r'card|spent|withdrawal|purchase|available limit|avl bal', re.I)
 _LIVE_WINDOW = timedelta(days=1)
 _UNKNOWN_ACCOUNT = 'Unknown'
+_PERIOD_START_REACH = timedelta(days=20)
 
 
 def _dir(config):
@@ -281,6 +283,21 @@ def create_category(name: str) -> Category:
     category = Category(key=key, name=name.strip())
     category.save()
     return category
+
+
+def end_period_at(config, ledger, period_key: str, tx_id: str) -> str:
+    following = ledger.following_key(period_key)
+    first = ledger.entry_after(tx_id)
+    if following is None or first is None:
+        raise ValueError('no later transaction to start the next period with')
+    year, month = map(int, following.split('-'))
+    if abs(first.tx.at - Clock.load(config.db).default_period_start(year, month)) > _PERIOD_START_REACH:
+        raise ValueError(f'{first.tx.ts[:10]} is too far from the usual start of that period')
+    path = _dir(config) / 'period_starts.yaml'
+    starts = read_yaml(path) or {}
+    starts[following] = first.tx.id
+    path.write_text(yaml.safe_dump(dict(sorted(starts.items())), sort_keys=False))
+    return following
 
 
 def rename_category(key: str, name: str) -> Category:

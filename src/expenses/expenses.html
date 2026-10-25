@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% import "period_card.html" as pc %}
 {% import "tx_table.html" as tt %}
+{% import "period_divider.html" as pd with context %}
 
 {% block title %}Budget{% endblock %}
 {% block heading %}Budget{% endblock %}
@@ -42,7 +43,13 @@
   .venue { color: var(--strong); }
 
   .tx-table .tx-note { width: 100%; min-width: 8rem; }
-  .card-period { margin-top: 1.4rem; }
+  .card-period { margin-top: 1rem; }
+  .period-divider { display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.4rem; margin: 0 -0.4rem 0.2rem; border-radius: var(--radius-sm); cursor: grab; user-select: none; font-size: 0.82rem; }
+  .period-divider:hover { background: var(--hover); }
+  .period-divider.dragging { opacity: 0.5; }
+  .pd-name { color: var(--strong); font-weight: 600; }
+  .pd-grip { width: 8px; height: 12px; flex: none; opacity: 0.45; background: radial-gradient(circle, currentColor 1px, transparent 1.3px) 0 0 / 4px 4px; }
+  tr.drop-target td { box-shadow: inset 0 -2px 0 var(--accent); }
   .search-input { width: 100%; margin-bottom: 0.7rem; }
   .search-hidden { display: none !important; }
   .search-meta { font-size: 0.76rem; margin: 0 0 0.3rem 0.2rem; }
@@ -103,10 +110,7 @@
 </nav>
 <section id="search-panel" hidden><div id="search-results"></div></section>
 <section role="tabpanel" data-tabs="card" data-tab="all" hidden>
-  <div class="section-head">
-    <h2>All cards</h2>
-    {% if all_cards.count %}<span class="muted amount">{{ dh }}{{ all_cards.total | fmt }} · {{ all_cards.count }}</span>{% endif %}
-  </div>
+  {{ pd.period_divider(current_period.key, current_period.name, current_period.range, all_cards.total, all_cards.count) }}
   {% if all_cards.entries %}
   {{ tt.tx_table(all_cards.entries, categories, show_account=true) }}
   {% else %}
@@ -117,10 +121,7 @@
 </section>
 {% for c in card_sections %}
 <section role="tabpanel" data-tabs="card" data-tab="card-{{ loop.index }}" hidden>
-  <div class="section-head">
-    <h2>{{ c.account }}</h2>
-    {% if c.count %}<span class="muted amount">{{ dh }}{{ c.total | fmt }} · {{ c.count }}</span>{% endif %}
-  </div>
+  {{ pd.period_divider(current_period.key, current_period.name, current_period.range, c.total, c.count) }}
   {% if c.entries %}
   {{ tt.tx_table(c.entries, categories) }}
   {% else %}
@@ -159,7 +160,7 @@
       <span class="vendor-meta">{% if v.count %}<span class="amount{% if v.inflow %} inflow{% endif %}">{% if v.inflow %}+{% endif %}{{ dh }}{{ v.total | fmt }}</span> · {{ v.count }}{% if v.last %} · <time data-human="date" datetime="{{ v.last }}">{{ v.last }}</time>{% endif %}{% else %}by transaction type{% endif %}</span>
     </div>
     {% if v.inflow %}
-    <div class="vendor-assign muted vendor-income">Incoming, not categorized</div>
+    <div class="vendor-assign"></div>
     <span></span>
     {% else %}
     <div class="vendor-assign">
@@ -296,6 +297,37 @@
 
 {% block scripts %}
 <script>
+  (function () {
+    var dragging = null;
+    document.addEventListener('dragstart', function (e) {
+      var divider = e.target.closest && e.target.closest('.period-divider');
+      if (!divider) return;
+      dragging = divider.dataset.key;
+      divider.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', dragging);
+    });
+    document.addEventListener('dragend', function (e) {
+      document.querySelectorAll('.period-divider.dragging').forEach(function (d) { d.classList.remove('dragging'); });
+      document.querySelectorAll('tr.drop-target').forEach(function (r) { r.classList.remove('drop-target'); });
+      dragging = null;
+    });
+    document.addEventListener('dragover', function (e) {
+      var row = dragging && e.target.closest && e.target.closest('tr[data-tx-id]');
+      if (!row) return;
+      e.preventDefault();
+      document.querySelectorAll('tr.drop-target').forEach(function (r) { if (r !== row) r.classList.remove('drop-target'); });
+      row.classList.add('drop-target');
+    });
+    document.addEventListener('drop', function (e) {
+      var row = dragging && e.target.closest && e.target.closest('tr[data-tx-id]');
+      if (!row) return;
+      e.preventDefault();
+      api('/api/periods/' + dragging + '/last', 'POST', { tx_id: row.dataset.txId })
+        .then(function () { toast('Month boundary moved'); setTimeout(function () { location.reload(); }, 400); });
+    });
+  })();
+
   (function () {
     var input = document.getElementById('tx-search');
     var panel = document.getElementById('search-panel');

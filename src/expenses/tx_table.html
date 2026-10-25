@@ -3,7 +3,7 @@
     <thead><tr><th>When</th>{% if show_account %}<th>Card</th>{% endif %}<th>Where</th><th>Category</th><th>Note</th><th class="num">{{ dh }}</th></tr></thead>
     <tbody>
       {% for e in entries %}
-      <tr{% if e.self_transfer %} class="self-transfer"{% endif %}>
+      <tr data-tx-id="{{ e.tx.id }}"{% if e.self_transfer %} class="self-transfer"{% endif %}>
         <td class="when"><time data-human datetime="{{ e.tx.ts }}">{{ e.tx.ts[:16] }}</time></td>
         {% if show_account %}<td class="muted card-col">{{ e.account }}</td>{% endif %}
         <td class="venue">{{ e.tx.venue or e.type | replace('_', ' ') | capitalize }}{% if e.type == 'declined' %} <span class="badge b-clay">Declined</span>{% endif %}{% if e.self_transfer %} <span class="badge">Self</span>{% endif %}</td>

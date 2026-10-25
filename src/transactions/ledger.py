@@ -1,3 +1,4 @@
+from bisect import bisect_right
 from collections import Counter, defaultdict
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
@@ -5,7 +6,7 @@ from functools import cached_property, lru_cache
 from pathlib import Path
 
 from pkg.model.io import read_yaml
-from transactions.rules import Category, Clock, Matching, Rule
+from transactions.rules import Category, Clock, Matching, Period, Rule, _shift_month
 from transactions.transaction import Transaction, TransactionStore
 
 _MOVEMENT_TYPES = {'transfer', 'income'}
@@ -61,7 +62,8 @@ class Entry:
 
 class Ledger:
     def __init__(self, transactions: list[Transaction], categories: list[Category], clock: Clock,
-                 types: dict[str, dict], cards: list[dict], owner: dict, matching: Matching):
+                 types: dict[str, dict], cards: list[dict], owner: dict, matching: Matching,
+                 period_starts: dict[str, str]):
         self.categories = sorted(categories, key=lambda c: c.name.casefold())
         self._by_key = {c.key: c for c in self.categories}
         self.clock = clock
@@ -75,6 +77,7 @@ class Ledger:
                                 spend=entry.spend and entry.tx.id not in own)
                         for entry in resolved]
         self._hidden |= {entry.tx.id for entry in self.entries if entry.refunds and not entry.partially_refunded}
+        self._boundaries = self._period_boundaries(period_starts)
 
     @classmethod
     def load(cls, config) -> 'Ledger':
@@ -85,6 +88,49 @@ class Ledger:
         if kind is None:
             raise ValueError(f'transaction type {type_key!r} is missing from transactions/types.yaml')
         return bool(kind.get('spend'))
+
+    def period(self, at: datetime) -> Period:
+        index = bisect_right([start for _, start in self._boundaries], at) - 1
+        key, start = self._boundaries[max(index, 0)]
+        end = self._boundaries[index + 1][1] if index + 1 < len(self._boundaries) else start + timedelta(days=31)
+        return Period(key, start, end, self.clock.local(at))
+
+    def following_key(self, key: str) -> str | None:
+        keys = [k for k, _ in self._boundaries]
+        index = keys.index(key) if key in keys else -1
+        return keys[index + 1] if 0 <= index < len(keys) - 1 else None
+
+    def entry_after(self, tx_id: str) -> Entry | None:
+        ordered = self.visible
+        index = next((i for i, entry in enumerate(ordered) if entry.tx.id == tx_id), None)
+        return ordered[index + 1] if index is not None and index + 1 < len(ordered) else None
+
+    def previous(self, period: Period) -> Period:
+        return self.period(period.start - timedelta(seconds=1))
+
+    def _period_boundaries(self, overrides: dict[str, str]) -> list[tuple[str, datetime]]:
+        by_id = {entry.tx.id: entry for entry in self.entries}
+        marker = self.clock.period_marker.casefold()
+        window = timedelta(days=self.clock.period_marker_window_days)
+        markers = [e for e in self.entries if marker and e.tx.vendor.casefold() == marker and e.is_inflow]
+        now = self.clock.local(datetime.now().astimezone())
+        first = self.entries[0].tx.at if self.entries else now
+        year, month = _shift_month(first.year, first.month, -1)
+        boundaries = []
+        while (year, month) <= _shift_month(now.year, now.month, 2):
+            key = f'{year}-{month:02d}'
+            default = self.clock.default_period_start(year, month)
+            override = by_id.get(overrides.get(key, ''))
+            nearby = [e for e in markers if abs(e.tx.at - default) <= window]
+            if override is not None:
+                start = override.tx.at
+            elif nearby:
+                start = min(nearby, key=lambda e: abs(e.tx.at - default)).tx.at
+            else:
+                start = default
+            boundaries.append((key, start))
+            year, month = _shift_month(year, month, 1)
+        return sorted(boundaries, key=lambda pair: pair[1])
 
     def category(self, key: str) -> Category | None:
         return self._by_key.get(key)
@@ -217,4 +263,4 @@ def _load(db: Path, fingerprint: tuple) -> Ledger:
     cards = read_yaml(db / 'transactions' / 'cards.yaml') or []
     owner = read_yaml(db / 'transactions' / 'owner.yaml') or {}
     return Ledger(TransactionStore(db / 'transactions').all(), Category.objects.all(), Clock.load(db), types, cards, owner,
-                  Matching.load(db))
+                  Matching.load(db), read_yaml(db / 'transactions' / 'period_starts.yaml') or {})

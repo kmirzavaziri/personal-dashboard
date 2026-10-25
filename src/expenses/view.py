@@ -215,7 +215,8 @@ def _period_summary(ledger, period, budgets: dict[str, float], current: bool) ->
     budget = sum(budgets.values())
     status, _ = _budget_status(budget, actual, period.fraction)
     return {
-        'name': f'{period.day(period.length_days):%B %Y}',
+        'name': period.name,
+        'key': period.key,
         'range': period.label if current else period.range_label,
         'start': period.start.isoformat(),
         'current': current,
@@ -234,7 +235,7 @@ def _monthly_averages(ledger, current) -> tuple[dict, dict]:
     for entry in ledger.visible:
         if not entry.spend:
             continue
-        start = ledger.clock.period(entry.tx.at).start
+        start = ledger.period(entry.tx.at).start
         totals[start] = totals.get(start, 0.0) + entry.aed
         if entry.category:
             months = by_category.setdefault(entry.category.key, {})
@@ -269,10 +270,10 @@ def render_previous_periods(services, before: str, count: int) -> str:
     budgets = _category_budgets(_planned_accounts(config))
     earliest = ledger.earliest
     summaries = []
-    period = ledger.clock.period(datetime.fromisoformat(before) - timedelta(seconds=1))
+    period = ledger.period(datetime.fromisoformat(before) - timedelta(seconds=1))
     while len(summaries) < count and earliest is not None and period.end > earliest:
         summaries.append(_period_summary(ledger, period, budgets, current=False))
-        period = ledger.clock.previous(period)
+        period = ledger.previous(period)
     more = earliest is not None and period.end > earliest
     return _env(ledger).get_template('periods.html').render(periods=summaries, more=more)
 
@@ -281,18 +282,20 @@ def render_card_periods(services, account: str, before: str, count: int) -> str:
     ledger = Ledger.load(services.config)
     earliest = ledger.earliest
     periods = []
-    period = ledger.clock.period(datetime.fromisoformat(before) - timedelta(seconds=1))
+    period = ledger.period(datetime.fromisoformat(before) - timedelta(seconds=1))
     while len(periods) < count and earliest is not None and period.end > earliest:
         entries = sorted((e for e in ledger.between(period.start, period.end) if not account or e.account == account),
                          key=lambda e: e.tx.ts, reverse=True)
         if entries:
             periods.append({
-                'name': f'{period.day(period.length_days):%B %Y}',
+                'name': period.name,
+                'key': period.key,
+                'range': period.range_label,
                 'start': period.start.isoformat(),
                 'total': sum(e.aed for e in entries if e.spend),
                 'entries': entries,
             })
-        period = ledger.clock.previous(period)
+        period = ledger.previous(period)
     more = earliest is not None and period.end > earliest
     return _env(ledger).get_template('card_periods.html').render(
         periods=periods, more=more, categories=ledger.categories, show_account=not account)
@@ -323,7 +326,7 @@ def render(services) -> str:
     budgets = _category_budgets(accounts)
     ledger = Ledger.load(config)
     clock = ledger.clock
-    period = clock.period(datetime.now(timezone.utc))
+    period = ledger.period(datetime.now(timezone.utc))
     period_entries = ledger.between(period.start, period.end)
     average, category_averages = _monthly_averages(ledger, period)
 

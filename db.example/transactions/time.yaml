@@ -1,6 +1,8 @@
 timezone: UTC
 day_starts_at: 5
 period_starts_on: 1
+period_marker: Salary
+period_marker_window_days: 5
 weekend:
 - sat
 - sun

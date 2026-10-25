@@ -19,17 +19,22 @@ def _shift_month(year: int, month: int, delta: int) -> tuple[int, int]:
 
 @dataclass(frozen=True)
 class Period:
+    key: str
     start: datetime
     end: datetime
     now: datetime
 
     @property
+    def last_day(self) -> datetime:
+        return self.end - timedelta(seconds=1)
+
+    @property
     def length_days(self) -> int:
-        return (self.end - self.start).days
+        return (self.last_day.date() - self.start.date()).days + 1
 
     @property
     def elapsed_days(self) -> int:
-        return min((self.now - self.start).days + 1, self.length_days)
+        return max(1, min((self.now.date() - self.start.date()).days + 1, self.length_days))
 
     @property
     def fraction(self) -> float:
@@ -39,8 +44,12 @@ class Period:
         return self.start + timedelta(days=number - 1)
 
     @property
+    def name(self) -> str:
+        return f'{self.last_day:%B %Y}'
+
+    @property
     def range_label(self) -> str:
-        return f'{self.start:%b %-d} – {self.day(self.length_days):%b %-d}'
+        return f'{self.start:%b %-d} – {self.last_day:%b %-d}'
 
     @property
     def label(self) -> str:
@@ -82,6 +91,8 @@ class Clock(BaseModel):
     timezone: str
     day_starts_at: int
     period_starts_on: int
+    period_marker: str
+    period_marker_window_days: int
     weekend: list[str]
     slots: list[Slot]
 
@@ -92,18 +103,8 @@ class Clock(BaseModel):
     def local(self, at: datetime) -> datetime:
         return at.astimezone(ZoneInfo(self.timezone))
 
-    def period(self, at: datetime) -> 'Period':
-        local = self.local(at)
-        start = self._period_start(local.year, local.month, local.tzinfo)
-        if local < start:
-            start = self._period_start(*_shift_month(local.year, local.month, -1), local.tzinfo)
-        return Period(start, self._period_start(*_shift_month(start.year, start.month, 1), local.tzinfo), local)
-
-    def previous(self, period: 'Period') -> 'Period':
-        return self.period(period.start - timedelta(seconds=1))
-
-    def _period_start(self, year: int, month: int, tz) -> datetime:
-        return datetime(year, month, min(self.period_starts_on, monthrange(year, month)[1]), tzinfo=tz)
+    def default_period_start(self, year: int, month: int) -> datetime:
+        return datetime(year, month, min(self.period_starts_on, monthrange(year, month)[1]), tzinfo=ZoneInfo(self.timezone))
 
     def month(self, month: str) -> tuple[datetime, datetime]:
         year, number = map(int, month.split('-'))
