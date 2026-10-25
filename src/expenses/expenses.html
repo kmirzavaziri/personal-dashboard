@@ -27,7 +27,7 @@
   .amount.red { color: var(--red); }
   .amount.yellow { color: var(--yellow); }
   .periods-actions { display: flex; justify-content: center; padding: 0.4rem 0 1rem; }
-  .periods-actions[hidden] { display: none; }
+  .periods-actions[hidden], .vendor[hidden] { display: none; }
   .budget-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; font-size: 0.86rem; margin-bottom: 0.3rem; }
   .budget-head .name { color: var(--strong); font-weight: 500; }
 
@@ -679,11 +679,12 @@
     }
     (function restoreQuery() {
       var params = new URLSearchParams(location.search);
-      if (location.pathname.indexOf('/categorize') === -1) return;
-      if (params.get('q')) vendorSearch.value = params.get('q');
-      if (params.has('category')) vendorFilter.value = params.get('category');
-      if (params.get('sort')) vendorSort.value = params.get('sort');
-      showHidden.checked = params.get('hidden') === '1';
+      if (location.pathname.indexOf('/categorize') !== -1) {
+        if (params.get('q')) vendorSearch.value = params.get('q');
+        if (params.has('category')) vendorFilter.value = params.get('category');
+        if (params.get('sort')) vendorSort.value = params.get('sort');
+        showHidden.checked = params.get('hidden') === '1';
+      }
       refreshVendors();
     })();
     vendorList.addEventListener('vendors-refreshed', saveQuery);
