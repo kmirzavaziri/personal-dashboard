@@ -59,7 +59,7 @@
   tr.drop-target td { box-shadow: inset 0 -2px 0 var(--accent); }
   .tx-toolbar { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.7rem; }
   .tx-toolbar .search-input { flex: 1; }
-  [data-tab="transactions"]:not(.show-self) tr.hidden-tx { display: none; }
+  [data-tab="transactions"]:not(.show-self) tr.hidden-tx, [data-tab="transactions"] tr.category-filtered { display: none; }
   .search-hidden { display: none !important; }
   .search-meta { font-size: 0.76rem; margin: 0 0 0.3rem 0.2rem; }
   .card-col { font-size: 0.78rem; white-space: nowrap; }
@@ -136,6 +136,11 @@
 <div role="tabpanel" data-tabs="budget" data-tab="transactions" hidden>
 <div class="tx-toolbar">
   <input class="search-input" id="tx-search" type="search" placeholder="Search description, note, category or amount" autocomplete="off" aria-label="Search transactions">
+  <select id="tx-category" class="input-quiet" aria-label="Category filter">
+    <option value="*">All categories</option>
+    <option value="">Uncategorized</option>
+    {% for cat in categories %}<option value="{{ cat.key }}">{{ cat.name }}</option>{% endfor %}
+  </select>
   <label class="toggle"><input type="checkbox" id="show-self"><span class="toggle-track" aria-hidden="true"></span>Show hidden</label>
 </div>
 <nav role="tablist" class="sub" data-tabs="card" data-deselect="all">
@@ -484,6 +489,44 @@
       setQuery('hidden', toggle.checked ? '1' : '');
       try { localStorage.setItem('show-hidden-transactions', toggle.checked ? '1' : '0'); } catch (e) {}
     });
+    apply();
+  })();
+
+  (function () {
+    var select = document.getElementById('tx-category');
+    var toggle = document.getElementById('show-self');
+    var panel = document.querySelector('[role="tabpanel"][data-tab="transactions"]');
+    var searchPanel = document.getElementById('search-panel');
+    var pending = false;
+    function shownRows() {
+      var root = !searchPanel.hidden ? searchPanel : panel.querySelector('[role="tabpanel"][data-tabs="card"]:not([hidden])');
+      return root ? Array.prototype.slice.call(root.querySelectorAll('tr[data-category]')) : [];
+    }
+    function apply() {
+      pending = false;
+      var hits = { '*': 0 };
+      shownRows().forEach(function (row) {
+        if (!toggle.checked && row.classList.contains('hidden-tx')) return;
+        hits[row.dataset.category] = (hits[row.dataset.category] || 0) + 1;
+        hits['*'] += 1;
+      });
+      Array.prototype.forEach.call(select.options, function (option) { option.dataset.count = hits[option.value] || 0; });
+      panel.querySelectorAll('tr[data-category]').forEach(function (row) {
+        row.classList.toggle('category-filtered', select.value !== '*' && row.dataset.category !== select.value);
+      });
+    }
+    function schedule() {
+      if (pending) return;
+      pending = true;
+      requestAnimationFrame(apply);
+    }
+    if (location.pathname.indexOf('/transactions') !== -1) {
+      var chosen = new URLSearchParams(location.search).get('category');
+      if (chosen !== null) select.value = chosen === '-' ? '' : chosen;
+    }
+    select.addEventListener('change', function () { setQuery('category', select.value === '*' ? '' : (select.value || '-')); apply(); });
+    toggle.addEventListener('change', schedule);
+    new MutationObserver(schedule).observe(panel, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });
     apply();
   })();
 
