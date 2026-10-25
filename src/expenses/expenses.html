@@ -127,7 +127,7 @@
   .trend-legend button[aria-pressed="false"] { color: var(--faint); }
   .trend-legend button[aria-pressed="false"] .dd-dot { background: transparent; box-shadow: inset 0 0 0 1px var(--faint); }
   .trend-legend button:focus-visible { outline: 2px solid var(--accent); }
-  .trend-actions { display: flex; gap: 0.4rem; justify-content: flex-end; margin-bottom: 0.4rem; }
+  .trend-actions { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.4rem; }
   .delete-choice { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.8rem; font-size: 0.84rem; }
   .delete-choice label { display: flex; align-items: center; gap: 0.5rem; }
   .delete-choice .dd { margin-left: 1.45rem; width: 16rem; max-width: calc(100% - 1.45rem); }
@@ -231,7 +231,7 @@
 
 <div role="tabpanel" data-tabs="budget" data-tab="trends" hidden>
 <section class="trend-card">
-  <div class="trend-actions"><button class="btn btn-ghost btn-sm" type="button" id="trend-all">Show all</button><button class="btn btn-ghost btn-sm" type="button" id="trend-none">Hide all</button></div>
+  <div class="trend-actions"><select id="trend-unit" class="input-quiet" aria-label="Group by"><option value="month">Per month</option><option value="week">Per week</option><option value="day">Per day</option></select><select id="trend-range" class="input-quiet" aria-label="Range"><option value="6">Last 6 months</option><option value="12">Last 12 months</option><option value="24">Last 24 months</option><option value="all">All time</option></select><span class="spacer"></span><button class="btn btn-ghost btn-sm" type="button" id="trend-all">Show all</button><button class="btn btn-ghost btn-sm" type="button" id="trend-none">Hide all</button></div>
   <div class="trend-chart" id="trend-chart"></div>
   <div class="trend-legend" id="trend-legend"></div>
 </section>
@@ -592,23 +592,75 @@
   (function () {
     var box = document.getElementById('trend-chart');
     var legend = document.getElementById('trend-legend');
-    var data = JSON.parse(document.getElementById('trend-data').textContent);
+    var source = JSON.parse(document.getElementById('trend-data').textContent);
+    var unitSelect = document.getElementById('trend-unit');
+    var rangeSelect = document.getElementById('trend-range');
     var SVG = 'http://www.w3.org/2000/svg';
+    var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    var DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     var WIDTH = 0, HEIGHT = 340, LEFT = 46, RIGHT = 10, TOP = 10, BOTTOM = 24;
-    var all = data.series.filter(function (s) { return s.name === 'All spending'; })[0];
-    var series = data.series.filter(function (s) { return s.name !== 'All spending'; });
+    var origin = new Date(source.start + 'T00:00:00');
     var shown = {};
-    series.forEach(function (s) { shown[s.name] = true; });
-    var count = data.periods.length;
+    var view = { buckets: [], all: null, series: [] };
     var svg, tip, cross;
+
     function money(value) { return 'Đ' + Math.round(value).toLocaleString('en-US'); }
+    function dateAt(day) { var d = new Date(origin); d.setDate(d.getDate() + day); return d; }
+    function dayLabel(day) { var d = dateAt(day); return d.getDate() + ' ' + MONTHS[d.getMonth()]; }
     function el(name, attrs, parent) {
       var node = document.createElementNS(SVG, name);
       Object.keys(attrs).forEach(function (key) { node.setAttribute(key, attrs[key]); });
       if (parent) parent.appendChild(node);
       return node;
     }
-    function x(i) { return LEFT + (count === 1 ? 0 : i * (WIDTH - LEFT - RIGHT) / (count - 1)); }
+
+    function rangeStart() {
+      var months = rangeSelect.value;
+      if (months === 'all') return 0;
+      var periods = source.periods;
+      return periods[Math.max(periods.length - Number(months), 0)].day;
+    }
+    function buckets(start) {
+      var unit = unitSelect.value, list = [];
+      if (unit === 'month') {
+        source.periods.forEach(function (p, i) {
+          var end = i + 1 < source.periods.length ? source.periods[i + 1].day : source.days;
+          if (end > start) list.push({ from: Math.max(p.day, start), to: end, label: p.label, short: p.label.replace(/^(\w{3})\w* \d{2}(\d{2})$/, '$1 $2') });
+        });
+      } else if (unit === 'week') {
+        var first = start - ((dateAt(start).getDay() + 6) % 7);
+        for (var day = first; day < source.days; day += 7) {
+          list.push({ from: Math.max(day, start), to: Math.min(day + 7, source.days), label: 'Week of ' + dayLabel(day), short: dayLabel(day) });
+        }
+      } else {
+        for (var d = start; d < source.days; d++) {
+          list.push({ from: d, to: d + 1, label: DAYS[dateAt(d).getDay()] + ' ' + dayLabel(d), short: dayLabel(d) });
+        }
+      }
+      return list;
+    }
+    function compute() {
+      var list = buckets(rangeStart());
+      var bucketOf = {};
+      list.forEach(function (b, i) { for (var d = b.from; d < b.to; d++) bucketOf[d] = i; });
+      var mapped = source.series.map(function (s) {
+        var values = list.map(function () { return 0; });
+        Object.keys(s.daily).forEach(function (key) {
+          if (key in bucketOf) values[bucketOf[key]] += s.daily[key];
+        });
+        var settled = values.slice(0, -1);
+        var average = settled.length ? settled.reduce(function (a, b) { return a + b; }, 0) / settled.length : values[0] || 0;
+        return { name: s.name, tone: s.tone, values: values, average: average };
+      }).filter(function (s) { return s.values.some(function (v) { return v > 0; }); });
+      view = {
+        buckets: list,
+        all: mapped.filter(function (s) { return s.name === 'All spending'; })[0],
+        series: mapped.filter(function (s) { return s.name !== 'All spending'; }),
+      };
+      view.series.forEach(function (s) { if (!(s.name in shown)) shown[s.name] = true; });
+    }
+
+    function x(i) { var n = view.buckets.length; return LEFT + (n === 1 ? 0 : i * (WIDTH - LEFT - RIGHT) / (n - 1)); }
     function niceMax(value) {
       var step = Math.pow(10, Math.floor(Math.log10(value || 1)));
       var nice = [1, 2, 2.5, 5, 10].map(function (m) { return m * step; }).filter(function (v) { return v >= value; })[0];
@@ -618,26 +670,30 @@
       WIDTH = box.clientWidth;
       if (!WIDTH) return;
       box.innerHTML = '';
-      var visible = series.filter(function (s) { return shown[s.name]; });
+      var count = view.buckets.length;
+      var visible = view.series.filter(function (s) { return shown[s.name]; });
       var peak = niceMax(Math.max.apply(null, [1].concat(visible.map(function (s) { return Math.max.apply(null, s.values); }))));
       var y = function (value) { return TOP + (HEIGHT - TOP - BOTTOM) * (1 - value / peak); };
-      svg = el('svg', { viewBox: '0 0 ' + WIDTH + ' ' + HEIGHT, width: WIDTH, height: HEIGHT, role: 'img', 'aria-label': 'Monthly spending per category' }, box);
+      svg = el('svg', { viewBox: '0 0 ' + WIDTH + ' ' + HEIGHT, width: WIDTH, height: HEIGHT, role: 'img', 'aria-label': 'Spending per category over time' }, box);
       [0, 0.25, 0.5, 0.75, 1].forEach(function (f) {
-        el('line', { class: 'grid', x1: LEFT, x2: WIDTH - RIGHT, y1: y(peak * f), y2: y(peak * f), 'vector-effect': 'non-scaling-stroke' }, svg);
+        el('line', { class: 'grid', x1: LEFT, x2: WIDTH - RIGHT, y1: y(peak * f), y2: y(peak * f) }, svg);
         el('text', { class: 'axis', x: LEFT - 6, y: y(peak * f) + 4, 'text-anchor': 'end' }, svg).textContent = peak * f >= 1000 ? (peak * f / 1000) + 'k' : Math.round(peak * f);
       });
-      var every = Math.ceil(count / 9);
-      data.periods.forEach(function (p, i) {
+      var every = Math.ceil(count / Math.max(Math.floor(WIDTH / 90), 2));
+      view.buckets.forEach(function (b, i) {
         if (i % every && i !== count - 1) return;
-        el('text', { class: 'axis', x: x(i), y: HEIGHT - 6, 'text-anchor': i === 0 ? 'start' : i === count - 1 ? 'end' : 'middle' }, svg).textContent = p.label.replace(/^(\w{3})\w* (\d{2})(\d{2})$/, '$1 $3');
+        if (i !== count - 1 && count - 1 - i < every / 2) return;
+        el('text', { class: 'axis', x: x(i), y: HEIGHT - 6, 'text-anchor': i === 0 ? 'start' : i === count - 1 ? 'end' : 'middle' }, svg).textContent = b.short;
       });
-      cross = el('line', { class: 'cross', y1: TOP, y2: HEIGHT - BOTTOM, 'vector-effect': 'non-scaling-stroke' }, svg);
+      cross = el('line', { class: 'cross', y1: TOP, y2: HEIGHT - BOTTOM }, svg);
       cross.style.display = 'none';
       visible.forEach(function (s) {
         var points = s.values.map(function (v, i) { return x(i) + ',' + y(v); });
-        var settled = el('polyline', { class: 'line', points: points.slice(0, count - 1).join(' '), 'vector-effect': 'non-scaling-stroke', 'data-name': s.name }, svg);
-        var partial = el('polyline', { class: 'line partial', points: points.slice(count - 2).join(' '), 'vector-effect': 'non-scaling-stroke', 'data-name': s.name }, svg);
-        [settled, partial].forEach(function (line) { line.style.setProperty('--tone', s.tone); });
+        var lines = count > 1
+          ? [el('polyline', { class: 'line', points: points.slice(0, count - 1).join(' '), 'data-name': s.name }, svg),
+             el('polyline', { class: 'line partial', points: points.slice(count - 2).join(' '), 'data-name': s.name }, svg)]
+          : [el('circle', { class: 'dot', cx: x(0), cy: y(s.values[0]), r: 4, 'data-name': s.name }, svg)];
+        lines.forEach(function (line) { line.style.setProperty('--tone', s.tone); });
       });
       tip = document.createElement('div');
       tip.className = 'trend-tip';
@@ -645,29 +701,29 @@
       box.appendChild(tip);
       svg.addEventListener('mousemove', function (e) {
         var rect = svg.getBoundingClientRect();
-        var i = Math.round(((e.clientX - rect.left) / rect.width * WIDTH - LEFT) / ((WIDTH - LEFT - RIGHT) / Math.max(count - 1, 1)));
-        hover(Math.max(0, Math.min(count - 1, i)), visible, y, rect);
+        var i = Math.round(((e.clientX - rect.left) - LEFT) / ((WIDTH - LEFT - RIGHT) / Math.max(count - 1, 1)));
+        hover(Math.max(0, Math.min(count - 1, i)), visible, y);
       });
-      svg.addEventListener('mouseleave', function () { tip.hidden = true; cross.style.display = 'none'; svg.querySelectorAll('.dot').forEach(function (d) { d.remove(); }); });
+      svg.addEventListener('mouseleave', function () { tip.hidden = true; cross.style.display = 'none'; svg.querySelectorAll('.hover-dot').forEach(function (d) { d.remove(); }); });
     }
-    function hover(i, visible, y, rect) {
+    function hover(i, visible, y) {
       cross.setAttribute('x1', x(i));
       cross.setAttribute('x2', x(i));
       cross.style.display = '';
-      svg.querySelectorAll('.dot').forEach(function (d) { d.remove(); });
+      svg.querySelectorAll('.hover-dot').forEach(function (d) { d.remove(); });
       var rows = visible.map(function (s) { return { s: s, v: s.values[i] }; }).filter(function (r) { return r.v > 0; })
         .sort(function (a, b) { return b.v - a.v; });
       rows.slice(0, 8).forEach(function (r) {
-        var dot = el('circle', { class: 'dot', cx: x(i), cy: y(r.v), r: 4 }, svg);
+        var dot = el('circle', { class: 'dot hover-dot', cx: x(i), cy: y(r.v), r: 4 }, svg);
         dot.style.setProperty('--tone', r.s.tone);
       });
       tip.innerHTML = '';
       var head = document.createElement('div');
       head.className = 'tip-head';
       var label = document.createElement('span');
-      label.textContent = data.periods[i].label + (i === count - 1 ? ' · so far' : '');
+      label.textContent = view.buckets[i].label + (i === view.buckets.length - 1 ? ' · so far' : '');
       var total = document.createElement('span');
-      total.textContent = all ? money(all.values[i]) : '';
+      total.textContent = view.all ? money(view.all.values[i]) : '';
       head.appendChild(label);
       head.appendChild(total);
       tip.appendChild(head);
@@ -693,40 +749,57 @@
         tip.appendChild(more);
       }
       tip.hidden = false;
-      var px = x(i) / WIDTH * rect.width;
-      tip.style.left = Math.min(px + 12, rect.width - tip.offsetWidth) + 'px';
-      if (px + 12 + tip.offsetWidth > rect.width) tip.style.left = Math.max(px - 12 - tip.offsetWidth, 0) + 'px';
+      var px = x(i);
+      tip.style.left = (px + 12 + tip.offsetWidth > WIDTH ? Math.max(px - 12 - tip.offsetWidth, 0) : px + 12) + 'px';
       tip.style.top = '8px';
     }
     function focus(name) {
       box.classList.toggle('focusing', !!name);
       box.querySelectorAll('.line').forEach(function (line) { line.classList.toggle('focus', line.dataset.name === name); });
     }
-    series.forEach(function (s) {
-      var button = document.createElement('button');
-      button.type = 'button';
-      button.setAttribute('aria-pressed', 'true');
-      var dot = document.createElement('span');
-      dot.className = 'dd-dot';
-      dot.style.setProperty('--tone', s.tone);
-      button.appendChild(dot);
-      button.appendChild(document.createTextNode(s.name + ' · ' + money(s.average) + '/mo'));
-      button.addEventListener('click', function () {
-        shown[s.name] = !shown[s.name];
+    function legendItems() {
+      legend.innerHTML = '';
+      var unit = { month: '/mo', week: '/wk', day: '/day' }[unitSelect.value];
+      view.series.forEach(function (s) {
+        var button = document.createElement('button');
+        button.type = 'button';
         button.setAttribute('aria-pressed', String(shown[s.name]));
-        draw();
+        var dot = document.createElement('span');
+        dot.className = 'dd-dot';
+        dot.style.setProperty('--tone', s.tone);
+        button.appendChild(dot);
+        button.appendChild(document.createTextNode(s.name + ' · ' + money(s.average) + unit));
+        button.addEventListener('click', function () {
+          shown[s.name] = !shown[s.name];
+          button.setAttribute('aria-pressed', String(shown[s.name]));
+          draw();
+        });
+        button.addEventListener('mouseenter', function () { if (shown[s.name]) focus(s.name); });
+        button.addEventListener('mouseleave', function () { focus(null); });
+        legend.appendChild(button);
       });
-      button.addEventListener('mouseenter', function () { if (shown[s.name]) focus(s.name); });
-      button.addEventListener('mouseleave', function () { focus(null); });
-      legend.appendChild(button);
-    });
+    }
+    function refresh() {
+      compute();
+      legendItems();
+      draw();
+    }
     function setAll(value) {
-      series.forEach(function (s) { shown[s.name] = value; });
+      view.series.forEach(function (s) { shown[s.name] = value; });
       legend.querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-pressed', String(value)); });
       draw();
     }
+    if (location.pathname.indexOf('/trends') !== -1) {
+      var params = new URLSearchParams(location.search);
+      if (params.get('range')) rangeSelect.value = params.get('range');
+      if (params.get('by')) unitSelect.value = params.get('by');
+    }
+    rangeSelect.addEventListener('change', function () { setQuery('range', rangeSelect.value === '6' ? '' : rangeSelect.value); refresh(); });
+    unitSelect.addEventListener('change', function () { setQuery('by', unitSelect.value === 'month' ? '' : unitSelect.value); refresh(); });
     document.getElementById('trend-all').addEventListener('click', function () { setAll(true); });
     document.getElementById('trend-none').addEventListener('click', function () { setAll(false); });
+    if (source.periods.length) compute();
+    legendItems();
     var drawnWidth = 0;
     new ResizeObserver(function () {
       if (box.clientWidth && box.clientWidth !== drawnWidth) { drawnWidth = box.clientWidth; draw(); }

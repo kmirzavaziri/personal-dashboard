@@ -265,31 +265,32 @@ def _trends(ledger, now: datetime, budgets: dict[str, float]) -> dict:
         periods.append(period)
         period = ledger.previous(period)
     periods.reverse()
-    index = {p.start: i for i, p in enumerate(periods)}
-    series: dict[str, list[float]] = {}
+    if not periods:
+        return {'start': '', 'days': 0, 'periods': [], 'series': []}
+    first_day = ledger.clock.local(periods[0].start).date()
+    today = ledger.clock.local(now).date()
+    series: dict[str, dict[int, float]] = {}
     for entry in ledger.visible:
         if not entry.spend:
             continue
-        slot = index.get(ledger.period(entry.tx.at).start)
-        if slot is None:
+        day = (ledger.clock.local(entry.tx.at).date() - first_day).days
+        if day < 0:
             continue
         for key in (_ALL_SPENDING, entry.category.key if entry.category else ''):
-            series.setdefault(key, [0.0] * len(periods))[slot] += entry.aed
-    complete = max(len(periods) - 1, 1)
+            amounts = series.setdefault(key, {})
+            amounts[day] = amounts.get(day, 0.0) + entry.aed
     tones = colors_for(c.name for c in ledger.categories)
     names = {category.key: category.name for category in ledger.categories} | {_ALL_SPENDING: _ALL_SPENDING, '': 'Uncategorized'}
-    rows = [{
-        'name': names[key],
-        'tone': 'var(--accent)' if key == _ALL_SPENDING else tones.get(names[key], 'var(--faint)'),
-        'values': [round(v) for v in values],
-        'total': round(sum(values)),
-        'average': round(sum(values[:-1]) / complete),
-        'budget': round(sum(budgets.values())) if key == _ALL_SPENDING else round(budgets.get(key, 0.0)),
-    } for key, values in series.items()]
-    rows.sort(key=lambda row: (row['name'] != _ALL_SPENDING, -row['total']))
     return {
-        'periods': [{'label': p.name, 'range': p.range_label} for p in periods],
-        'series': rows,
+        'start': first_day.isoformat(),
+        'days': (today - first_day).days + 1,
+        'periods': [{'label': p.name, 'day': (ledger.clock.local(p.start).date() - first_day).days} for p in periods],
+        'series': sorted(({
+            'name': names[key],
+            'tone': 'var(--accent)' if key == _ALL_SPENDING else tones.get(names[key], 'var(--faint)'),
+            'daily': {day: round(amount, 2) for day, amount in amounts.items()},
+            'budget': round(sum(budgets.values())) if key == _ALL_SPENDING else round(budgets.get(key, 0.0)),
+        } for key, amounts in series.items()), key=lambda row: -sum(row['daily'].values())),
     }
 
 
