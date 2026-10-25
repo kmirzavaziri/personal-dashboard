@@ -618,7 +618,19 @@
     var vendorEmpty = document.getElementById('vendor-empty');
     var showHidden = document.getElementById('vendor-show-hidden');
 
+    function countHitsByCategory() {
+      var hits = { '*': 0 };
+      vendorRows.forEach(function (row) {
+        if (!showHidden.checked && row.classList.contains('hidden-vendor')) return;
+        var count = Number(row.dataset.count) || 0;
+        hits[row.dataset.category] = (hits[row.dataset.category] || 0) + count;
+        hits['*'] += count;
+      });
+      Array.prototype.forEach.call(vendorFilter.options, function (option) { option.dataset.count = hits[option.value] || 0; });
+    }
+
     function refreshVendors() {
+      countHitsByCategory();
       var needle = vendorSearch.value.trim().toLowerCase();
       var category = vendorFilter.value;
       var key = vendorSort.value;

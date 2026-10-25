@@ -214,6 +214,12 @@
           row.appendChild(dot);
         }
         row.appendChild(document.createTextNode(option.text));
+        if (option.dataset.count) {
+          var count = document.createElement('span');
+          count.className = 'dd-count';
+          count.textContent = option.dataset.count;
+          row.appendChild(count);
+        }
         list.appendChild(row);
       });
       if (!list.children.length) list.innerHTML = '<div class="dd-empty">No matches</div>';
