@@ -1,3 +1,4 @@
+from collections import Counter
 from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from pathlib import Path
@@ -95,7 +96,7 @@ def _vendor_rows(ledger, type_keys: list[str]) -> list[dict]:
     for key in type_keys:
         if key.casefold() in assigned and key.casefold() not in summaries:
             summaries[key.casefold()] = {'vendor': key, 'total': 0.0, 'count': 0, 'last': '', 'inflow': 0,
-                                         'hidden_total': 0.0, 'hidden_count': 0, 'overridden': 0}
+                                         'hidden_total': 0.0, 'hidden_count': 0, 'overridden': 0, 'by_type': Counter()}
     rows = []
     for folded, summary in summaries.items():
         rules = assigned.get(folded, [])
@@ -103,6 +104,8 @@ def _vendor_rows(ledger, type_keys: list[str]) -> list[dict]:
         per_slot = {slot: (category.key, rule.note) for category, rule in rules for slot in rule.slots}
         single = next(((category.key, rule.note) for category, rule in rules if not rule.slots), ('', ''))
         primary = single[0] if not split else next(iter(per_slot.values()), ('', ''))[0]
+        by_type = '' if rules else next(iter(key for key, _ in summary['by_type'].most_common(1)), '')
+        primary = primary or by_type
         hidden = summary['count'] == 0 and summary['hidden_count'] > 0
         rows.append({
             'hidden': hidden or (not rules and summary['count'] > 0 and summary['overridden'] == summary['count']),
@@ -116,6 +119,7 @@ def _vendor_rows(ledger, type_keys: list[str]) -> list[dict]:
             'single': single,
             'per_slot': per_slot,
             'type': next((rule.type for _, rule in rules if rule.type), ''),
+            'by_type': by_type,
             'category': primary,
             'category_name': ledger.category(primary).name if ledger.category(primary) else '',
         })

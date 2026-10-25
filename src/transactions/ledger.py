@@ -184,7 +184,10 @@ class Ledger:
             if not vendor or entry.type == 'declined':
                 continue
             row = rows.setdefault(vendor.casefold(), {'vendor': vendor, 'total': 0.0, 'count': 0, 'last': '', 'inflow': 0,
-                                                      'hidden_total': 0.0, 'hidden_count': 0, 'overridden': 0})
+                                                      'hidden_total': 0.0, 'hidden_count': 0, 'overridden': 0,
+                                                      'by_type': Counter()})
+            if entry.match and not entry.tx.category_override and entry.match.rule.match.casefold() == entry.tx.type.casefold():
+                row['by_type'][entry.match.category.key] += 1
             row['last'] = max(row['last'], entry.tx.ts[:10])
             if entry.hidden or entry.self_transfer:
                 row['hidden_total'] += entry.aed

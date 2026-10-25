@@ -12,7 +12,7 @@
     {% if not v.inflow %}
     <div class="vendor-assign">
       <div class="assign-blocks">
-      <div class="assign-single"{% if v.split %} hidden{% endif %}>{{ category_select(v.single[0]) }}<input class="vnote input-quiet" value="{{ v.single[1] }}" placeholder="Note" maxlength="80" aria-label="Note"></div>
+      <div class="assign-single"{% if v.split %} hidden{% endif %}>{{ category_select(v.single[0], v.by_type) }}<input class="vnote input-quiet" value="{{ v.single[1] }}" placeholder="Note" maxlength="80" aria-label="Note"></div>
       <div class="assign-split"{% if not v.split %} hidden{% endif %}>{% if v.split %}
         {% for s in slots %}{% set a = v.per_slot.get(s.key, ('', '')) %}<div class="slot-row" data-slot="{{ s.key }}"><span class="slot-label" title="{{ s.label }}">{{ s.short }}</span>{{ category_select(a[0]) }}<input class="vnote input-quiet" value="{{ a[1] }}" placeholder="Note" maxlength="80" aria-label="Note"></div>{% endfor %}
       {% endif %}</div>
