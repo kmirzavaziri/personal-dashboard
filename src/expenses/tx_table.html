@@ -1,13 +1,13 @@
 {% macro tx_table(entries, categories, show_account=false) %}
   <table class="tx-table">
     <colgroup><col class="c-when">{% if show_account %}<col class="c-card">{% endif %}<col class="c-where"><col class="c-cat"><col class="c-note"><col class="c-amount"></colgroup>
-    <thead><tr><th>When</th>{% if show_account %}<th>Card</th>{% endif %}<th>Where</th><th>Category</th><th>Note</th><th class="num">{{ dh }}</th></tr></thead>
+    <thead><tr><th>When</th>{% if show_account %}<th>Card</th>{% endif %}<th>Description</th><th>Category</th><th>Note</th><th class="num">{{ dh }}</th></tr></thead>
     <tbody>
       {% for e in entries %}
       <tr data-tx-id="{{ e.tx.id }}"{% if e.self_transfer %} class="self-transfer"{% endif %}>
         <td class="when"><time data-human datetime="{{ e.tx.ts }}">{{ e.tx.ts[:16] }}</time></td>
         {% if show_account %}<td class="muted card-col">{{ e.account }}</td>{% endif %}
-        <td class="venue">{{ e.tx.venue or e.type | replace('_', ' ') | capitalize }}{% if e.type == 'declined' %} <span class="badge b-clay">Declined</span>{% endif %}{% if e.self_transfer %} <span class="badge">Self</span>{% endif %}</td>
+        <td class="venue{% if not e.is_inflow and e.tx.vendor %} categorizable{% endif %}"{% if not e.is_inflow and e.tx.vendor %} data-vendor="{{ e.tx.vendor }}"{% endif %}>{{ e.tx.venue or e.type | replace('_', ' ') | capitalize }}{% if e.type == 'declined' %} <span class="badge b-clay">Declined</span>{% endif %}{% if e.self_transfer %} <span class="badge">Self</span>{% endif %}</td>
         {% if e.is_inflow %}
         <td></td>
         <td></td>

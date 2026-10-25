@@ -347,5 +347,6 @@ def render(services) -> str:
         category_averages=category_averages,
         vendor_rows=_vendor_rows(ledger, tx_service.type_keys(config)),
         slots=clock.slots,
+        slot_json=[{'key': slot.key, 'label': slot.label, 'short': slot.short} for slot in clock.slots],
         types=tx_service.type_keys(config),
     )

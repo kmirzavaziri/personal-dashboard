@@ -61,7 +61,6 @@
   tr.drop-target td { box-shadow: inset 0 -2px 0 var(--accent); }
   .tx-toolbar { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.7rem; }
   .tx-toolbar .search-input { flex: 1; }
-  .switch { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: var(--muted); white-space: nowrap; cursor: pointer; }
   [data-tab="transactions"]:not(.show-self) tr.self-transfer { display: none; }
   .search-hidden { display: none !important; }
   .search-meta { font-size: 0.76rem; margin: 0 0 0.3rem 0.2rem; }
@@ -95,6 +94,12 @@
   .category-item { display: flex; align-items: center; gap: 0.4rem; }
   .category-item .category-name { flex: 1; font-weight: 500; }
   .category-avg { font-size: 0.74rem; white-space: nowrap; }
+  .tx-table td.categorizable { cursor: pointer; }
+  @media (hover: hover) { .tx-table td.categorizable:hover { color: var(--accent); } }
+  .describe-sub { font-size: 0.8rem; margin-bottom: 0.8rem; }
+  .describe-body .assign-single, .describe-body .slot-row { gap: 0.5rem; margin-bottom: 0.4rem; }
+  .describe-body .vnote { flex: 1; max-width: none; font-size: 0.82rem; color: var(--text); }
+  #describe-dialog .modal-actions { align-items: center; }
   #new-category-name { width: 100%; margin-top: 0.4rem; }
   @media (max-width: 760px) {
     .vendor { grid-template-columns: 1fr auto; }
@@ -126,7 +131,7 @@
 <div role="tabpanel" data-tabs="budget" data-tab="transactions" hidden>
 <div class="tx-toolbar">
   <input class="search-input" id="tx-search" type="search" placeholder="Search description, note, category or amount" autocomplete="off" aria-label="Search transactions">
-  <label class="switch"><input type="checkbox" id="show-self"> Self-transfers</label>
+  <label class="toggle"><input type="checkbox" id="show-self"><span class="toggle-track" aria-hidden="true"></span>Self-transfers</label>
 </div>
 <nav role="tablist" class="sub" data-tabs="card" data-deselect="all">
   <button role="tab" data-tab="all" data-account="" hidden>All</button>
@@ -220,6 +225,19 @@
   <option value="{{ uncategorized }}" data-tone="var(--faint)">Uncategorized</option>
   {% for cat in categories %}<option value="{{ cat.key }}" data-tone="{{ tone(cat.name) }}">{{ cat.name }}</option>{% endfor %}
 </template>
+<dialog class="modal" id="describe-dialog">
+  <form method="dialog">
+    <h2 id="describe-title"></h2>
+    <div class="muted describe-sub">Every transaction with this description gets this category.</div>
+    <div class="describe-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost split-mode" type="button">Split by time</button>
+      <span class="spacer"></span>
+      <button class="btn" value="cancel">Cancel</button>
+      <button class="btn btn-primary" value="confirm">Save</button>
+    </div>
+  </form>
+</dialog>
 <dialog class="modal" id="new-category-dialog">
   <form method="dialog">
     <h2>New category</h2>
@@ -333,6 +351,103 @@
 
 {% block scripts %}
 <script>
+  var SLOTS = {{ slot_json | tojson }};
+  (function () {
+    var dialog = document.getElementById('describe-dialog');
+    var body = dialog.querySelector('.describe-body');
+    var splitButton = dialog.querySelector('.split-mode');
+    var vendor = null;
+    var split = false;
+
+    function categorySelect(value, label, tone) {
+      var select = document.createElement('select');
+      select.className = 'vcat tone';
+      select.dataset.optionsFrom = 'category-options';
+      select.setAttribute('aria-label', 'Category');
+      var option = new Option(label || 'Uncategorized', value || '', true, true);
+      option.dataset.tone = tone || 'var(--faint)';
+      select.appendChild(option);
+      return select;
+    }
+
+    function line(slot, value, label, tone, note) {
+      var row = document.createElement('div');
+      row.className = slot ? 'slot-row' : 'assign-single';
+      if (slot) {
+        row.dataset.slot = slot.key;
+        var name = document.createElement('span');
+        name.className = 'slot-label';
+        name.textContent = slot.short;
+        name.title = slot.label;
+        row.appendChild(name);
+      }
+      row.appendChild(categorySelect(value, label, tone));
+      var input = document.createElement('input');
+      input.className = 'vnote';
+      input.placeholder = 'Note';
+      input.maxLength = 80;
+      input.value = note || '';
+      row.appendChild(input);
+      return row;
+    }
+
+    function current(source) {
+      var rows = source ? source.querySelectorAll(split ? '.slot-row' : '.assign-single') : [];
+      var picks = {};
+      Array.prototype.forEach.call(rows, function (row) {
+        var select = row.querySelector('select.vcat');
+        var option = select && select.selectedOptions[0];
+        picks[row.dataset.slot || ''] = {
+          value: select ? select.value : '',
+          label: option ? option.text : '',
+          tone: option ? option.dataset.tone : '',
+          note: row.querySelector('.vnote') ? row.querySelector('.vnote').value : '',
+        };
+      });
+      return picks;
+    }
+
+    function render(picks) {
+      body.innerHTML = '';
+      if (split) {
+        SLOTS.forEach(function (slot) {
+          var p = picks[slot.key] || picks[''] || {};
+          body.appendChild(line(slot, p.value, p.label, p.tone, p.note));
+        });
+      } else {
+        var p = picks[''] || picks[SLOTS[0].key] || {};
+        body.appendChild(line(null, p.value, p.label, p.tone, p.note));
+      }
+      splitButton.textContent = split ? 'One category' : 'Split by time';
+    }
+
+    document.addEventListener('click', function (e) {
+      var cell = e.target.closest && e.target.closest('td.categorizable');
+      if (!cell) return;
+      vendor = cell.dataset.vendor;
+      var row = Array.prototype.find.call(document.querySelectorAll('.vendor'), function (r) { return r.dataset.vendor === vendor; });
+      split = !!row && row.querySelector('.split-toggle') && row.querySelector('.split-toggle').getAttribute('aria-pressed') === 'true';
+      document.getElementById('describe-title').textContent = vendor;
+      render(current(row));
+      dialog.showModal();
+    });
+
+    splitButton.addEventListener('click', function () {
+      var picks = current(body);
+      split = !split;
+      render(picks);
+    });
+
+    dialog.addEventListener('close', function () {
+      if (dialog.returnValue !== 'confirm' || !vendor) return;
+      var assignments = Array.prototype.map.call(body.querySelectorAll(split ? '.slot-row' : '.assign-single'), function (row) {
+        return { slots: split ? [row.dataset.slot] : [], category: row.querySelector('select.vcat').value, note: row.querySelector('.vnote').value.trim() };
+      }).filter(function (a) { return a.category; });
+      api('/api/vendors/assign', 'POST', { vendor: vendor, assignments: assignments })
+        .then(function () { toast('Saved'); setTimeout(function () { location.reload(); }, 400); });
+    });
+  })();
+
   (function () {
     var toggle = document.getElementById('show-self');
     var panel = document.querySelector('[role="tabpanel"][data-tab="transactions"]');

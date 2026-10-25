@@ -221,6 +221,20 @@
   .dd-dot { width: 0.45rem; height: 0.45rem; flex: none; border-radius: 50%; background: var(--tone, var(--faint)); }
   .dd-empty { padding: 0.4rem 0.55rem; font-size: 0.78rem; color: var(--faint); }
   input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); width: 0.95rem; height: 0.95rem; }
+  .toggle { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--muted); white-space: nowrap; cursor: pointer; user-select: none; }
+  .toggle input { position: absolute; opacity: 0; pointer-events: none; }
+  .toggle-track {
+    position: relative; width: 1.9rem; height: 1.1rem; flex: none; border-radius: 999px;
+    background: var(--raised); border: 1px solid var(--border-strong); transition: background 0.15s, border-color 0.15s;
+  }
+  .toggle-track::after {
+    content: ''; position: absolute; top: 50%; left: 0.12rem; width: 0.78rem; height: 0.78rem; border-radius: 50%;
+    background: var(--faint); transform: translateY(-50%); transition: transform 0.15s, background 0.15s;
+  }
+  .toggle input:checked + .toggle-track { background: var(--accent-soft); border-color: var(--accent); }
+  .toggle input:checked + .toggle-track::after { transform: translate(0.78rem, -50%); background: var(--accent); }
+  .toggle input:focus-visible + .toggle-track { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .toggle:has(input:checked) { color: var(--strong); }
   label.field { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.75rem; color: var(--muted); }
 
   .bar { height: 6px; border-radius: 999px; background: var(--raised); overflow: hidden; }
