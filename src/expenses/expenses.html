@@ -514,6 +514,13 @@
       panel.querySelectorAll('tr[data-category]').forEach(function (row) {
         row.classList.toggle('category-filtered', select.value !== '*' && row.dataset.category !== select.value);
       });
+      panel.querySelectorAll('table.restriped tbody').forEach(function (body) {
+        var shown = 0;
+        Array.prototype.forEach.call(body.rows, function (row) {
+          var visible = !row.classList.contains('category-filtered') && (toggle.checked || !row.classList.contains('hidden-tx'));
+          row.classList.toggle('alt', visible && shown++ % 2 === 1);
+        });
+      });
     }
     function schedule() {
       if (pending) return;

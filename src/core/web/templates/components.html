@@ -101,20 +101,23 @@
   table:last-child { margin-bottom: 0; }
   th {
     color: var(--muted); font-size: 0.74rem; font-weight: 500; text-align: left;
-    padding: 0.35rem 0.6rem; border-bottom: 1px solid var(--border);
+    padding: 0.3rem 0.6rem; border-bottom: 1px solid var(--border);
   }
-  td { padding: 0.42rem 0.6rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
-  th:first-child, td:first-child { padding-left: 0.2rem; }
-  th:last-child, td:last-child { padding-right: 0.2rem; }
+  td { padding: 0.3rem 0.6rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  th:first-child, td:first-child { padding-left: 0.5rem; }
+  th:last-child, td:last-child { padding-right: 0.5rem; }
   tbody tr:last-child td { border-bottom: none; }
-  @media (hover: hover) { tbody tr:hover td { background: var(--hover); } }
+  tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--text) 3.5%, transparent); }
+  .restriped tbody tr:nth-child(even) td { background: none; }
+  .restriped tbody tr.alt td { background: color-mix(in srgb, var(--text) 3.5%, transparent); }
+  @media (hover: hover) { tbody tr:hover td, .restriped tbody tr:hover td { background: var(--hover); } }
   .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  tr:target td { background: var(--accent-soft); }
+  tbody tr:target td { background: var(--accent-soft); }
   .thumb-col { width: 60px; padding: 0.2rem 0.3rem; }
   .thumb-col img { width: 52px; height: 52px; object-fit: contain; border-radius: var(--radius-sm); display: block; background: #fff; }
   .total-row td { font-weight: 600; color: var(--strong); border-top: 1px solid var(--border-strong); }
   .grand-total-row td { font-weight: 600; color: var(--strong); font-size: 0.92rem; border-top: 1px solid var(--strong); }
-  .subtotal-row td { color: var(--muted); background: var(--raised); }
+  tbody tr.subtotal-row td { color: var(--muted); background: var(--raised); }
   .category-heading-row td { color: var(--strong); font-size: 0.8rem; font-weight: 600; padding-top: 0.9rem; }
 
   .badge, .chip, .pill {
