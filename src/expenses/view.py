@@ -244,15 +244,17 @@ def _monthly_averages(ledger, current) -> tuple[dict, dict]:
 
 
 def _env(ledger):
-    return _env_for(tuple(c.name for c in ledger.categories))
+    return _env_for(tuple(c.name for c in ledger.categories), tuple(ledger.account_names))
 
 
 @lru_cache(maxsize=4)
-def _env_for(category_names: tuple[str, ...]):
+def _env_for(category_names: tuple[str, ...], account_names: tuple[str, ...]):
     tones = colors_for(category_names)
+    card_tones = colors_for(account_names)
     env = make_env(HERE)
     env.trim_blocks, env.lstrip_blocks = True, True
     env.globals['tone'] = lambda name: tones.get(name, 'var(--faint)')
+    env.globals['card_tone'] = lambda name: card_tones.get(name, 'var(--faint)')
     env.globals['uncategorized'] = UNCATEGORIZED
     env.filters['fmt'] = lambda v: f'{v:,.0f}'
     env.filters['fmt1'] = lambda v: f'{v:.1f}'
@@ -347,7 +349,6 @@ def render(services) -> str:
         current_period=_period_summary(ledger, period, budgets, current=True),
         average=average,
         card_sections=card_sections,
-        card_tones=colors_for(section['account'] for section in card_sections),
         all_cards={
             'entries': sorted(shown_entries, key=lambda e: e.tx.at, reverse=True),
             'total': sum(e.aed for e in shown_entries if e.spend and not e.hidden),

@@ -48,6 +48,7 @@
   .tx-table .c-amount { width: 5.5rem; }
   .tx-table td { overflow: hidden; text-overflow: ellipsis; }
   .tx-table td.venue, .tx-table td.card-col { white-space: nowrap; }
+  .card-col .dd-dot { display: inline-block; margin-right: 0.4rem; vertical-align: 0.08em; }
   .tx-table .tx-note { width: 100%; min-width: 0; }
   .tx-table .dd { max-width: 100%; }
   .card-period { margin-top: 1rem; }
@@ -131,7 +132,7 @@
 <div class="tx-toolbar">
   <select id="tx-card" class="input-quiet tone" aria-label="Card">
     <option value="all" data-account="" data-tone="var(--faint)">All cards</option>
-    {% for c in card_sections %}<option value="card-{{ loop.index }}" data-account="{{ c.account }}" data-tone="{{ card_tones[c.account] }}">{{ c.account }}</option>{% endfor %}
+    {% for c in card_sections %}<option value="card-{{ loop.index }}" data-account="{{ c.account }}" data-tone="{{ card_tone(c.account) }}">{{ c.account }}</option>{% endfor %}
   </select>
   <input class="search-input" id="tx-search" type="search" placeholder="Search description, note, category or amount" autocomplete="off" aria-label="Search transactions">
   <select id="tx-category" class="input-quiet" aria-label="Category filter">

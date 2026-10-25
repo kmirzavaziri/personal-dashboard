@@ -147,6 +147,10 @@ class Ledger:
             year, month = _shift_month(year, month, 1)
         return sorted(boundaries, key=lambda pair: pair[1])
 
+    @property
+    def account_names(self) -> list[str]:
+        return sorted(set(self._accounts.values()) | {_UNKNOWN_ACCOUNT})
+
     def category(self, key: str) -> Category | None:
         return self._by_key.get(key)
 

@@ -9,6 +9,7 @@ _MASHREQ_DATE = re.compile(r'^\d{2}/\d{2}/\d{4}(?:\s|$)')
 _MASHREQ_ENTRY = re.compile(
     r'^(?P<day>\d{2}/\d{2}/\d{4}) (?:VALUE DATE: \S+ )?(?P<kind>.+?) (?P<ref>\S+) (?P<debit>[\d,]+\.\d{3}) '
     r'(?P<credit>[\d,]+\.\d{3}) (?P<balance>[\d,]+\.\d{3})(?P<extra>.*)$')
+_MASHREQ_FROM_TO = re.compile(r'FROM ACCOUNT No:\s*(\d{6,})\s+TO\s+ACCOUNT No:\s*(\d{6,})')
 _IBAN_ACCOUNT = re.compile(r'AE\d{2}\d{3}(\d{16})')
 _MASHREQ_ACCOUNT_VALUE = re.compile(r'^(\d{9,})\s+AED\b')
 _MASHREQ_TRANSFERS = ('Account to Account', 'IPP TRANSFER', 'Online Local Fund Transfer', 'Instant Card Payment')
@@ -76,17 +77,25 @@ def parse_mashreq(text: str) -> list[StatementLine]:
 def _mashreq_line(entry: dict, own: str) -> StatementLine:
     kind, extra = entry['kind'], entry['extra']
     details = kind + ' ' + extra
-    ibans = [account.lstrip('0') for account in _IBAN_ACCOUNT.findall(details) if not own or not account.endswith(own)]
-    accounts = ibans or [a for a in re.findall(r'(?:ACCOUNT No:|A/C ?No:|IPP TRANSFER)\s*(\d{6,})', details) if a != own]
-    name = ''
+    direct = _MASHREQ_FROM_TO.search(details)
+    if direct:
+        sender, receiver = direct.groups()
+        own, other = (sender, receiver) if entry['amount'] > 0 else (receiver, sender)
+        accounts = [other]
+    else:
+        ibans = [account.lstrip('0') for account in _IBAN_ACCOUNT.findall(details) if not own or not account.endswith(own)]
+        accounts = ibans or [a for a in re.findall(r'(?:A/C ?No:|IPP TRANSFER)\s*(\d{6,})', details) if a != own]
     named = re.match(r'Online Local Fund Transfer, (.+?), A/C', kind)
-    if named:
-        name = ' '.join(named.group(1).split())
+    name = _spaced_name(named.group(1)) if named else ''
     kind_name = re.sub(r'\s+', ' ', re.sub(r'AccountTransfer', 'Account Transfer', kind.split(',')[0])).strip()
-    kind_name = re.sub(r' \d{6,}$', '', kind_name)
+    kind_name = re.sub(r' \d{6,}.*$', '', kind_name)
     return StatementLine(bank='Mashreq', last4=own[-4:], day=entry['day'], kind=kind_name,
                          amount=entry['amount'], counterparty_name=name,
                          counterparty_account=accounts[0] if accounts else '')
+
+
+def _spaced_name(text: str) -> str:
+    return ' '.join(re.sub(r'(?<=[a-z])(?=[A-Z])', ' ', text).split())
 
 
 def parse_enbd(text: str) -> list[StatementLine]:
