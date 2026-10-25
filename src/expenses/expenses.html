@@ -60,9 +60,16 @@
   .vendor-toolbar { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.7rem; }
   .vendor-toolbar #vendor-search { flex: 1 1 14rem; max-width: 22rem; }
   .vendor-list { padding: 0.3rem 0.9rem; }
-  .vendor { display: grid; grid-template-columns: minmax(10rem, 1fr) minmax(16rem, 1.6fr) auto; align-items: center; gap: 0.6rem; padding: 0.45rem 0; border-top: 1px solid var(--border); }
+  .vendor { display: grid; grid-template-columns: minmax(10rem, 1.3fr) 6.5rem 3.5rem 6rem minmax(16rem, 1.7fr) auto; align-items: center; gap: 0.6rem; padding: 0.45rem 0; border-top: 1px solid var(--border); }
   .vendor:first-child { border-top: none; }
   .vendor-main { display: flex; flex-direction: column; min-width: 0; }
+  .vendor-meta { display: none; }
+  .vcol { font-size: 0.8rem; }
+  .vendor-head { padding: 0.2rem 0 0.35rem; }
+  .vendor-head + .vendor { border-top: 1px solid var(--border); }
+  .vh { all: unset; cursor: pointer; font-size: 0.74rem; color: var(--muted); }
+  .vh.num { text-align: right; }
+  .vh:hover, .vh[aria-sort] { color: var(--strong); }
   .vendor-income { font-size: 0.78rem; }
   .vendor-name { color: var(--strong); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .vendor-meta { font-size: 0.74rem; color: var(--muted); }
@@ -77,9 +84,11 @@
   .category-item .category-name { flex: 1; font-weight: 500; }
   .category-avg { font-size: 0.74rem; white-space: nowrap; }
   #new-category-name { width: 100%; margin-top: 0.4rem; }
-  @media (max-width: 700px) {
+  @media (max-width: 760px) {
     .vendor { grid-template-columns: 1fr auto; }
     .vendor-assign { grid-column: 1 / -1; grid-row: 2; }
+    .vendor-meta { display: block; }
+    .vcol, .vendor-head { display: none; }
   }
   .delete-choice { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.8rem; font-size: 0.84rem; }
   .delete-choice label { display: flex; align-items: center; gap: 0.5rem; }
@@ -147,18 +156,30 @@
     <option value="count">Most frequent</option>
     <option value="last">Most recent</option>
     <option value="category">Category</option>
+    <option value="name">Name</option>
   </select>
   <span class="spacer"></span>
   <button class="btn btn-sm" id="manage-categories" type="button">Categories</button>
   <button class="btn btn-sm btn-primary" id="new-category" type="button">New category</button>
 </div>
 <section class="vendor-list">
+  <div class="vendor vendor-head">
+    <button type="button" class="vh" data-sort="name">Vendor</button>
+    <button type="button" class="vh num" data-sort="total">{{ dh }}</button>
+    <button type="button" class="vh num" data-sort="count">Count</button>
+    <button type="button" class="vh" data-sort="last">Last seen</button>
+    <button type="button" class="vh" data-sort="category">Category and note</button>
+    <span></span>
+  </div>
   {% for v in vendor_rows %}
   <div class="vendor" data-vendor="{{ v.vendor }}" data-total="{{ v.total }}" data-count="{{ v.count }}" data-last="{{ v.last }}" data-category="{{ v.category }}" data-category-name="{{ v.category_name }}" data-search="{{ v.label | lower }}">
     <div class="vendor-main">
       <span class="vendor-name">{{ v.label }}</span>
       <span class="vendor-meta">{% if v.count %}<span class="amount{% if v.inflow %} inflow{% endif %}">{% if v.inflow %}+{% endif %}{{ dh }}{{ v.total | fmt }}</span> · {{ v.count }}{% if v.last %} · <time data-human="date" datetime="{{ v.last }}">{{ v.last }}</time>{% endif %}{% else %}by transaction type{% endif %}</span>
     </div>
+    <span class="vcol num amount{% if v.inflow %} inflow{% endif %}">{% if v.count %}{% if v.inflow %}+{% endif %}{{ v.total | fmt }}{% endif %}</span>
+    <span class="vcol num muted">{{ v.count or '' }}</span>
+    <span class="vcol when">{% if v.last %}<time data-human="date" datetime="{{ v.last }}">{{ v.last }}</time>{% endif %}</span>
     {% if v.inflow %}
     <div class="vendor-assign"></div>
     <span></span>
@@ -408,7 +429,7 @@
         .then(function () { toast(sel.value ? 'Category set' : 'Back to automatic'); });
     });
 
-    var vendorRows = Array.prototype.slice.call(document.querySelectorAll('.vendor'));
+    var vendorRows = Array.prototype.slice.call(document.querySelectorAll('.vendor:not(.vendor-head)'));
     var vendorList = document.querySelector('.vendor-list');
     var vendorSearch = document.getElementById('vendor-search');
     var vendorFilter = document.getElementById('vendor-filter');
@@ -422,6 +443,7 @@
       var shown = 0;
       vendorRows.sort(function (a, b) {
         if (key === 'last') return (b.dataset.last || '').localeCompare(a.dataset.last || '');
+        if (key === 'name') return a.dataset.search.localeCompare(b.dataset.search);
         if (key === 'category') {
           var byName = (a.dataset.categoryName || '\uffff').localeCompare(b.dataset.categoryName || '\uffff');
           if (byName) return byName;
@@ -442,6 +464,13 @@
     vendorSearch.addEventListener('input', function () { clearTimeout(searchTimer); searchTimer = setTimeout(refreshVendors, 150); });
     vendorFilter.addEventListener('change', refreshVendors);
     vendorSort.addEventListener('change', refreshVendors);
+    document.querySelector('.vendor-head').addEventListener('click', function (e) {
+      var head = e.target.closest('.vh');
+      if (!head) return;
+      vendorSort.value = head.dataset.sort;
+      document.querySelectorAll('.vh').forEach(function (h) { h.toggleAttribute('aria-sort', h === head); });
+      refreshVendors();
+    });
 
     function assignments(row) {
       var split = row.querySelector('.split-toggle').getAttribute('aria-pressed') === 'true';

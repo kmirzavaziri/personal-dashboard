@@ -7,6 +7,10 @@
         <td class="when"><time data-human datetime="{{ e.tx.ts }}">{{ e.tx.ts[:16] }}</time></td>
         {% if show_account %}<td class="muted card-col">{{ e.account }}</td>{% endif %}
         <td class="venue">{{ e.tx.venue or e.type | replace('_', ' ') | capitalize }}{% if e.type == 'declined' %} <span class="badge b-clay">Declined</span>{% endif %}{% if e.self_transfer %} <span class="badge">Self</span>{% endif %}</td>
+        {% if e.is_inflow %}
+        <td></td>
+        <td></td>
+        {% else %}
         <td>
           <select class="tx-cat tone" data-id="{{ e.tx.id }}" data-options-from="tx-category-options" aria-label="Category">
             <option value="" data-tone="{{ tone(e.match.category.name) if e.match else 'var(--faint)' }}"{% if not e.tx.category_override %} selected{% endif %}>{% if e.match %}{{ e.match.category.name }} · auto{% else %}None{% endif %}</option>
@@ -14,6 +18,7 @@
           </select>
         </td>
         <td><input class="tx-note input-quiet" data-id="{{ e.tx.id }}" value="{{ e.tx.note }}" placeholder="{{ e.default_note or 'Note' }}" maxlength="140"></td>
+        {% endif %}
         <td class="num amount{% if e.is_inflow %} inflow{% endif %}{% if e.type == 'declined' %} declined{% endif %}"{% if e.partially_refunded %} data-tip="{{ e.tx.aed | fmt }} − {{ (e.tx.aed - e.aed) | fmt }} refunded"{% elif e.tx.currency and e.tx.currency != 'AED' %} data-tip="{{ e.tx.currency }} {{ e.tx.amount | abs }}"{% endif %}>{% if e.is_inflow %}+{% endif %}{{ e.aed | abs | fmt }}{% if e.partially_refunded %}<span class="refund-mark" aria-label="partially refunded">↩</span>{% endif %}</td>
       </tr>
       {% endfor %}
