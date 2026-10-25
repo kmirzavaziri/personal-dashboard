@@ -53,6 +53,13 @@ def make_expenses_bp(services) -> Blueprint:
             return 'transaction not found', 404
         return changed({'id': tx_id, 'category': category})
 
+    @bp.post('/api/transaction/<tx_id>/description')
+    def set_transaction_description(tx_id):
+        description = body().get('description', '')
+        if not tx_service.set_description(services.config, tx_id, description):
+            return 'transaction not found', 404
+        return changed({'id': tx_id, 'description': description})
+
     @bp.post('/api/transaction/<tx_id>/note')
     def set_transaction_note(tx_id):
         note = body().get('note', '').strip()

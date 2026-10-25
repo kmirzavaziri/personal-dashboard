@@ -232,8 +232,8 @@ def _same_account_and_amount(row: Transaction, tx: Transaction, patterns: dict, 
 
 def _overrides(config) -> dict[str, dict]:
     return {
-        tx.id: {'category_override': tx.category_override, 'note': tx.note}
-        for tx in _store(config).all() if tx.category_override or tx.note
+        tx.id: {'category_override': tx.category_override, 'note': tx.note, 'description_override': tx.description_override}
+        for tx in _store(config).all() if tx.category_override or tx.note or tx.description_override
     }
 
 
@@ -268,6 +268,10 @@ def set_category(config, tx_id: str, category_key: str) -> bool:
     if category_key not in ('', UNCATEGORIZED) and Category.objects.get_or_none(key=category_key) is None:
         raise ValueError(f'unknown category {category_key!r}')
     return _store(config).update(tx_id, category_override=category_key)
+
+
+def set_description(config, tx_id: str, description: str) -> bool:
+    return _store(config).update(tx_id, description_override=' '.join(description.split()))
 
 
 def set_note(config, tx_id: str, note: str) -> bool:

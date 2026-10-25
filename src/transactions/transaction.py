@@ -28,6 +28,7 @@ class Transaction(BaseModel):
     venue_pattern: str = ''
     raw_ref: str = ''
     category_override: str = ''
+    description_override: str = ''
     note: str = ''
 
     @property
@@ -39,8 +40,12 @@ class Transaction(BaseModel):
         return self.amount_aed if self.amount_aed is not None else self.amount
 
     @property
+    def description(self) -> str:
+        return self.description_override or self.venue
+
+    @property
     def vendor(self) -> str:
-        return ' '.join(_LOCATION_SUFFIX.sub('', self.venue).split())
+        return ' '.join(_LOCATION_SUFFIX.sub('', self.description).split())
 
     @property
     def signature(self) -> str:

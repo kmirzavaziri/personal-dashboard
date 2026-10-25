@@ -302,7 +302,7 @@ def render_card_periods(services, account: str, before: str, count: int) -> str:
 
 
 def _matches_query(entry, terms: list[str]) -> bool:
-    haystack = ' '.join((entry.tx.venue, entry.note, entry.category_name, entry.account, entry.type,
+    haystack = ' '.join((entry.tx.description, entry.note, entry.category_name, entry.account, entry.type,
                          f'{abs(entry.tx.aed):.2f}', f'{abs(entry.tx.amount):.2f}')).casefold()
     return all(term in haystack for term in terms)
 

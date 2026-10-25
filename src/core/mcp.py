@@ -198,7 +198,7 @@ def transactions_list(services, month=None):
     entries = ledger.between(*ledger.clock.month(month or f'{ledger.clock.local(datetime.now(timezone.utc)):%Y-%m}'))
     return json.dumps([
         {'id': e.tx.id, 'ts': e.tx.ts, 'account': e.account, 'type': e.type, 'amount': e.tx.amount,
-         'currency': e.tx.currency, 'amount_aed': e.tx.amount_aed, 'venue': e.tx.venue,
+         'currency': e.tx.currency, 'amount_aed': e.tx.amount_aed, 'venue': e.tx.description,
          'category': e.category_name, 'note': e.note}
         for e in entries
     ], ensure_ascii=False)

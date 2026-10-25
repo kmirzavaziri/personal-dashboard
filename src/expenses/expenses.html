@@ -96,7 +96,8 @@
   .category-avg { font-size: 0.74rem; white-space: nowrap; }
   .tx-table td.categorizable { cursor: pointer; }
   @media (hover: hover) { .tx-table td.categorizable:hover { color: var(--accent); } }
-  .describe-sub { font-size: 0.8rem; margin-bottom: 0.8rem; }
+  .describe-sub { font-size: 0.78rem; margin: 0.9rem 0 0.5rem; }
+  .describe-rename input { font-size: 0.86rem; }
   .describe-body .assign-single, .describe-body .slot-row { gap: 0.5rem; margin-bottom: 0.4rem; }
   .describe-body .vnote { flex: 1; max-width: none; font-size: 0.82rem; color: var(--text); }
   #describe-dialog .modal-actions { align-items: center; }
@@ -227,9 +228,12 @@
 </template>
 <dialog class="modal" id="describe-dialog">
   <form method="dialog">
-    <h2 id="describe-title"></h2>
-    <div class="muted describe-sub">Every transaction with this description gets this category.</div>
-    <div class="describe-body"></div>
+    <h2>Description</h2>
+    <label class="field describe-rename">This transaction<input id="describe-name" maxlength="80" autocomplete="off"></label>
+    <div class="describe-categorize">
+      <div class="muted describe-sub">Category for every transaction with this description</div>
+      <div class="describe-body"></div>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-ghost split-mode" type="button">Split by time</button>
       <span class="spacer"></span>
@@ -421,13 +425,25 @@
       splitButton.textContent = split ? 'One category' : 'Split by time';
     }
 
+    var nameInput = document.getElementById('describe-name');
+    var categorizeBlock = dialog.querySelector('.describe-categorize');
+    var txId = null;
+    var originalName = '';
+    var categorize = true;
+    function vendorOf(text) { return text.replace(/,[^,]*$/, '').split(/\s+/).filter(Boolean).join(' '); }
+
     document.addEventListener('click', function (e) {
       var cell = e.target.closest && e.target.closest('td.categorizable');
       if (!cell) return;
       vendor = cell.dataset.vendor;
+      txId = cell.closest('tr').dataset.txId;
+      originalName = cell.dataset.txDesc;
+      nameInput.value = originalName;
+      categorize = cell.dataset.categorize === 'true';
+      categorizeBlock.hidden = !categorize;
+      splitButton.hidden = !categorize;
       var row = Array.prototype.find.call(document.querySelectorAll('.vendor'), function (r) { return r.dataset.vendor === vendor; });
       split = !!row && row.querySelector('.split-toggle') && row.querySelector('.split-toggle').getAttribute('aria-pressed') === 'true';
-      document.getElementById('describe-title').textContent = vendor;
       render(current(row));
       dialog.showModal();
     });
@@ -440,11 +456,16 @@
 
     dialog.addEventListener('close', function () {
       if (dialog.returnValue !== 'confirm' || !vendor) return;
+      var name = nameInput.value.trim();
+      var renamed = name !== originalName;
+      var target = renamed && name ? vendorOf(name) : vendor;
       var assignments = Array.prototype.map.call(body.querySelectorAll(split ? '.slot-row' : '.assign-single'), function (row) {
         return { slots: split ? [row.dataset.slot] : [], category: row.querySelector('select.vcat').value, note: row.querySelector('.vnote').value.trim() };
       }).filter(function (a) { return a.category; });
-      api('/api/vendors/assign', 'POST', { vendor: vendor, assignments: assignments })
-        .then(function () { toast('Saved'); setTimeout(function () { location.reload(); }, 400); });
+      var steps = Promise.resolve();
+      if (renamed) steps = steps.then(function () { return api('/api/transaction/' + txId + '/description', 'POST', { description: name }); });
+      if (categorize) steps = steps.then(function () { return api('/api/vendors/assign', 'POST', { vendor: target, assignments: assignments }); });
+      steps.then(function () { toast('Saved'); setTimeout(function () { location.reload(); }, 400); });
     });
   })();
 

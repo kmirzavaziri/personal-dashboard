@@ -239,7 +239,7 @@ def _pairs_with(out: Entry, inc: Entry, window: timedelta) -> bool:
 def _self_transfers(entries: list[Entry], own_accounts: set[str], owner: dict, window: timedelta) -> set[str]:
     markers = [text.casefold() for text in (owner.get('names') or []) + (owner.get('movements') or [])]
     to_owner = {e.tx.id for e in entries
-                if e.type in _MOVEMENT_TYPES and any(marker in e.tx.venue.casefold() for marker in markers)}
+                if e.type in _MOVEMENT_TYPES and any(marker in e.tx.description.casefold() for marker in markers)}
     outgoing = [e for e in entries if e.type == 'transfer' and e.tx.amount > 0 and e.account in own_accounts]
     incoming = [e for e in entries if e.type in _MOVEMENT_TYPES and e.tx.amount < 0 and e.account in own_accounts]
     candidates = {out.tx.id: [inc for inc in incoming if _pairs_with(out, inc, window)] for out in outgoing}
