@@ -292,7 +292,7 @@
     background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
     padding: 1.2rem 1.4rem 1.3rem; box-shadow: var(--shadow-pop);
   }
-  dialog.modal { margin: auto; }
+  dialog.modal { position: fixed; inset: 0; margin: auto; max-height: calc(100dvh - 2rem); overflow: auto; }
   dialog.modal::backdrop { background: rgba(20, 20, 19, 0.45); }
   .modal h2 { margin-bottom: 0.4rem; }
   .modal-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.1rem; }
