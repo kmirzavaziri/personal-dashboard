@@ -1,10 +1,11 @@
 ---
 name: dashboard
 description: >-
-  Operate and maintain a self-hosted Personal Dashboard instance. One skill, three
+  Operate and maintain a self-hosted Personal Dashboard instance. One skill, four
   workflows: (A) everyday changes through the MCP tools, (B) local data edits
   reconciled with the live server via the flush → rebase → push → pull protocol,
-  and (C) schema / code-coupled refactors done order-independently. Use whenever
+  (C) schema / code-coupled refactors done order-independently, and (D) monthly bank
+  statement reconciliation. Use whenever
   you add or change dashboard data, hand-edit the data repo (db/ or storage/), do a
   bulk or vocab/schema change the MCP tools don't cover, or need to reconcile local
   and server data — because the deployed app writes the same data repo and
@@ -118,6 +119,66 @@ from a real instance.
 
 ---
 
+## Deploys — the host has no disk
+
+On a free-tier host every code deploy re-clones the data repo, so anything the
+server has not pushed is lost, and while a deploy rolls over the old and new
+containers both accept writes.
+
+- **`data_push` before every code push, and again once the deploy is live**
+  (`version` shows the new sha).
+- **If `data_push` reports FAILED, never deploy.** Reconcile the data remote first;
+  a deploy would wipe the unpushed state.
+- After a deploy that changes how transactions are keyed or stored, pull and check
+  the row count and timestamp format; if a stale merge brought old rows back,
+  rebuild from the inbox.
+
+## Transactions — the inbox is the source, the ledger is derived
+
+- **Every channel lands in the messaging inbox:** the SMS relay, forwarded bank
+  emails (the email worker), the wallet endpoint, and manual entries sent through
+  `messaging_ingest` with a source of their own. Patterns in
+  `db/transactions/patterns.yaml` turn inbox messages into transactions; categories,
+  notes, refund pairing and settlement are derived live by the ledger.
+- **Never hand-edit transaction rows.** Fix the pattern, card, counterparty or
+  category rule, then rebuild with `service.backfill(config, rebuild=True)`
+  (Workflow B). A rebuild keeps per-transaction overrides (category, description,
+  note, settled), so it is always safe to rerun.
+- **A missing transaction is an inbox gap, not a ledger edit.** Ingest the message
+  (with its real `sent_at`) and let the patterns record it; dedup drops it if a
+  bank message for the same movement already exists.
+- **Category assignment for a description** goes through
+  `service.assign_vendor(config, description, rules)` inside Workflow B, never a
+  hand-written rule file.
+
+## Workflow D — monthly statement reconciliation
+
+SMS and email give near-real-time numbers but miss some movements (salaries, card
+purchases the bank never texted). Each month's bank statements fill those gaps.
+
+**Today (manual):**
+
+1. Unlock the month's statement PDFs locally.
+2. `dash transactions statement-lines <folders…>` prints every parsed line as JSON.
+3. Reconcile against the ledger: a statement line with no transaction on the same
+   account for the same amount within ±3 days is missing.
+4. Ingest each missing line as an inbox message (source `statement`) so a rebuild
+   keeps it, then rebuild (Workflow B).
+
+**Target (fully automated, no AI):**
+
+1. The bank's statement email is forwarded to the ingest address like the alert
+   emails; the email worker passes the PDF attachment through.
+2. The server unlocks it with a per-bank password from an environment secret
+   (`STATEMENT_PASSWORD_<BANK>`, set on the host and in the local env, never in
+   either repo) and parses it with the deterministic per-bank parser.
+3. **Trust gate:** the parsed lines must chain from the opening to the closing
+   balance. A statement that doesn't reconcile, or parses no lines, is not
+   imported; it raises an alert instead, like an unparsed SMS.
+4. Unmatched lines are ingested and recorded; matched ones only confirm.
+
+---
+
 ## Tools reference
 
 - `data_push` — force the server to commit + push pending data now (Workflow B
@@ -136,3 +197,9 @@ from a real instance.
 - [ ] edit → commit → `git push` (never `--force`)
 - [ ] `data_pull` (sync server)
 - [ ] verify: `git log`, `git status`, `check` the touched domains
+
+## Quick checklist (code deploy)
+
+- [ ] `data_push` succeeds (FAILED → stop, reconcile first)
+- [ ] push code → `version` shows the new sha
+- [ ] `data_push` again; check transactions if their storage changed
