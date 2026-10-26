@@ -22,7 +22,7 @@ cp -r db.example db && dash server up
   `profile`, `gym`, `monitoring`, `clinics`, `skin_clinic`.
 - `nutrients/`, `edible_categories/`, `clothing_sections/`,
   `expense_categories/` — reference vocabularies.
-- `expenses/recurring.yaml`, `income/models.yaml` — expense/income config. Each recurring entry's `frequency` is daily | workday | weekly | biweekly | monthly | yearly, and `category` is a `transactions/categories` key; an entry without `category` budgets Misc. (spending in categories with no budget).
+- `expenses/recurring.yaml`, `income/models.yaml` — expense/income config. Each recurring entry's `frequency` is daily | workday | weekly | biweekly | monthly | bimonthly | semiannual | yearly, and `category` is a `transactions/categories` key; an entry without `category` budgets Misc. (spending in categories with no budget).
 - `planner/` + `planner_meta/board.yaml` — kanban tasks (`backlog`/`next`/`done`)
   and label ordering.
 - `calendar/` — recurring (`day:`) and dated (`date:`) entries; `task_key`

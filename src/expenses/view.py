@@ -32,6 +32,8 @@ _FREQ_TO_MONTHLY = {
     'weekly':   _DAYS_PER_MONTH / 7,
     'biweekly': _DAYS_PER_MONTH / 14,
     'monthly':  1.0,
+    'bimonthly': 1.0 / 2,
+    'semiannual': 1.0 / 6,
     'yearly':   1.0 / 12,
 }
 
@@ -41,6 +43,8 @@ _FREQ_UNITS = {
     'weekly':   '/ week',
     'biweekly': '/ 2 weeks',
     'monthly':  '',
+    'bimonthly': '/ 2 months',
+    'semiannual': '/ 6 months',
     'yearly':   '/ year',
 }
 
