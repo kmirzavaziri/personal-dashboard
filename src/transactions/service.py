@@ -250,10 +250,17 @@ def _distinct_events(row: Transaction, tx: Transaction, matching: Matching) -> b
 
 
 def _compatible_types(row: Transaction, tx: Transaction, patterns: dict) -> bool:
-    if row.type == tx.type:
+    row_type = _recorded_type(row, patterns)
+    if row_type == tx.type:
         return True
-    merges = lambda a, b: b.type in (patterns.get(a.pattern) or {}).get('merges_with', [])
-    return merges(row, tx) or merges(tx, row)
+    merges = lambda pattern, other_type: other_type in (patterns.get(pattern) or {}).get('merges_with', [])
+    return merges(row.pattern, tx.type) or merges(tx.pattern, row_type)
+
+
+def _recorded_type(row: Transaction, patterns: dict) -> str:
+    if not row.venue_pattern:
+        return row.type
+    return ((patterns.get(row.pattern) or {}).get('set') or {}).get('type', 'purchase')
 
 
 def _same_account_and_amount(row: Transaction, tx: Transaction, patterns: dict, banks: dict, charges: float) -> bool:
