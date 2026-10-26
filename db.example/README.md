@@ -21,8 +21,8 @@ cp -r db.example db && dash server up
   `routine` (dosing/care), `nutrient_targets` (→ `nutrients/`), plus
   `profile`, `gym`, `monitoring`, `clinics`, `skin_clinic`.
 - `nutrients/`, `edible_categories/`, `clothing_sections/`,
-  `expense_accounts/`, `expense_categories/` — reference vocabularies.
-- `expenses/recurring.yaml`, `income/models.yaml` — expense/income config. Each recurring entry's `frequency` is daily | workday | weekly | biweekly | monthly | yearly, `account` is an `expense_accounts` key, and `category` is a `transactions/categories` key.
+  `expense_categories/` — reference vocabularies.
+- `expenses/recurring.yaml`, `income/models.yaml` — expense/income config. Each recurring entry's `frequency` is daily | workday | weekly | biweekly | monthly | yearly, and `category` is a `transactions/categories` key; an entry without `category` budgets Misc. (spending in categories with no budget).
 - `planner/` + `planner_meta/board.yaml` — kanban tasks (`backlog`/`next`/`done`)
   and label ordering.
 - `calendar/` — recurring (`day:`) and dated (`date:`) entries; `task_key`
@@ -45,5 +45,5 @@ cp -r db.example db && dash server up
 - Each edible item's `metadata.edible.category` must be an
   `edible_categories` key.
 - `skin_clinic[].clinic_groups[].key` must be a key in `health/clinics.yaml`.
-- `expense_categories[].account` must be an `expense_accounts` key, and `expense_categories[].category` a `transactions/categories` key.
+- `expense_categories[].category` must be a `transactions/categories` key.
 - Calendar `task_key` must match a `planner/` task key.

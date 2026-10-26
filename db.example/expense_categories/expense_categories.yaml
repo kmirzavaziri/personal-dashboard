@@ -1,12 +1,8 @@
 - key: snack
-  account: daily
   category: coffee
 - key: supplement
-  account: monthly
   category: self_care
 - key: care
-  account: monthly
   category: self_care
 - key: hygiene
-  account: monthly
   category: self_care

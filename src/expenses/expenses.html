@@ -249,7 +249,7 @@
 <section>
   <table class="budget-tree">
     <thead>
-      <tr><th>Category</th><th class="num">Rate</th><th class="num">{{ dh }} / mo</th><th class="num">{{ average.months }}-mo avg</th></tr>
+      <tr><th>Category</th><th class="num">Rate</th><th class="num">{{ dh }} / mo</th></tr>
     </thead>
     <tbody>
       {% for cat in budget_tree %}
@@ -257,7 +257,6 @@
         <td><button type="button" class="tree-toggle" aria-expanded="true"><span class="dot" style="--tone: {{ tone(cat.name) }}"></span>{{ cat.name }}</button></td>
         <td></td>
         <td class="num">{{ cat.monthly | fmt }}</td>
-        <td class="num muted">{{ cat.average | fmt }}</td>
       </tr>
       {% for child in cat.children %}
       {% set branch = '└' if loop.last else '├' %}
@@ -268,14 +267,12 @@
         <td><span class="branch">{{ branch }}</span><button type="button" class="tree-toggle" aria-expanded="false">{{ child.name }}<span class="tag">{{ child.children | length }} items</span></button></td>
         <td></td>
         <td class="num">{{ child.monthly | fmt }}</td>
-        <td></td>
       </tr>
       {% for item in child.children %}
       <tr class="tree-leaf" data-parent="{{ group_key }}" hidden>
         <td><span class="branch">{{ ' ' if group_last else '│' }}</span><span class="branch">{{ '└' if loop.last else '├' }}</span>{%- if item.image %}<img src="{{ item.image }}" class="thumb" alt="">{%- endif -%}{%- if item.url %}<a href="{{ item.url }}" class="item-link" target="_blank">{{ item.name }}</a>{%- else %}{{ item.name }}{%- endif -%}</td>
         <td></td>
         <td class="num muted">{{ item.monthly | fmt }}</td>
-        <td></td>
       </tr>
       {% endfor %}
       {% else %}
@@ -283,12 +280,11 @@
         <td><span class="branch">{{ branch }}</span>{{ child.name }}{% if child.note %}<span class="tag">{{ child.note }}</span>{% endif %}</td>
         <td class="num muted">{% if child.unit %}{{ child.cost | fmt }} {{ child.unit }}{% endif %}</td>
         <td class="num">{{ child.monthly | fmt }}</td>
-        <td></td>
       </tr>
       {% endif %}
       {% endfor %}
       {% endfor %}
-      <tr class="grand-total-row"><td>Total</td><td></td><td class="num">{{ dh }}{{ budget_total | fmt }}</td><td class="num muted">{{ dh }}{{ budget_average | fmt }}</td></tr>
+      <tr class="grand-total-row"><td>Total</td><td></td><td class="num">{{ dh }}{{ budget_total | fmt }}</td></tr>
     </tbody>
   </table>
 </section>

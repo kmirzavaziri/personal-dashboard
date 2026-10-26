@@ -7,7 +7,6 @@ class ExpenseCategory(Model):
     SUBDIR = 'expense_categories'
 
     key: str
-    account: str = ''
     category: str
 
 

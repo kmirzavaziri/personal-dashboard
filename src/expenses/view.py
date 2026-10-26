@@ -202,7 +202,7 @@ def _category_budgets(lines: list[dict]) -> dict[str, float]:
     return totals
 
 
-def _budget_tree(lines: list[dict], names: dict[str, str], averages: dict[str, float], average_total: float) -> list[dict]:
+def _budget_tree(lines: list[dict], names: dict[str, str]) -> list[dict]:
     by_category: dict[str, list[dict]] = {}
     for line in lines:
         by_category.setdefault(line['category_key'], []).append(line)
@@ -221,13 +221,9 @@ def _budget_tree(lines: list[dict], names: dict[str, str], averages: dict[str, f
             'key': key or _MISC_NODE,
             'name': _category_name(key, names),
             'monthly': sum(line['monthly'] for line in members),
-            'average': averages.get(key, 0.0),
             'children': sorted(children, key=lambda child: -child['monthly']),
         })
-    misc = next((node for node in tree if node['key'] == _MISC_NODE), None)
-    if misc:
-        misc['average'] = average_total - sum(averages.get(key, 0.0) for key in by_category if key != _MISC_KEY)
-    return sorted(tree, key=lambda node: (node is misc, -node['monthly']))
+    return sorted(tree, key=lambda node: (node['key'] == _MISC_NODE, -node['monthly']))
 
 
 def _period_summary(ledger, period, budgets: dict[str, float], current: bool) -> dict:
@@ -417,9 +413,8 @@ def render(services) -> str:
     trends = _trends(ledger, datetime.now(timezone.utc), budgets)
 
     return _env(ledger).get_template('expenses.html').render(
-        budget_tree=_budget_tree(lines, category_names, category_averages, average['amount']),
+        budget_tree=_budget_tree(lines, category_names),
         budget_total=sum(budgets.values()),
-        budget_average=average['amount'],
         current_period=_period_summary(ledger, period, budgets, current=True),
         average=average,
         card_sections=card_sections,
