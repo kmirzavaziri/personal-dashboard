@@ -73,7 +73,7 @@ Paid {{ when(line.last_paid) }}{% if line.state == 'over' %}, {{ (line.spent - l
   <div class="grid-scroll">
   <table class="rhythm-grid">
     {% set first = group.rows[0][1] %}
-    <thead><tr><th>Sub-category</th>
+    <thead><tr><th>Expense</th>
       {% if first.history %}{% for c in first.history %}<th class="num{% if c.current %} current{% endif %}" title="{{ c.title }}">{{ c.label }}</th>{% endfor %}{% else %}<th class="num">This month</th>{% endif %}
       <th>Now</th></tr></thead>
     <tbody>

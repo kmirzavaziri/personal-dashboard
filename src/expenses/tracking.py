@@ -212,7 +212,7 @@ class Tracker:
                 first = monday - timedelta(weeks=back)
                 start = _day_start(clock, first)
                 last = first + timedelta(days=6 if line.frequency is Frequency.WEEKLY else 13)
-                cells.append(Cell(label=f'{first:%-d %b} – {last:%-d %b}', title=f'{first:%a %-d %b} – {last:%a %-d %b}',
+                cells.append(Cell(label=_span(first, last), title=f'{first:%a %-d %b} – {last:%a %-d %b}',
                                   spent=spent(start, start + timedelta(weeks=1)), allowance=weekly, current=back == 0))
             return cells
         cycle = line.frequency.cycle_months
@@ -225,9 +225,8 @@ class Tracker:
         cells = []
         for window in windows[-(6 if cycle == 1 else 4):]:
             start, end = window[0].start, window[-1].end
-            edge = '%-d %b %Y' if cycle == 12 else '%-d %b'
             last_day = window[-1].last_day if len(window) == cycle else _add_months(window[0].start, cycle) - timedelta(days=1)
-            label = window[-1].last_day.strftime('%b') if cycle == 1 else f'{window[0].start:{edge}} – {last_day:{edge}}'
+            label = window[-1].last_day.strftime('%b') if cycle == 1 else _span(window[0].start.date(), last_day.date(), years=cycle == 12)
             allowance = line.monthly * cycle if line.paced else line.cost_aed * line.times
             cells.append(Cell(label=label, title=f'{window[0].start:%-d %b %Y} – {last_day:%-d %b %Y}',
                               spent=spent(start, end), allowance=allowance, current=start <= now < end or window[-1] is period))
@@ -310,6 +309,14 @@ def _paced_state(spent: float, budget: float, expected: float) -> str:
 
 def _day(clock, at: datetime) -> date:
     return (clock.local(at) - timedelta(hours=clock.day_starts_at)).date()
+
+
+def _span(first: date, last: date, years: bool = False) -> str:
+    suffix = f' {last:%Y}' if years else ''
+    if (first.year, first.month) == (last.year, last.month):
+        return f'{first.day}–{last:%-d %b}{suffix}'
+    start = f'{first:%-d %b %Y}' if years and first.year != last.year else f'{first:%-d %b}'
+    return f'{start}–{last:%-d %b}{suffix}'
 
 
 def _day_start(clock, day: date) -> datetime:

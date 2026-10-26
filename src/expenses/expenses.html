@@ -37,6 +37,7 @@
   .rhythm-grid td.cell.over { --tint: color-mix(in srgb, var(--red) 22%, transparent); color: var(--red); }
   .rhythm-grid th.current { box-shadow: inset 0 -1px 0 var(--accent); color: var(--strong); }
   .rhythm-grid th, .rhythm-grid td { padding: 0.2rem 0.45rem; white-space: nowrap; }
+  .rhythm-grid th, .rhythm-grid td.now, .rhythm-grid td:first-child { white-space: normal; }
   .rhythm-grid td.now .small { display: inline; margin-left: 0.4rem; }
   .rhythm-grid td.now { min-width: 9rem; }
   .breakdown-rows { display: flex; flex-direction: column; gap: 0.5rem; margin: 0.75rem 0; }
