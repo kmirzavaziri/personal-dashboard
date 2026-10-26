@@ -48,34 +48,44 @@ def _expand(regex):
 
 
 def parse_text(text, patterns):
+    records = []
     for pattern in patterns:
-        m = re.search(_expand(pattern['regex']), text, re.I)
-        if not m:
+        parsed = _parse(pattern, text)
+        if parsed is None:
             continue
-        fields = dict(pattern.get('set') or {})
-        fields.update({k: v for k, v in m.groupdict().items() if v is not None})
-        if 'beneficiary' in fields:
-            fields['beneficiary'] = _person_name(fields['beneficiary'])
-        if '{' in fields.get('venue', ''):
-            fields['venue'] = fields['venue'].format_map(defaultdict(str, fields))
-        amount = _num(fields.get('amount'))
-        if amount is not None and pattern.get('negate'):
-            amount = -amount
-        return {
-            'action': pattern.get('action', 'record'),
-            'alert': pattern.get('alert', ''),
-            'groups': fields,
-            'type': fields.get('type', 'purchase'),
-            'currency': (fields.get('currency') or '').upper() or None,
-            'amount': amount,
-            'last4': fields['last4'][-4:].replace('*', 'X') if fields.get('last4') else None,
-            'card_name': (fields.get('card_name') or '').strip(),
-            'venue': (fields.get('venue') or '').strip(),
-            'remaining': _num(fields.get('remaining')),
-            'pattern': pattern['name'],
-            'enriches': int(pattern.get('enriches') or 0),
-        }
-    return None
+        records.append(parsed)
+        if not pattern.get('continue'):
+            break
+    return records
+
+
+def _parse(pattern, text):
+    m = re.search(_expand(pattern['regex']), text, re.I)
+    if not m:
+        return None
+    fields = dict(pattern.get('set') or {})
+    fields.update({k: v for k, v in m.groupdict().items() if v is not None})
+    if 'beneficiary' in fields:
+        fields['beneficiary'] = _person_name(fields['beneficiary'])
+    if '{' in fields.get('venue', ''):
+        fields['venue'] = fields['venue'].format_map(defaultdict(str, fields))
+    amount = _num(fields.get('amount'))
+    if amount is not None and pattern.get('negate'):
+        amount = -amount
+    return {
+        'action': pattern.get('action', 'record'),
+        'alert': pattern.get('alert', ''),
+        'groups': fields,
+        'type': fields.get('type', 'purchase'),
+        'currency': (fields.get('currency') or '').upper() or None,
+        'amount': amount,
+        'last4': fields['last4'][-4:].replace('*', 'X') if fields.get('last4') else None,
+        'card_name': (fields.get('card_name') or '').strip(),
+        'venue': (fields.get('venue') or '').strip(),
+        'remaining': _num(fields.get('remaining')),
+        'pattern': pattern['name'],
+        'enriches': int(pattern.get('enriches') or 0),
+    }
 
 
 def _person_name(name: str) -> str:
@@ -116,7 +126,8 @@ def _alert_text(parsed, account):
 
 def ingest(config, entry, notify=True):
     text = messaging.text_of(entry.get('payload'))
-    parsed = parse_text(text, _patterns(config))
+    records = parse_text(text, _patterns(config))
+    parsed = records[0] if records else None
     if parsed is None or (parsed['action'] == 'record' and parsed['amount'] is None):
         if not looks_like_transaction(text):
             return {'action': 'none'}
@@ -134,6 +145,9 @@ def ingest(config, entry, notify=True):
             messaging.send(config, 'notifications', message)
         return {'action': 'alert', 'message': message}
     tx = _record(config, entry, text, parsed, account)
+    for follow_up in records[1:]:
+        if follow_up['action'] == 'record' and follow_up['amount'] is not None:
+            _record(config, entry, text, follow_up, _account(follow_up, _cards(config)), follow_up['pattern'])
     if tx and parsed['alert'] and notify:
         messaging.send(config, 'notifications', _alert_text(parsed, account))
     return {'action': 'record', 'tx': tx} if tx else {'action': 'duplicate', 'pattern': parsed['pattern']}
@@ -171,11 +185,12 @@ def _store(config) -> TransactionStore:
     return TransactionStore(_dir(config))
 
 
-def _record(config, entry, text, parsed, account) -> Transaction | None:
+def _record(config, entry, text, parsed, account, follow_up='') -> Transaction | None:
     ts = Clock.load(config.db).local(_received_at(entry)).isoformat()
     rate = fx.rate(config, parsed['currency'], ts[:10])
+    seed = f'{ts}|{text}|{follow_up}' if follow_up else f'{ts}|{text}'
     tx = Transaction(
-        id=hashlib.sha1(f"{ts}|{text}".encode()).hexdigest()[:12],
+        id=hashlib.sha1(seed.encode()).hexdigest()[:12],
         ts=ts,
         source=entry.get('source', ''),
         account=account,
