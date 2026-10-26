@@ -10,6 +10,12 @@ UNCATEGORIZED = '-'
 
 
 class Transaction(BaseModel):
+    class Split(BaseModel):
+        model_config = ConfigDict(extra='forbid')
+
+        amount: float
+        line: str
+
     model_config = ConfigDict(extra='ignore')
 
     id: str
@@ -33,6 +39,8 @@ class Transaction(BaseModel):
     voided: bool = False
     marked_settled: bool = False
     note: str = ''
+    budget_line: str = ''
+    splits: list[Split] = []
 
     @property
     def at(self) -> datetime:
@@ -45,6 +53,12 @@ class Transaction(BaseModel):
     @property
     def description(self) -> str:
         return self.description_override or self.statement_description or self.venue
+
+    def portions(self) -> list[tuple[float, str]]:
+        rate = self.aed / self.amount if self.amount else 1.0
+        parts = [(split.amount * rate, split.line) for split in self.splits]
+        rest = self.aed - sum(amount for amount, _ in parts)
+        return parts + ([(rest, self.budget_line)] if abs(rest) > 0.005 else [])
 
     @property
     def vendor(self) -> str:

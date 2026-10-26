@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% import "period_card.html" as pc %}
+{% import "budget_view.html" as bv with context %}
 {% import "tx_table.html" as tt %}
 {% import "period_divider.html" as pd with context %}
 {% from "category_select.html" import category_select with context %}
@@ -15,6 +15,34 @@
   .budget-tree .tree-cat td { font-weight: 600; color: var(--strong); }
   .budget-tree .branch { display: inline-block; width: 1.1rem; color: var(--faint); font-family: var(--font-mono, monospace); }
   .budget-tree .tree-leaf td:first-child, .budget-tree .tree-group td:first-child { padding-left: 0.6rem; }
+  .budget-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
+  .budget-summary > div { display: flex; flex-direction: column; gap: 0.15rem; padding: 0.75rem 0.9rem; border-radius: var(--radius); background: var(--raised); font-size: 0.8rem; }
+  .budget-summary strong { font-size: 1.25rem; font-weight: 600; color: var(--strong); font-variant-numeric: tabular-nums; }
+  .view-switch { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; padding: 2px; margin-bottom: 0.9rem; }
+  .view-switch button { all: unset; cursor: pointer; padding: 0.3rem 0.9rem; border-radius: 999px; font-size: 0.82rem; color: var(--muted); }
+  .view-switch button[aria-pressed="true"] { background: var(--raised); color: var(--strong); }
+  .view-switch button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .tracking .c-progress { width: 34%; }
+  .tracking .c-amount { width: 9rem; }
+  .tracking .c-state { width: 6.5rem; }
+  .tracking .small, .rhythm-grid .small { font-size: 0.76rem; }
+  .state { font-size: 0.72rem; padding: 0.05rem 0.45rem; border-radius: 999px; white-space: nowrap; background: var(--raised); color: var(--muted); }
+  .state-on-pace, .state-paid { color: var(--green); background: color-mix(in srgb, var(--green) 14%, transparent); }
+  .state-ahead, .state-due, .state-part-paid { color: var(--yellow); background: color-mix(in srgb, var(--yellow) 16%, transparent); }
+  .state-over { color: var(--red); background: color-mix(in srgb, var(--red) 14%, transparent); }
+  .frequency-group { margin-bottom: 1.4rem; }
+  .grid-scroll { overflow-x: auto; }
+  .rhythm-grid { width: 100%; font-variant-numeric: tabular-nums; }
+  .rhythm-grid th.current { color: var(--strong); }
+  .rhythm-grid td.cell { text-align: right; font-size: 0.8rem; background: color-mix(in srgb, var(--green) calc(var(--level) * 22%), transparent); }
+  .rhythm-grid td.cell.over { background: color-mix(in srgb, var(--red) 22%, transparent); color: var(--red); }
+  .rhythm-grid td.cell.current { box-shadow: inset 0 0 0 1.5px var(--strong); }
+  .rhythm-grid .cell-label { display: block; font-size: 0.68rem; color: var(--muted); }
+  .rhythm-grid td.now { min-width: 9rem; }
+  .breakdown-rows { display: flex; flex-direction: column; gap: 0.5rem; margin: 0.75rem 0; }
+  .breakdown-row { display: grid; grid-template-columns: 7rem minmax(0, 1fr) auto; gap: 0.5rem; align-items: center; }
+  .breakdown-foot { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; }
+  .breakdown-error { color: var(--red); font-size: 0.82rem; min-height: 1.1rem; }
   .thumb { width: 22px; height: 22px; object-fit: contain; vertical-align: middle; border-radius: 5px; background: #fff; margin-right: 6px; }
   .tag { font-size: 0.74rem; color: var(--muted); margin-left: 0.4rem; font-weight: 400; font-family: var(--font-ui); }
   a.item-link { color: inherit; text-decoration: none; }
@@ -143,18 +171,26 @@
 {% block content %}
 
 <nav role="tablist" data-tabs="budget" data-route="/expenses">
-  <button role="tab" data-tab="spending">Spending</button>
+  <button role="tab" data-tab="budget">Budget</button>
   <button role="tab" data-tab="transactions">Transactions</button>
-  <button role="tab" data-tab="budgets">Budgets</button>
   <button role="tab" data-tab="categorize">Categorize</button>
   <button role="tab" data-tab="trends">Trends</button>
 </nav>
 
-<div role="tabpanel" data-tabs="budget" data-tab="spending">
-{% if average.months %}<div class="average" title="Average of the last {{ average.months }} completed months"><span class="muted">{{ average.months }}-month average</span> <span class="amount">{{ dh }}{{ average.amount | fmt }}</span></div>{% endif %}
-{{ pc.period_card(current_period) }}
+<div role="tabpanel" data-tabs="budget" data-tab="budget">
+{{ bv.summary(overview) }}
+<div class="view-switch" role="group" aria-label="View">
+  <button type="button" data-view="category" aria-pressed="true">By category</button>
+  <button type="button" data-view="frequency" aria-pressed="false">By frequency</button>
+</div>
+<div class="budget-view" data-view="category">
+{{ bv.by_category(overview) }}
 <div id="previous-periods"></div>
-<div class="periods-actions"><button class="btn btn-ghost load-more" type="button" data-url="/expenses/periods?count=3" data-before="{{ current_period.start }}">Previous months</button></div>
+<div class="periods-actions"><button class="btn btn-ghost load-more" type="button" data-url="/expenses/periods?count=3" data-before="{{ overview.period.start.isoformat() }}">Previous months</button></div>
+</div>
+<div class="budget-view" data-view="frequency" hidden>
+{{ bv.by_frequency(frequency_groups) }}
+</div>
 </div>
 
 <div role="tabpanel" data-tabs="budget" data-tab="transactions" hidden>
@@ -245,51 +281,6 @@
 <script type="application/json" id="trend-data">{{ trends | tojson }}</script>
 </div>
 
-<div role="tabpanel" data-tabs="budget" data-tab="budgets" hidden>
-<section>
-  <table class="budget-tree">
-    <thead>
-      <tr><th>Category</th><th class="num">Rate</th><th class="num">{{ dh }} / mo</th></tr>
-    </thead>
-    <tbody>
-      {% for cat in budget_tree %}
-      <tr class="tree-cat" data-node="{{ cat.key }}">
-        <td><button type="button" class="tree-toggle" aria-expanded="true"><span class="dot" style="--tone: {{ tone(cat.name) }}"></span>{{ cat.name }}</button></td>
-        <td></td>
-        <td class="num">{{ cat.monthly | fmt }}</td>
-      </tr>
-      {% for child in cat.children %}
-      {% set branch = '└' if loop.last else '├' %}
-      {% if child.children %}
-      {% set group_key = cat.key ~ '-' ~ loop.index %}
-      {% set group_last = loop.last %}
-      <tr class="tree-group" data-parent="{{ cat.key }}" data-node="{{ group_key }}">
-        <td><span class="branch">{{ branch }}</span><button type="button" class="tree-toggle" aria-expanded="false">{{ child.name }}<span class="tag">{{ child.children | length }} items</span></button></td>
-        <td></td>
-        <td class="num">{{ child.monthly | fmt }}</td>
-      </tr>
-      {% for item in child.children %}
-      <tr class="tree-leaf" data-parent="{{ group_key }}" hidden>
-        <td><span class="branch">{{ ' ' if group_last else '│' }}</span><span class="branch">{{ '└' if loop.last else '├' }}</span>{%- if item.image %}<img src="{{ item.image }}" class="thumb" alt="">{%- endif -%}{%- if item.url %}<a href="{{ item.url }}" class="item-link" target="_blank">{{ item.name }}</a>{%- else %}{{ item.name }}{%- endif -%}</td>
-        <td></td>
-        <td class="num muted">{{ item.monthly | fmt }}</td>
-      </tr>
-      {% endfor %}
-      {% else %}
-      <tr class="tree-leaf" data-parent="{{ cat.key }}">
-        <td><span class="branch">{{ branch }}</span>{{ child.name }}{% if child.note %}<span class="tag">{{ child.note }}</span>{% endif %}</td>
-        <td class="num muted">{% if child.unit %}{{ child.cost | fmt }} {{ child.unit }}{% endif %}</td>
-        <td class="num">{{ child.monthly | fmt }}</td>
-      </tr>
-      {% endif %}
-      {% endfor %}
-      {% endfor %}
-      <tr class="grand-total-row"><td>Total</td><td></td><td class="num">{{ dh }}{{ budget_total | fmt }}</td></tr>
-    </tbody>
-  </table>
-</section>
-</div>
-
 <template id="category-options">
   <option value="" data-tone="var(--faint)">Uncategorized</option>
   {% for cat in categories %}<option value="{{ cat.key }}" data-tone="{{ tone(cat.name) }}">{{ cat.name }}</option>{% endfor %}
@@ -297,7 +288,11 @@
 
 <template id="tx-category-options">
   <option value="{{ uncategorized }}" data-tone="var(--faint)">Uncategorized</option>
-  {% for cat in categories %}<option value="{{ cat.key }}" data-tone="{{ tone(cat.name) }}">{{ cat.name }}</option>{% endfor %}
+  {% for cat in categories %}<option value="{{ cat.key }}" data-tone="{{ tone(cat.name) }}">{{ cat.name }}</option>{% for line in sub_categories.values() if line.category == cat.key %}<option value="{{ cat.key }}/{{ line.key }}" data-tone="{{ tone(cat.name) }}">{{ cat.name }} › {{ line.name }}</option>{% endfor %}{% endfor %}
+</template>
+<template id="sub-category-options">
+  {% for cat in categories %}{% for line in sub_categories.values() if line.category == cat.key %}<option value="{{ line.key }}" data-tone="{{ tone(cat.name) }}">{{ cat.name }} › {{ line.name }}</option>{% endfor %}{% endfor %}
+  {% for line in sub_categories.values() if not line.category %}<option value="{{ line.key }}" data-tone="var(--faint)">{{ line.name }}</option>{% endfor %}
 </template>
 
 <template id="slot-rows">{% for s in slots %}<div class="slot-row" data-slot="{{ s.key }}"><span class="slot-label" title="{{ s.label }}">{{ s.short }}</span>{{ category_select('') }}<input class="vnote input-quiet" placeholder="Note" maxlength="80" aria-label="Note"></div>{% endfor %}</template>
@@ -314,6 +309,22 @@
       <button class="btn btn-ghost settle-tx" type="button" title="Paid back outside the bank, e.g. in cash; hides it and leaves it out of totals">Settled</button>
       <button class="btn btn-ghost btn-danger void-tx" type="button" title="Hide it and leave it out of totals, e.g. a card check that was reversed">Didn't happen</button>
       <button class="btn btn-ghost split-mode" type="button">Split by time</button>
+      <button class="btn btn-ghost break-down" type="button" title="Split the amount into sub-categories, e.g. rent and bills in one transfer">Break down</button>
+      <span class="spacer"></span>
+      <button class="btn" type="button" data-dismiss>Cancel</button>
+      <button class="btn btn-primary" value="confirm">Save</button>
+    </div>
+  </form>
+</dialog>
+<dialog class="modal" id="breakdown-dialog">
+  <form method="dialog">
+    <h2>Break down</h2>
+    <div class="muted describe-sub">Split this transaction into parts, each with its own sub-category</div>
+    <div class="breakdown-rows"></div>
+    <div class="breakdown-foot"><button class="btn btn-ghost add-part" type="button">Add part</button><span class="spacer"></span><span class="muted breakdown-rest"></span></div>
+    <div class="breakdown-error" role="alert"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost clear-parts" type="button">Remove breakdown</button>
       <span class="spacer"></span>
       <button class="btn" type="button" data-dismiss>Cancel</button>
       <button class="btn btn-primary" value="confirm">Save</button>
@@ -365,6 +376,21 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
+(function () {
+  var switcher = document.querySelector('.view-switch');
+  if (!switcher) return;
+  function pick(view) {
+    switcher.querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.view === view)); });
+    document.querySelectorAll('.budget-view').forEach(function (panel) { panel.hidden = panel.dataset.view !== view; });
+    try { localStorage.setItem('budget-view', view); } catch (e) {}
+  }
+  switcher.addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) pick(b.dataset.view); });
+  var saved;
+  try { saved = localStorage.getItem('budget-view'); } catch (e) {}
+  if (saved) pick(saved);
+})();
+</script>
 <script>
 (function () {
   function showChildren(node, open) {
@@ -528,6 +554,67 @@
     voidButton.addEventListener('click', function () {
       api('/api/transaction/' + txId + '/voided', 'POST', { voided: !voided })
         .then(function () { dialog.close('cancel'); toast(voided ? 'Restored' : 'Marked as not happened'); return refreshRows([txId]); });
+    });
+
+    var breakdown = document.getElementById('breakdown-dialog');
+    var parts = breakdown.querySelector('.breakdown-rows');
+    var rest = breakdown.querySelector('.breakdown-rest');
+    var problem = breakdown.querySelector('.breakdown-error');
+    var total = 0;
+    var breakdownTx = null;
+    function partRow(amount, line) {
+      var row = document.createElement('div');
+      row.className = 'breakdown-row';
+      var input = document.createElement('input');
+      input.type = 'number'; input.step = '0.01'; input.min = '0'; input.placeholder = 'Amount';
+      input.value = amount || '';
+      var select = document.createElement('select');
+      select.className = 'tone'; select.dataset.optionsFrom = 'sub-category-options'; select.setAttribute('aria-label', 'Sub-category');
+      var source = document.getElementById('sub-category-options');
+      Array.prototype.forEach.call(source.content.children, function (option) { select.appendChild(option.cloneNode(true)); });
+      if (line) select.value = line;
+      var remove = document.createElement('button');
+      remove.type = 'button'; remove.className = 'btn btn-ghost'; remove.textContent = 'Remove';
+      remove.addEventListener('click', function () { row.remove(); recount(); });
+      input.addEventListener('input', recount);
+      row.append(input, select, remove);
+      parts.appendChild(row);
+    }
+    function collected() {
+      return Array.prototype.map.call(parts.querySelectorAll('.breakdown-row'), function (row) {
+        return { amount: parseFloat(row.querySelector('input').value), line: row.querySelector('select').value };
+      });
+    }
+    function recount() {
+      problem.textContent = '';
+      var used = collected().reduce(function (sum, part) { return sum + (part.amount || 0); }, 0);
+      var left = Math.round((total - used) * 100) / 100;
+      rest.textContent = left >= 0 ? left.toLocaleString() + ' left for the transaction\'s own sub-category' : (-left).toLocaleString() + ' more than the transaction';
+    }
+    dialog.querySelector('.break-down').addEventListener('click', function () {
+      var cell = document.querySelector('tr[data-tx-id="' + CSS.escape(txId) + '"] td.venue');
+      breakdownTx = txId;
+      total = parseFloat(cell.dataset.amount) || 0;
+      parts.innerHTML = '';
+      JSON.parse(cell.dataset.splits || '[]').forEach(function (part) { partRow(part.amount, part.line); });
+      if (!parts.children.length) { partRow(); partRow(); }
+      recount();
+      dialog.close('cancel');
+      breakdown.showModal();
+    });
+    breakdown.querySelector('.add-part').addEventListener('click', function () { partRow(); recount(); });
+    function saveParts(list) {
+      return api('/api/transaction/' + breakdownTx + '/splits', 'POST', { splits: list })
+        .then(function () { breakdown.close('cancel'); toast(list.length ? 'Broken down' : 'Breakdown removed'); return refreshRows([breakdownTx]); });
+    }
+    breakdown.querySelector('.clear-parts').addEventListener('click', function () { saveParts([]); });
+    breakdown.addEventListener('submit', function (e) {
+      if (e.submitter && e.submitter.value !== 'confirm') return;
+      e.preventDefault();
+      var list = collected().filter(function (part) { return part.amount || part.line; });
+      if (list.some(function (part) { return !(part.amount > 0) || !part.line; })) { problem.textContent = 'Every part needs an amount and a sub-category'; return; }
+      if (list.reduce(function (sum, part) { return sum + part.amount; }, 0) > total + 0.005) { problem.textContent = 'The parts add up to more than the transaction'; return; }
+      saveParts(list);
     });
 
     splitButton.addEventListener('click', function () {
@@ -985,7 +1072,8 @@
     document.addEventListener('change', function (e) {
       var sel = e.target;
       if (!sel.matches('select.tx-cat')) return;
-      api('/api/transaction/' + sel.dataset.id + '/category', 'POST', { category: sel.value })
+      var picked = sel.value.split('/');
+      api('/api/transaction/' + sel.dataset.id + '/category', 'POST', { category: picked[0], line: picked[1] || '' })
         .then(function () { toast(sel.value ? 'Category set' : 'Back to automatic'); });
     });
 

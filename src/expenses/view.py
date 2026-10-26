@@ -7,51 +7,18 @@ import transactions.service as tx_service
 from transactions.ledger import Ledger
 from transactions.rules import Category
 from transactions.transaction import UNCATEGORIZED
-from core.item.schedule import build_pool
 from core.labels import colors_for
 from core.web.templating import make_env
-from core.item.categories import EdibleCategory
-from expenses.reference import expense_category
-from pkg.model.io import read_yaml
+from expenses.budget import BudgetLine, Frequency, budget_lines, sub_categories
+from expenses.tracking import Overview, Tracker
 
 HERE = Path(__file__).parent
 
-_DAYS_PER_MONTH = 365.25 / 12
 
 _AVERAGE_MONTHS = 6
 _MISC = 'Misc.'
 _MISC_KEY = ''
-_MISC_NODE = 'unbudgeted'
 _ALL_SPENDING = 'All spending'
-
-_WORKDAYS_PER_MONTH = _DAYS_PER_MONTH * 5 / 7
-
-_FREQ_TO_MONTHLY = {
-    'daily':    _DAYS_PER_MONTH,
-    'workday':  _WORKDAYS_PER_MONTH,
-    'weekly':   _DAYS_PER_MONTH / 7,
-    'biweekly': _DAYS_PER_MONTH / 14,
-    'monthly':  1.0,
-    'bimonthly': 1.0 / 2,
-    'semiannual': 1.0 / 6,
-    'yearly':   1.0 / 12,
-}
-
-_FREQ_UNITS = {
-    'daily':    '/ day',
-    'workday':  '/ workday',
-    'weekly':   '/ week',
-    'biweekly': '/ 2 weeks',
-    'monthly':  '',
-    'bimonthly': '/ 2 months',
-    'semiannual': '/ 6 months',
-    'yearly':   '/ year',
-}
-
-
-def _to_monthly(cost: float, frequency: str) -> float:
-    return cost * _FREQ_TO_MONTHLY.get(frequency, 1.0)
-
 
 def _budget_status(budget: float, actual: float, fraction: float) -> tuple[str, float]:
     projected = actual / fraction if fraction else actual
@@ -150,41 +117,36 @@ def _vendor_rows(ledger, type_keys: list[str]) -> list[dict]:
     return sorted(rows, key=lambda row: -row['total'])
 
 
-def _planned_lines(config) -> list[dict]:
-    groups = {category.key: category.label for category in EdibleCategory.objects.all()}
-    lines = []
-    for item in sorted(build_pool(config).values(), key=lambda item: item.short_name):
-        if item.metadata.edible.track_only or item.price_per_month is None or item.servings_per_week == 0:
-            continue
-        expense = expense_category(item.metadata.edible.category)
-        if expense is None:
-            continue
-        lines.append({
-            'name': item.short_name,
-            'category_key': expense.category,
-            'group': groups[item.metadata.edible.category],
-            'url': item.url or '',
-            'image': item.image or '',
-            'note': '',
-            'monthly': item.price_per_month,
-            'cost': 0.0,
-            'unit': '',
-        })
-    for entry in read_yaml(config.expenses_db / 'recurring.yaml') or []:
-        cost = entry.get('cost_aed', 0) or 0
-        frequency = entry.get('frequency', 'monthly')
-        lines.append({
-            'name': entry.get('name', ''),
-            'category_key': entry.get('category', _MISC_KEY),
-            'group': '',
-            'url': '',
-            'image': '',
-            'note': entry.get('notes', ''),
-            'monthly': _to_monthly(cost, frequency),
-            'cost': cost,
-            'unit': _FREQ_UNITS[frequency],
-        })
-    return lines
+def _category_budgets(lines: list[BudgetLine]) -> dict[str, float]:
+    totals: dict[str, float] = {}
+    for line in lines:
+        totals[line.category] = totals.get(line.category, 0.0) + line.monthly
+    return totals
+
+
+_FREQUENCY_GROUPS = (
+    ('Daily', (Frequency.DAILY, Frequency.WORKDAY)),
+    ('Weekly', (Frequency.WEEKLY, Frequency.BIWEEKLY)),
+    ('Monthly', (Frequency.MONTHLY,)),
+    ('Every 2 months', (Frequency.BIMONTHLY,)),
+    ('Every 6 months', (Frequency.SEMIANNUAL,)),
+    ('Yearly', (Frequency.YEARLY,)),
+)
+
+
+def _frequency_groups(overview: Overview) -> list[dict]:
+    groups = []
+    for name, frequencies in _FREQUENCY_GROUPS:
+        rows = [(category, line) for category in overview.categories for line in category.lines
+                if line.frequency in frequencies]
+        if rows:
+            groups.append({'name': name, 'rows': rows, 'budget': sum(line.budget for _, line in rows),
+                           'spent': sum(line.spent for _, line in rows)})
+    unassigned = [(category, line) for category in overview.categories for line in category.lines if line.line is None]
+    if unassigned:
+        groups.append({'name': 'Not assigned', 'rows': unassigned, 'budget': 0.0,
+                       'spent': sum(line.spent for _, line in unassigned)})
+    return groups
 
 
 def _category_names() -> dict[str, str]:
@@ -197,37 +159,6 @@ def _category_name(key: str, names: dict[str, str]) -> str:
     if key not in names:
         raise ValueError(f'budget category {key!r} is not a transactions category')
     return names[key]
-
-
-def _category_budgets(lines: list[dict]) -> dict[str, float]:
-    totals: dict[str, float] = {}
-    for line in lines:
-        totals[line['category_key']] = totals.get(line['category_key'], 0.0) + line['monthly']
-    return totals
-
-
-def _budget_tree(lines: list[dict], names: dict[str, str]) -> list[dict]:
-    by_category: dict[str, list[dict]] = {}
-    for line in lines:
-        by_category.setdefault(line['category_key'], []).append(line)
-    tree = []
-    for key, members in by_category.items():
-        groups: dict[str, list[dict]] = {}
-        children = []
-        for line in members:
-            if line['group']:
-                groups.setdefault(line['group'], []).append(line)
-            else:
-                children.append(line)
-        children += [{'name': name, 'monthly': sum(item['monthly'] for item in items),
-                      'children': sorted(items, key=lambda item: -item['monthly'])} for name, items in groups.items()]
-        tree.append({
-            'key': key or _MISC_NODE,
-            'name': _category_name(key, names),
-            'monthly': sum(line['monthly'] for line in members),
-            'children': sorted(children, key=lambda child: -child['monthly']),
-        })
-    return sorted(tree, key=lambda node: (node['key'] == _MISC_NODE, -node['monthly']))
 
 
 def _period_summary(ledger, period, budgets: dict[str, float], current: bool) -> dict:
@@ -310,8 +241,10 @@ def _trends(ledger, now: datetime, budgets: dict[str, float]) -> dict:
     }
 
 
-def _env(ledger):
-    return _env_for(tuple(c.name for c in ledger.categories), tuple(ledger.account_names))
+def _env(ledger, config):
+    env = _env_for(tuple(c.name for c in ledger.categories), tuple(ledger.account_names))
+    env.globals['sub_categories'] = sub_categories(config)
+    return env
 
 
 @lru_cache(maxsize=4)
@@ -332,7 +265,7 @@ def _env_for(category_names: tuple[str, ...], account_names: tuple[str, ...]):
 def render_previous_periods(services, before: str, count: int) -> str:
     config = services.config
     ledger = Ledger.load(config)
-    budgets = _category_budgets(_planned_lines(config))
+    budgets = _category_budgets(budget_lines(config))
     earliest = ledger.earliest
     summaries = []
     period = ledger.period(datetime.fromisoformat(before) - timedelta(seconds=1))
@@ -340,7 +273,7 @@ def render_previous_periods(services, before: str, count: int) -> str:
         summaries.append(_period_summary(ledger, period, budgets, current=False))
         period = ledger.previous(period)
     more = earliest is not None and period.end > earliest
-    return _env(ledger).get_template('periods.html').render(periods=summaries, more=more)
+    return _env(ledger, services.config).get_template('periods.html').render(periods=summaries, more=more)
 
 
 def render_card_periods(services, account: str, before: str, count: int) -> str:
@@ -363,7 +296,7 @@ def render_card_periods(services, account: str, before: str, count: int) -> str:
             })
         period = ledger.previous(period)
     more = earliest is not None and period.end > earliest
-    return _env(ledger).get_template('card_periods.html').render(
+    return _env(ledger, services.config).get_template('card_periods.html').render(
         periods=periods, more=more, categories=ledger.categories, show_account=not account)
 
 
@@ -376,7 +309,7 @@ def _matches_query(entry, terms: list[str]) -> bool:
 def render_rows(services, ids: list[str], show_account: bool) -> str:
     ledger = Ledger.load(services.config)
     by_id = {entry.tx.id: entry for entry in ledger.entries}
-    return _env(ledger).get_template('rows.html').render(
+    return _env(ledger, services.config).get_template('rows.html').render(
         entries=[by_id[tx_id] for tx_id in ids if tx_id in by_id], categories=ledger.categories, show_account=show_account)
 
 
@@ -386,7 +319,7 @@ def render_search(services, query: str, account: str, limit: int) -> str:
     hits = [e for e in reversed(ledger.entries)
             if (not account or e.account == account) and _matches_query(e, terms)] if terms else []
     entries = hits[:limit]
-    return _env(ledger).get_template('search_results.html').render(
+    return _env(ledger, services.config).get_template('search_results.html').render(
         entries=entries, truncated=len(hits) > limit, categories=ledger.categories, show_account=not account,
         total=sum(e.aed for e in hits if e.counts_as_spending and not e.hidden),
     )
@@ -395,7 +328,7 @@ def render_search(services, query: str, account: str, limit: int) -> str:
 def render_vendor_rows(services) -> str:
     config = services.config
     ledger = Ledger.load(config)
-    return _env(ledger).get_template('vendor_rows.html').render(
+    return _env(ledger, services.config).get_template('vendor_rows.html').render(
         vendor_rows=_vendor_rows(ledger, tx_service.type_keys(config)),
         categories=ledger.categories,
         slots=ledger.clock.slots,
@@ -404,7 +337,7 @@ def render_vendor_rows(services) -> str:
 
 def render(services) -> str:
     config = services.config
-    lines = _planned_lines(config)
+    lines = budget_lines(config)
     budgets = _category_budgets(lines)
     ledger = Ledger.load(config)
     clock = ledger.clock
@@ -414,12 +347,13 @@ def render(services) -> str:
     average, category_averages = _monthly_averages(ledger, period)
     card_sections = _card_sections(config, shown_entries)
     category_names = {category.key: category.name for category in ledger.categories}
+    overview = Tracker(ledger, lines, category_names).overview(period)
     trends = _trends(ledger, datetime.now(timezone.utc), budgets)
 
-    return _env(ledger).get_template('expenses.html').render(
-        budget_tree=_budget_tree(lines, category_names),
-        budget_total=sum(budgets.values()),
+    return _env(ledger, services.config).get_template('expenses.html').render(
+        overview=overview,
         current_period=_period_summary(ledger, period, budgets, current=True),
+        frequency_groups=_frequency_groups(overview),
         average=average,
         card_sections=card_sections,
         trends=trends,

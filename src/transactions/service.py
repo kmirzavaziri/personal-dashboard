@@ -270,10 +270,12 @@ def _same_account_and_amount(row: Transaction, tx: Transaction, patterns: dict, 
 
 def _overrides(config) -> dict[str, dict]:
     return {
-        tx.id: {'category_override': tx.category_override, 'note': tx.note,
-                'description_override': tx.description_override, 'voided': tx.voided, 'marked_settled': tx.marked_settled}
+        tx.id: {'category_override': tx.category_override, 'budget_line': tx.budget_line, 'note': tx.note,
+                'splits': tx.splits, 'description_override': tx.description_override, 'voided': tx.voided,
+                'marked_settled': tx.marked_settled}
         for tx in _store(config).all()
-        if tx.category_override or tx.note or tx.description_override or tx.voided or tx.marked_settled
+        if tx.category_override or tx.budget_line or tx.note or tx.splits or tx.description_override or tx.voided
+        or tx.marked_settled
     }
 
 
@@ -307,7 +309,7 @@ def type_keys(config) -> list[str]:
 def set_category(config, tx_id: str, category_key: str) -> bool:
     if category_key not in ('', UNCATEGORIZED) and Category.objects.get_or_none(key=category_key) is None:
         raise ValueError(f'unknown category {category_key!r}')
-    return _store(config).update(tx_id, category_override=category_key)
+    return _store(config).update(tx_id, category_override=category_key, budget_line='')
 
 
 def set_description(config, tx_id: str, description: str) -> bool:
@@ -324,6 +326,22 @@ def set_settled(config, tx_id: str, settled: bool) -> bool:
 
 def set_note(config, tx_id: str, note: str) -> bool:
     return _store(config).update(tx_id, note=note)
+
+
+def set_budget_line(config, tx_id: str, category_key: str, line_key: str) -> bool:
+    return _store(config).update(tx_id, category_override=category_key, budget_line=line_key)
+
+
+def set_splits(config, tx_id: str, splits: list[dict]) -> bool:
+    parts = [Transaction.Split.model_validate(split) for split in splits]
+    tx = next((row for row in _store(config).all() if row.id == tx_id), None)
+    if tx is None:
+        return False
+    if any(part.amount <= 0 or not part.line for part in parts):
+        raise ValueError('every part needs a positive amount and a sub-category')
+    if sum(part.amount for part in parts) > abs(tx.amount) + 0.005:
+        raise ValueError('the parts add up to more than the transaction')
+    return _store(config).update(tx_id, splits=parts)
 
 
 def create_category(name: str) -> Category:

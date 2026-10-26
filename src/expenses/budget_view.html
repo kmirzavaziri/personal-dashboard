@@ -1,0 +1,98 @@
+{% macro state(name) %}<span class="state state-{{ name | replace(' ', '-') }}">{{ name | capitalize }}</span>{% endmacro %}
+
+{% macro progress(spent, budget, expected, tone) %}
+<div class="paced"><div class="bar thin toned" style="--tone: {{ tone }}"><span style="width: {{ [spent / budget * 100, 100] | min if budget > 0 else (100 if spent > 0 else 0) }}%"></span></div>{% if budget > 0 and expected < budget %}<i class="pace" style="left: {{ expected / budget * 100 }}%" title="Expected by today: {{ expected | fmt }}"></i>{% endif %}</div>
+{% endmacro %}
+
+{% macro when(at) %}{{ at.strftime('%b %-d') }}{% endmacro %}
+
+{% macro detail(line) %}
+{%- if line.line is none -%}
+Set a sub-category in Transactions
+{%- elif line.line.paced -%}
+{%- if line.frequency.value in ('daily', 'workday') -%}Today {{ line.today_spent | fmt }} of {{ line.today_allowance | fmt }}
+{%- elif line.frequency.value in ('weekly', 'biweekly') -%}This week {{ line.week_spent | fmt }} of {{ line.week_allowance | fmt }}
+{%- else -%}{{ line.expected | fmt }} expected by today{%- endif -%}
+{%- elif not line.line.bill -%}
+{% if line.spent > line.budget %}{{ (line.spent - line.budget) | fmt }} over{% else %}{{ (line.budget - line.spent) | fmt }} left{% endif %} this month
+{%- elif line.state == 'not due' -%}
+{% if line.next_due %}Next around {{ when(line.next_due) }}{% else %}Not due this month{% endif %}
+{%- elif line.state == 'due' -%}
+{% if line.overdue %}Was due {{ when(line.next_due) }}{% elif line.next_due %}Due around {{ when(line.next_due) }}{% else %}Due this month{% endif %}
+{%- else -%}
+Paid {{ when(line.last_paid) }}{% if line.state == 'over' %}, {{ (line.spent - line.budget) | fmt }} over{% endif %}
+{%- endif -%}
+{% endmacro %}
+
+{% macro amounts(spent, budget) %}{{ spent | fmt }}<span class="muted"> / {{ budget | fmt }}</span>{% endmacro %}
+
+{% macro summary(overview) %}
+{% set paced_spent = overview.paced | sum(attribute='spent') %}
+{% set paced_expected = overview.paced | sum(attribute='expected') %}
+{% set bills = overview.bills %}
+<div class="budget-summary">
+  <div><span class="muted">{{ overview.period.name }} · day {{ overview.period.elapsed_days }} of {{ overview.period.length_days }}</span><strong>{{ dh }}{{ overview.spent | fmt }}</strong><span class="muted">of {{ overview.budget | fmt }} budgeted</span></div>
+  <div><span class="muted">Day-to-day spending</span><strong>{{ dh }}{{ paced_spent | fmt }}</strong><span class="muted">{% if paced_spent > paced_expected %}{{ (paced_spent - paced_expected) | fmt }} ahead of pace{% else %}{{ (paced_expected - paced_spent) | fmt }} under pace{% endif %} · {{ overview.daily_left | fmt }} / day left</span></div>
+  <div><span class="muted">Bills this month</span><strong>{{ bills | selectattr('state', 'in', ['paid', 'over']) | list | length }} of {{ bills | length }} paid</strong><span class="muted">{{ dh }}{{ bills | sum(attribute='spent') | fmt }} of {{ bills | sum(attribute='budget') | fmt }}</span></div>
+  {% if overview.unassigned %}<div><span class="muted">Not assigned to a sub-category</span><strong>{{ dh }}{{ overview.unassigned | fmt }}</strong><span class="muted">Set them in Transactions</span></div>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro by_category(overview) %}
+<table class="budget-tree tracking">
+  <colgroup><col><col class="c-progress"><col class="c-amount"><col class="c-state"></colgroup>
+  <thead><tr><th>Category</th><th>Progress</th><th class="num">{{ dh }} spent / budget</th><th>Status</th></tr></thead>
+  <tbody>
+    {% for cat in overview.categories %}
+    <tr class="tree-cat" data-node="{{ cat.key }}">
+      <td><button type="button" class="tree-toggle" aria-expanded="false"><span class="dot" style="--tone: {{ tone(cat.name) }}"></span>{{ cat.name }}</button></td>
+      <td>{{ progress(cat.spent, cat.budget, cat.expected, tone(cat.name)) }}</td>
+      <td class="num">{{ amounts(cat.spent, cat.budget) }}</td>
+      <td>{{ state(cat.state) }}</td>
+    </tr>
+    {% for line in cat.lines %}
+    <tr class="tree-leaf" data-parent="{{ cat.key }}" hidden>
+      <td><span class="branch">{{ '└' if loop.last else '├' }}</span>{{ line.name }}{% if line.line %}<span class="tag">{{ line.line.rate }}</span>{% endif %}</td>
+      <td class="muted small">{{ detail(line) }}</td>
+      <td class="num">{{ amounts(line.spent, line.budget) }}</td>
+      <td>{{ state(line.state) }}</td>
+    </tr>
+    {% endfor %}
+    {% endfor %}
+    <tr class="grand-total-row"><td>Total</td><td></td><td class="num">{{ dh }}{{ amounts(overview.spent, overview.budget) }}</td><td></td></tr>
+  </tbody>
+</table>
+{% endmacro %}
+
+{% macro cell(c) %}<td class="cell{% if c.current %} current{% endif %}{% if c.ratio > 1.01 %} over{% endif %}" style="--level: {{ [c.ratio, 1] | min }}" title="{{ c.title }}: {{ c.spent | fmt }} of {{ c.allowance | fmt }}">{% if c.spent %}{{ c.spent | fmt }}{% else %}<span class="muted">·</span>{% endif %}</td>{% endmacro %}
+
+{% macro by_frequency(groups) %}
+{% for group in groups %}
+<section class="frequency-group">
+  <div class="section-head"><h2>{{ group.name }}</h2><span class="muted">this month {{ amounts(group.spent, group.budget) }}</span></div>
+  <div class="grid-scroll">
+  <table class="rhythm-grid">
+    {% set first = group.rows[0][1] %}
+    <thead><tr><th>Sub-category</th>
+      {% if first.history and group.name in ('Daily', 'Weekly', 'Monthly') %}{% for c in first.history %}<th class="num{% if c.current %} current{% endif %}">{{ c.label }}</th>{% endfor %}{% elif not first.history %}<th class="num">This month</th>{% else %}<th colspan="4">Cycles, oldest to current</th>{% endif %}
+      <th>Now</th></tr></thead>
+    <tbody>
+      {% for cat, line in group.rows %}
+      <tr>
+        <td><span class="dot" style="--tone: {{ tone(cat.name) }}"></span>{{ line.name }}{% if line.line %}<span class="tag">{{ line.line.rate }}</span>{% endif %}</td>
+        {% if not line.history %}
+        <td class="num">{{ line.spent | fmt }}</td>
+        {% elif group.name in ('Daily', 'Weekly', 'Monthly') %}
+        {% for c in line.history %}{{ cell(c) }}{% endfor %}
+        {% else %}
+        {% for c in line.history %}<td class="cell{% if c.current %} current{% endif %}{% if c.ratio > 1.01 %} over{% endif %}" style="--level: {{ [c.ratio, 1] | min }}" title="{{ c.title }}: {{ c.spent | fmt }} of {{ c.allowance | fmt }}"><span class="cell-label">{{ c.label }}</span>{% if c.spent %}{{ c.spent | fmt }}{% else %}<span class="muted">·</span>{% endif %}</td>{% endfor %}
+        {% endif %}
+        <td class="now">{{ state(line.state) }}<div class="muted small">{{ detail(line) }}</div></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endfor %}
+{% endmacro %}

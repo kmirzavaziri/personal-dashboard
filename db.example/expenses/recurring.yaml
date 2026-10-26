@@ -1,10 +1,12 @@
-- name: Sample Coffee
+- key: sample-coffee
+  name: Sample Coffee
   category: coffee
   cost_aed: 10
   frequency: daily
   notes: ''
 
-- name: Sample Subscription
+- key: sample-subscription
+  name: Sample Subscription
   category: subscriptions
   cost_aed: 40
   frequency: monthly

@@ -1,7 +1,8 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, redirect, request
 from pydantic import ValidationError
 
 import transactions.service as tx_service
+from expenses.budget import sub_categories
 from transactions.ledger import Ledger
 from expenses.view import render, render_card_periods, render_previous_periods, render_rows, render_search, render_vendor_rows
 from pkg.model.base import DoesNotExist
@@ -28,9 +29,13 @@ def make_expenses_bp(services) -> Blueprint:
         return str(error), 404
 
     @bp.get('/expenses')
-    @bp.get('/expenses/<any(spending, transactions, budgets, categorize, trends):tab>')
+    @bp.get('/expenses/<any(budget, transactions, categorize, trends):tab>')
     def page(tab=None):
         return render(services)
+
+    @bp.get('/expenses/<any(spending, budgets):tab>')
+    def renamed_tab(tab):
+        return redirect('/expenses/budget')
 
     @bp.get('/expenses/categorize/rows')
     def vendor_rows():
@@ -57,10 +62,17 @@ def make_expenses_bp(services) -> Blueprint:
 
     @bp.post('/api/transaction/<tx_id>/category')
     def set_transaction_category(tx_id):
-        category = body().get('category', '')
-        if not tx_service.set_category(services.config, tx_id, category):
+        category, line = body().get('category', ''), body().get('line', '')
+        if line:
+            sub_category = sub_categories(services.config).get(line)
+            if sub_category is None or sub_category.category != category:
+                raise ValueError(f'{line!r} is not a sub-category of {category!r}')
+            found = tx_service.set_budget_line(services.config, tx_id, category, line)
+        else:
+            found = tx_service.set_category(services.config, tx_id, category)
+        if not found:
             return 'transaction not found', 404
-        return changed({'id': tx_id, 'category': category})
+        return changed({'id': tx_id, 'category': category, 'line': line})
 
     @bp.post('/api/transaction/<tx_id>/description')
     def set_transaction_description(tx_id):
@@ -89,6 +101,16 @@ def make_expenses_bp(services) -> Blueprint:
         if not tx_service.set_note(services.config, tx_id, note):
             return 'transaction not found', 404
         return changed({'id': tx_id, 'note': note})
+
+    @bp.post('/api/transaction/<tx_id>/splits')
+    def set_transaction_splits(tx_id):
+        splits = body().get('splits', [])
+        unknown = [split.get('line') for split in splits if split.get('line') not in sub_categories(services.config)]
+        if unknown:
+            raise ValueError(f'unknown sub-categories: {unknown}')
+        if not tx_service.set_splits(services.config, tx_id, splits):
+            return 'transaction not found', 404
+        return changed({'id': tx_id, 'splits': splits})
 
     @bp.post('/api/periods/<period_key>/last')
     def end_period_at(period_key):
