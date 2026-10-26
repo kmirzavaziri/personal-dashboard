@@ -29,11 +29,9 @@ Paid {{ when(line.last_paid) }}{% if line.state == 'over' %}, {{ (line.spent - l
 {% macro summary(overview) %}
 {% set paced_spent = overview.paced | sum(attribute='spent') %}
 {% set paced_expected = overview.paced | sum(attribute='expected') %}
-{% set bills = overview.bills %}
 <div class="budget-summary">
   <div><span class="muted">{{ overview.period.name }} · day {{ overview.period.elapsed_days }} of {{ overview.period.length_days }}</span><strong>{{ dh }}{{ overview.spent | fmt }}</strong><span class="muted">of {{ overview.budget | fmt }} budgeted</span></div>
   <div><span class="muted">Day-to-day spending</span><strong>{{ dh }}{{ paced_spent | fmt }}</strong><span class="muted">{% if paced_spent > paced_expected %}{{ (paced_spent - paced_expected) | fmt }} ahead of pace{% else %}{{ (paced_expected - paced_spent) | fmt }} under pace{% endif %} · {{ overview.daily_left | fmt }} / day left</span></div>
-  <div><span class="muted">Bills this month</span><strong>{{ bills | selectattr('state', 'in', ['paid', 'over']) | list | length }} of {{ bills | length }} paid</strong><span class="muted">{{ dh }}{{ bills | sum(attribute='spent') | fmt }} of {{ bills | sum(attribute='budget') | fmt }}</span></div>
   {% if overview.unassigned %}<div><span class="muted">Not assigned to a sub-category</span><strong>{{ dh }}{{ overview.unassigned | fmt }}</strong><span class="muted">Set them in Transactions</span></div>{% endif %}
 </div>
 {% endmacro %}

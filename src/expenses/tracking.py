@@ -111,10 +111,6 @@ class Overview:
         return [line for line in self.lines if line.line and line.line.paced]
 
     @property
-    def bills(self) -> list[LineStatus]:
-        return [line for line in self.lines if line.line and line.line.bill and line.budget]
-
-    @property
     def unassigned(self) -> float:
         return sum(line.spent for line in self.lines if line.line is None)
 
