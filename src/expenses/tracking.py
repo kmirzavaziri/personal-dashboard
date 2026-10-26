@@ -31,7 +31,7 @@ class Cell:
 
     @property
     def ratio(self) -> float:
-        return self.spent / self.allowance if self.allowance else (1.0 if self.spent else 0.0)
+        return self.spent / self.allowance if self.allowance else (2.0 if self.spent > 0.005 else 0.0)
 
 
 @dataclass
@@ -169,7 +169,7 @@ class Tracker:
         matched = next((line for line in own if line.claims(text)), None) or timed
         if matched:
             return matched
-        open_lines = [line for line in own if not line.match and not line.hours]
+        open_lines = [line for line in own if not line.match and not line.hours and not line.bill]
         return open_lines[0] if len(open_lines) == 1 else None
 
     def _line_status(self, line: BudgetLine, period: Period, now: datetime, in_period: list[Piece]) -> LineStatus:
