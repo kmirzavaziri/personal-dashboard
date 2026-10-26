@@ -52,7 +52,7 @@ Paid {{ when(line.last_paid) }}{% if line.state == 'over' %}, {{ (line.spent - l
     </tr>
     {% for line in cat.lines %}
     <tr class="tree-leaf" data-parent="{{ cat.key }}" hidden>
-      <td><span class="branch">{{ '└' if loop.last else '├' }}</span>{{ line.name }}{% if line.line %}<span class="tag">{{ line.line.rate }}</span>{% endif %}</td>
+      <td><span class="branch">{{ '└' if loop.last else '├' }}</span>{{ line.name if line.line else 'Not assigned' }}{% if line.line %}<span class="tag">{{ line.line.rate }}</span>{% endif %}</td>
       <td class="muted small">{{ detail(line) }}</td>
       <td class="num">{{ amounts(line.spent, line.budget) }}</td>
       <td>{{ state(line.state) }}</td>
@@ -79,7 +79,7 @@ Paid {{ when(line.last_paid) }}{% if line.state == 'over' %}, {{ (line.spent - l
     <tbody>
       {% for cat, line in group.rows %}
       <tr>
-        <td><span class="dot" style="--tone: {{ tone(cat.name) }}"></span>{{ line.name }}{% if line.line %}<span class="tag">{{ line.line.rate }}</span>{% endif %}</td>
+        <td><span class="dot" style="--tone: {{ tone(cat.name) }}"></span>{{ cat.name }} · {{ line.name if line.line else 'Not assigned' }}{% if line.line %}<span class="tag">{{ line.line.rate }}</span>{% endif %}</td>
         {% if not line.history %}
         <td class="num">{{ line.spent | fmt }}</td>
         {% elif group.name in ('Daily', 'Weekly', 'Monthly') %}

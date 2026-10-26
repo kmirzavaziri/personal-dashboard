@@ -209,7 +209,8 @@ class Tracker:
             for back in range(5, -1, -1):
                 first = monday - timedelta(weeks=back)
                 start = _day_start(clock, first)
-                cells.append(Cell(label=first.strftime('%b %-d'), title=f'Week of {first:%b %-d}',
+                last = first + timedelta(days=6 if line.frequency is Frequency.WEEKLY else 13)
+                cells.append(Cell(label=f'{first:%-d %b} – {last:%-d %b}', title=f'{first:%a %-d %b} – {last:%a %-d %b}',
                                   spent=spent(start, start + timedelta(weeks=1)), allowance=weekly, current=back == 0))
             return cells
         cycle = line.frequency.cycle_months
@@ -222,9 +223,11 @@ class Tracker:
         cells = []
         for window in windows[-(6 if cycle == 1 else 4):]:
             start, end = window[0].start, window[-1].end
-            label = window[-1].last_day.strftime('%b') if cycle == 1 else f'{window[0].last_day:%b %y} – {window[-1].last_day:%b %y}'
+            edge = '%-d %b %Y' if cycle == 12 else '%-d %b'
+            last_day = window[-1].last_day if len(window) == cycle else _add_months(window[0].start, cycle) - timedelta(days=1)
+            label = window[-1].last_day.strftime('%b') if cycle == 1 else f'{window[0].start:{edge}} – {last_day:{edge}}'
             allowance = line.monthly * cycle if line.paced else line.cost_aed * line.times
-            cells.append(Cell(label=label, title=f'{window[0].start:%b %-d} – {window[-1].last_day:%b %-d}',
+            cells.append(Cell(label=label, title=f'{window[0].start:%-d %b %Y} – {last_day:%-d %b %Y}',
                               spent=spent(start, end), allowance=allowance, current=start <= now < end or window[-1] is period))
         return cells
 
