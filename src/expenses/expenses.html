@@ -36,7 +36,8 @@
   .rhythm-grid th.current { color: var(--strong); }
   .rhythm-grid td.cell { text-align: right; font-size: 0.8rem; background: color-mix(in srgb, var(--green) calc(var(--level) * 22%), transparent); }
   .rhythm-grid td.cell.over { background: color-mix(in srgb, var(--red) 22%, transparent); color: var(--red); }
-  .rhythm-grid td.cell.current { box-shadow: inset 0 0 0 1.5px var(--strong); }
+  .rhythm-grid td.cell.current { box-shadow: inset 0 -2px 0 var(--accent); color: var(--strong); }
+  .rhythm-grid th, .rhythm-grid td { padding: 0.22rem 0.45rem; }
   .rhythm-grid .cell-label { display: block; font-size: 0.68rem; color: var(--muted); }
   .rhythm-grid td.now { min-width: 9rem; }
   .breakdown-rows { display: flex; flex-direction: column; gap: 0.5rem; margin: 0.75rem 0; }
@@ -180,15 +181,15 @@
 <div role="tabpanel" data-tabs="budget" data-tab="budget">
 {{ bv.summary(overview) }}
 <div class="view-switch" role="group" aria-label="View">
-  <button type="button" data-view="category" aria-pressed="true">By category</button>
-  <button type="button" data-view="frequency" aria-pressed="false">By frequency</button>
+  <button type="button" data-view="frequency" aria-pressed="true">By frequency</button>
+  <button type="button" data-view="category" aria-pressed="false">By category</button>
 </div>
-<div class="budget-view" data-view="category">
+<div class="budget-view" data-view="category" hidden>
 {{ bv.by_category(overview) }}
 <div id="previous-periods"></div>
 <div class="periods-actions"><button class="btn btn-ghost load-more" type="button" data-url="/expenses/periods?count=3" data-before="{{ overview.period.start.isoformat() }}">Previous months</button></div>
 </div>
-<div class="budget-view" data-view="frequency" hidden>
+<div class="budget-view" data-view="frequency">
 {{ bv.by_frequency(frequency_groups) }}
 </div>
 </div>
