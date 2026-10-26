@@ -33,10 +33,10 @@
   .frequency-group { margin-bottom: 1.4rem; }
   .grid-scroll { overflow-x: auto; }
   .rhythm-grid { width: 100%; font-variant-numeric: tabular-nums; }
-  .rhythm-grid th.current { color: var(--strong); }
   .rhythm-grid td.cell { text-align: right; font-size: 0.8rem; background: color-mix(in srgb, var(--green) calc(var(--level) * 22%), transparent); }
   .rhythm-grid td.cell.over { background: color-mix(in srgb, var(--red) 22%, transparent); color: var(--red); }
-  .rhythm-grid td.cell.current, .rhythm-grid th.current { box-shadow: inset 0 0 0 100vmax color-mix(in srgb, var(--accent) 9%, transparent); color: var(--strong); }
+  .rhythm-grid th.current { box-shadow: inset 0 -2px 0 var(--accent); color: var(--strong); }
+  .rhythm-grid td.cell.current .cell-label { color: var(--strong); text-decoration: underline 2px var(--accent); text-underline-offset: 3px; }
   .rhythm-grid th, .rhythm-grid td { padding: 0.2rem 0.45rem; white-space: nowrap; }
   .rhythm-grid td.now .small { display: inline; margin-left: 0.4rem; }
   .rhythm-grid .cell-label { display: block; font-size: 0.68rem; color: var(--muted); }
