@@ -74,7 +74,7 @@ Paid {{ when(line.last_paid) }}{% if line.state == 'over' %}, {{ (line.spent - l
   <table class="rhythm-grid">
     {% set first = group.rows[0][1] %}
     <thead><tr><th>Sub-category</th>
-      {% if first.history and group.name in ('Daily', 'Weekly', 'Monthly') %}{% for c in first.history %}<th class="num{% if c.current %} current{% endif %}">{{ c.label }}</th>{% endfor %}{% elif not first.history %}<th class="num">This month</th>{% else %}<th colspan="4">Cycles, oldest to current</th>{% endif %}
+      {% if first.history %}{% for c in first.history %}<th class="num{% if c.current %} current{% endif %}" title="{{ c.title }}">{{ c.label }}</th>{% endfor %}{% else %}<th class="num">This month</th>{% endif %}
       <th>Now</th></tr></thead>
     <tbody>
       {% for cat, line in group.rows %}
@@ -82,10 +82,8 @@ Paid {{ when(line.last_paid) }}{% if line.state == 'over' %}, {{ (line.spent - l
         <td><span class="dot" style="--tone: {{ tone(cat.name) }}"></span>{{ cat.name }} · {{ line.name if line.line else 'Not assigned' }}{% if line.line %}<span class="tag">{{ line.line.rate }}</span>{% endif %}</td>
         {% if not line.history %}
         <td class="num">{{ line.spent | fmt }}</td>
-        {% elif group.name in ('Daily', 'Weekly', 'Monthly') %}
-        {% for c in line.history %}{{ cell(c) }}{% endfor %}
         {% else %}
-        {% for c in line.history %}<td class="cell{% if c.current %} current{% endif %}{% if c.ratio > 1.01 %} over{% endif %}" style="--level: {{ [c.ratio, 1] | min }}" title="{{ c.title }}: {{ c.spent | fmt }} of {{ c.allowance | fmt }}"><span class="cell-label">{{ c.label }}</span>{% if c.spent %}{{ c.spent | fmt }}{% else %}<span class="muted">·</span>{% endif %}</td>{% endfor %}
+        {% for c in line.history %}{{ cell(c) }}{% endfor %}
         {% endif %}
         <td class="now">{{ state(line.state) }}<span class="muted small">{{ detail(line) }}</span></td>
       </tr>

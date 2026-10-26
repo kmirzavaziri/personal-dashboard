@@ -33,13 +33,11 @@
   .frequency-group { margin-bottom: 1.4rem; }
   .grid-scroll { overflow-x: auto; }
   .rhythm-grid { width: 100%; font-variant-numeric: tabular-nums; }
-  .rhythm-grid td.cell { text-align: right; font-size: 0.8rem; background: color-mix(in srgb, var(--green) calc(var(--level) * 22%), transparent); }
-  .rhythm-grid td.cell.over { background: color-mix(in srgb, var(--red) 22%, transparent); color: var(--red); }
-  .rhythm-grid th.current { box-shadow: inset 0 -2px 0 var(--accent); color: var(--strong); }
-  .rhythm-grid td.cell.current .cell-label { color: var(--strong); text-decoration: underline 2px var(--accent); text-underline-offset: 3px; }
+  .rhythm-grid td.cell { text-align: right; font-size: 0.8rem; --tint: color-mix(in srgb, var(--green) calc(var(--level) * 22%), transparent); background-image: linear-gradient(var(--tint), var(--tint)); }
+  .rhythm-grid td.cell.over { --tint: color-mix(in srgb, var(--red) 22%, transparent); color: var(--red); }
+  .rhythm-grid th.current { box-shadow: inset 0 -1px 0 var(--accent); color: var(--strong); }
   .rhythm-grid th, .rhythm-grid td { padding: 0.2rem 0.45rem; white-space: nowrap; }
   .rhythm-grid td.now .small { display: inline; margin-left: 0.4rem; }
-  .rhythm-grid .cell-label { display: block; font-size: 0.68rem; color: var(--muted); }
   .rhythm-grid td.now { min-width: 9rem; }
   .breakdown-rows { display: flex; flex-direction: column; gap: 0.5rem; margin: 0.75rem 0; }
   .breakdown-row { display: grid; grid-template-columns: 7rem minmax(0, 1fr) auto; gap: 0.5rem; align-items: center; }
