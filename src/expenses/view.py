@@ -17,6 +17,7 @@ HERE = Path(__file__).parent
 
 _DAYS_PER_MONTH = 365.25 / 12
 
+_AVERAGE_MONTHS = 6
 _MISC = 'Misc.'
 _ALL_SPENDING = 'All spending'
 
@@ -51,7 +52,7 @@ def _budget_rows(entries, cat_totals: dict[str, float], period) -> list[dict]:
     names = _category_names()
     actual_by_cat: dict[str, float] = {}
     for entry in entries:
-        if entry.spend:
+        if entry.counts_as_spending:
             key = entry.category.key if entry.category else ''
             actual_by_cat[key] = actual_by_cat.get(key, 0.0) + entry.aed
 
@@ -81,7 +82,7 @@ def _card_sections(config, entries) -> list[dict]:
         cards.setdefault(entry.account or 'Unknown', []).append(entry)
     return [{
         'account': account,
-        'total': sum(e.aed for e in entries if e.spend and not e.hidden),
+        'total': sum(e.aed for e in entries if e.counts_as_spending and not e.hidden),
         'count': sum(1 for e in entries if not e.hidden and not e.self_transfer),
         'entries': sorted(entries, key=lambda e: e.tx.at, reverse=True),
     } for account, entries in cards.items()]
@@ -242,14 +243,14 @@ def _monthly_averages(ledger, current) -> tuple[dict, dict]:
     totals: dict[datetime, float] = {}
     by_category: dict[str, dict[datetime, float]] = {}
     for entry in ledger.visible:
-        if not entry.spend:
+        if not entry.counts_as_spending:
             continue
         start = ledger.period(entry.tx.at).start
         totals[start] = totals.get(start, 0.0) + entry.aed
         if entry.category:
             months = by_category.setdefault(entry.category.key, {})
             months[start] = months.get(start, 0.0) + entry.aed
-    complete = [start for start in sorted(totals)[1:] if start < current.start]
+    complete = [start for start in sorted(totals)[1:] if start < current.start][-_AVERAGE_MONTHS:]
     count = len(complete) or 1
 
     def average(months: dict[datetime, float]) -> float:
@@ -275,7 +276,7 @@ def _trends(ledger, now: datetime, budgets: dict[str, float]) -> dict:
     today = ledger.clock.local(now).date()
     series: dict[str, dict[int, float]] = {}
     for entry in ledger.visible:
-        if not entry.spend:
+        if not entry.counts_as_spending:
             continue
         day = (ledger.clock.local(entry.tx.at).date() - first_day).days
         if day < 0:
@@ -345,7 +346,7 @@ def render_card_periods(services, account: str, before: str, count: int) -> str:
                 'key': period.key,
                 'range': period.range_label,
                 'start': period.start.isoformat(),
-                'total': sum(e.aed for e in entries if e.spend and not e.hidden),
+                'total': sum(e.aed for e in entries if e.counts_as_spending and not e.hidden),
                 'count': sum(1 for e in entries if not e.hidden and not e.self_transfer),
                 'entries': entries,
             })
@@ -376,7 +377,7 @@ def render_search(services, query: str, account: str, limit: int) -> str:
     entries = hits[:limit]
     return _env(ledger).get_template('search_results.html').render(
         entries=entries, truncated=len(hits) > limit, categories=ledger.categories, show_account=not account,
-        total=sum(e.aed for e in hits if e.spend and not e.hidden),
+        total=sum(e.aed for e in hits if e.counts_as_spending and not e.hidden),
     )
 
 
@@ -416,7 +417,7 @@ def render(services) -> str:
         trends=trends,
         all_cards={
             'entries': sorted(shown_entries, key=lambda e: e.tx.at, reverse=True),
-            'total': sum(e.aed for e in shown_entries if e.spend and not e.hidden),
+            'total': sum(e.aed for e in shown_entries if e.counts_as_spending and not e.hidden),
             'count': sum(1 for e in shown_entries if not e.hidden and not e.self_transfer),
         },
         categories=ledger.categories,

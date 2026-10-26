@@ -145,7 +145,7 @@
 </nav>
 
 <div role="tabpanel" data-tabs="budget" data-tab="spending">
-{% if average.months %}<div class="average" title="Average over {{ average.months }} completed months"><span class="muted">Monthly average</span> <span class="amount">{{ dh }}{{ average.amount | fmt }}</span></div>{% endif %}
+{% if average.months %}<div class="average" title="Average of the last {{ average.months }} completed months"><span class="muted">{{ average.months }}-month average</span> <span class="amount">{{ dh }}{{ average.amount | fmt }}</span></div>{% endif %}
 {{ pc.period_card(current_period) }}
 <div id="previous-periods"></div>
 <div class="periods-actions"><button class="btn btn-ghost load-more" type="button" data-url="/expenses/periods?count=3" data-before="{{ current_period.start }}">Previous months</button></div>
@@ -265,7 +265,7 @@
           {%- if r.workday %} <span class="badge accent">work days</span>{%- endif %}
         </td>
         <td class="muted">{{ r.category }}</td>
-        <td class="num" data-tip="{{ dh }}{{ r.monthly | fmt1 }} / mo">{{ r.per_event | fmt }}</td>
+        <td class="num" data-tip="AED {{ r.monthly | fmt1 }} / mo">{{ r.per_event | fmt }}</td>
       </tr>
       {% else %}
       <tr>
@@ -278,7 +278,7 @@
       <tr class="total-row">
         <td colspan="2">{{ sec.name | capitalize }} total</td>
         {% if sec.tracking == "daily" %}
-        <td class="num" data-tip="{{ dh }}{{ sec.total | fmt }} / mo">{{ dh }}{{ sec.daily_total | fmt1 }} / day</td>
+        <td class="num" data-tip="AED {{ sec.total | fmt }} / mo">{{ dh }}{{ sec.daily_total | fmt1 }} / day</td>
         {% else %}
         <td class="num">{{ dh }}{{ sec.total | fmt }} / mo</td>
         {% endif %}
@@ -352,7 +352,7 @@
       <div class="category-item" data-key="{{ cat.key }}">
         <span class="dot lg" style="--tone: {{ tone(cat.name) }}"></span>
         <input class="category-name input-quiet" value="{{ cat.name }}" maxlength="40" aria-label="Category name">
-        <span class="muted category-avg" data-tip="Monthly average">{{ dh }}{{ category_averages.get(cat.key, 0) | compact }}/mo</span>
+        <span class="muted category-avg" data-tip="{{ average.months }}-month average">{{ dh }}{{ category_averages.get(cat.key, 0) | compact }}/mo</span>
         <button class="btn btn-ghost btn-sm btn-icon category-delete" type="button" aria-label="Delete category"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>
       </div>
       {% endfor %}

@@ -58,9 +58,13 @@ class Entry:
         return self.tx.aed < 0
 
     @property
+    def counts_as_spending(self) -> bool:
+        outgoing_transfer = self.type == 'transfer' and not self.self_transfer and not self.is_inflow
+        return self.spend or outgoing_transfer
+
+    @property
     def labelable(self) -> bool:
-        outgoing_transfer = self.type == 'transfer' and not self.self_transfer
-        return (self.spend or outgoing_transfer) and not self.is_inflow
+        return self.counts_as_spending and not self.is_inflow
 
     @property
     def partially_refunded(self) -> bool:
