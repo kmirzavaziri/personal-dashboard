@@ -36,3 +36,5 @@ If the app enforces an origin lock (`CF_PROXY_SECRET`, normally injected by a Cl
 rule), set the same value as the Worker's `PROXY_SECRET`: a Worker's request to a hostname in its own zone
 skips that header rule, so without it the app answers 403. Failed hand-offs are logged with their status
 (`wrangler tail email-ingest`, or the Worker's observability logs).
+
+The worker also runs every 5 minutes on a Cron Trigger and requests `/healthz` on the `INGEST_URL` host. This keeps a free-tier Render service from sleeping. Cron Triggers need the account's workers.dev subdomain, which Cloudflare creates when you first open Workers & Pages in the dashboard.

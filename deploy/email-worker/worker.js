@@ -1,6 +1,13 @@
 import PostalMime from 'postal-mime';
 
 export default {
+  async scheduled(event, env) {
+    const res = await fetch(new URL('/healthz', env.INGEST_URL), {
+      headers: { 'User-Agent': 'Mozilla/5.0', ...(env.PROXY_SECRET ? { 'X-Proxy-Secret': env.PROXY_SECRET } : {}) },
+    });
+    if (!res.ok) throw new Error('keep-warm ping failed with status ' + res.status);
+  },
+
   async email(message, env) {
     const email = await new PostalMime().parse(message.raw);
     const payload = {
