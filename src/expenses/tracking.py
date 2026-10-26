@@ -164,11 +164,13 @@ class Tracker:
     def _auto_line(self, entry: Entry, category: str) -> BudgetLine | None:
         own = [line for line in self.lines if line.category == category]
         text = f'{entry.note} {entry.tx.description}'
-        matched = next((line for line in own if line.claims(text)), None)
+        local = self.ledger.clock.local(entry.tx.at)
+        timed = next((line for line in own if line.fits(local.hour, self._is_workday(_day(self.ledger.clock, entry.tx.at)))), None)
+        matched = next((line for line in own if line.claims(text)), None) or timed
         if matched:
             return matched
-        unmatched = [line for line in own if not line.match]
-        return unmatched[0] if len(unmatched) == 1 else None
+        open_lines = [line for line in own if not line.match and not line.hours]
+        return open_lines[0] if len(open_lines) == 1 else None
 
     def _line_status(self, line: BudgetLine, period: Period, now: datetime, in_period: list[Piece]) -> LineStatus:
         own = [piece for piece in in_period if piece.line is line]
@@ -179,7 +181,7 @@ class Tracker:
                             last_paid=last_paid)
         if line.paced:
             self._pace(status, line, period, now, own)
-        elif line.bill:
+        elif line.bill and not line.paced:
             self._bill(status, line, period, history)
             status.overdue = status.state == 'due' and status.next_due is not None and status.next_due < now
         else:

@@ -22,7 +22,7 @@ cp -r db.example db && dash server up
   `profile`, `gym`, `monitoring`, `clinics`, `skin_clinic`.
 - `nutrients/`, `edible_categories/`, `clothing_sections/`,
   `expense_categories/` — reference vocabularies.
-- `expenses/recurring.yaml`, `income/models.yaml` — expense/income config. Each entry is a budget sub-category: a unique `key`, a `name`, `cost_aed`, a `frequency` (daily | workday | weekly | biweekly | monthly | bimonthly | semiannual | yearly), optional `times` per frequency window, optional `match` text that assigns transactions to it automatically, and `category`, a `transactions/categories` key; an entry without `category` budgets Misc. (spending in categories with no budget).
+- `expenses/recurring.yaml`, `income/models.yaml` — expense/income config. Each entry is a budget sub-category: a unique `key`, a `name`, `cost_aed`, a `frequency` (daily | workday | weekly | biweekly | monthly | bimonthly | semiannual | yearly), optional `times` per frequency window, optional `match` text or `hours` window ([start, end) local hours) that assigns transactions to it automatically, `bill: true` when it's a payment due once per cycle (shown as paid or due) rather than an allowance, and `category`, a `transactions/categories` key; an entry without `category` budgets Misc. (spending in categories with no budget).
 - `planner/` + `planner_meta/board.yaml` — kanban tasks (`backlog`/`next`/`done`)
   and label ordering.
 - `calendar/` — recurring (`day:`) and dated (`date:`) entries; `task_key`

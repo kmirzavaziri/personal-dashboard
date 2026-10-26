@@ -74,6 +74,8 @@ class BudgetLine(BaseModel):
     frequency: Frequency = Frequency.MONTHLY
     times: int = 1
     match: list[str] = []
+    hours: list[int] = []
+    bill: bool = False
     notes: str = ''
     items: list[Item] = []
 
@@ -86,10 +88,6 @@ class BudgetLine(BaseModel):
         return self.frequency.is_sub_monthly or self.times > 1
 
     @property
-    def bill(self) -> bool:
-        return not self.paced and (self.frequency.cycle_months > 1 or bool(self.match))
-
-    @property
     def rate(self) -> str:
         times = f' × {self.times}' if self.times > 1 else ''
         return f'{self.cost_aed:,.0f}{times} / {self.frequency.unit}'
@@ -97,6 +95,12 @@ class BudgetLine(BaseModel):
     def claims(self, text: str) -> bool:
         folded = text.casefold()
         return any(term.casefold() in folded for term in self.match)
+
+    def fits(self, hour: int, workday: bool) -> bool:
+        if not self.hours or (self.frequency is Frequency.WORKDAY and not workday):
+            return False
+        start, end = self.hours
+        return start <= hour < end if start < end else hour >= start or hour < end
 
 
 def budget_lines(config) -> list[BudgetLine]:
