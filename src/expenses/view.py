@@ -19,6 +19,7 @@ _DAYS_PER_MONTH = 365.25 / 12
 
 _AVERAGE_MONTHS = 6
 _MISC = 'Misc.'
+_MISC_KEY = ''
 _ALL_SPENDING = 'All spending'
 
 _WORKDAYS_PER_MONTH = _DAYS_PER_MONTH * 5 / 7
@@ -58,7 +59,7 @@ def _budget_rows(entries, cat_totals: dict[str, float], period) -> list[dict]:
             actual_by_cat[key] = actual_by_cat.get(key, 0.0) + entry.aed
             count_by_cat[key] += 1
 
-    budgeted = {cat for cat, budget in cat_totals.items() if budget > 0}
+    budgeted = {cat for cat, budget in cat_totals.items() if budget > 0 and cat != _MISC_KEY}
     misc_parts = sorted(({'category': names[cat] if cat else 'Uncategorized', 'actual': actual, 'count': count_by_cat[cat]}
                          for cat, actual in actual_by_cat.items() if cat not in budgeted), key=lambda part: -part['actual'])
     misc = sum(part['actual'] for part in misc_parts)
@@ -75,8 +76,11 @@ def _budget_rows(entries, cat_totals: dict[str, float], period) -> list[dict]:
             'status': status,
         })
     rows.sort(key=lambda r: ({'red': 0, 'yellow': 1, 'green': 2, 'none': 3}[r['status']], -r['actual']))
-    if misc:
-        rows.append({'category': _MISC, 'budget': 0.0, 'actual': misc, 'pct': 0, 'status': 'none', 'parts': misc_parts})
+    misc_budget = cat_totals.get(_MISC_KEY, 0.0)
+    if misc or misc_budget:
+        status, _ = _budget_status(misc_budget, misc, period.fraction)
+        rows.append({'category': _MISC, 'budget': misc_budget, 'actual': misc, 'status': status, 'parts': misc_parts,
+                     'pct': min(misc / misc_budget * 100, 100) if misc_budget > 0 else 0})
     return rows
 
 
@@ -165,8 +169,8 @@ def _planned_accounts(config) -> dict[str, list[dict]]:
         monthly = _to_monthly(cost, freq)
         accounts.setdefault(entry.get('account', 'other'), []).append({
             'name':      entry.get('name', ''),
-            'category_key': entry['category'],
-            'category':  _category_name(entry['category'], names),
+            'category_key': entry.get('category', _MISC_KEY),
+            'category':  _category_name(entry.get('category', _MISC_KEY), names),
             'store':     entry.get('store', ''),
             'url':       '',
             'image':     '',
@@ -183,6 +187,8 @@ def _category_names() -> dict[str, str]:
 
 
 def _category_name(key: str, names: dict[str, str]) -> str:
+    if key == _MISC_KEY:
+        return _MISC
     if key not in names:
         raise ValueError(f'budget category {key!r} is not a transactions category')
     return names[key]
