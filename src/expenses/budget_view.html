@@ -87,7 +87,7 @@ Paid {{ when(line.last_paid) }}{% if line.state == 'over' %}, {{ (line.spent - l
         {% else %}
         {% for c in line.history %}<td class="cell{% if c.current %} current{% endif %}{% if c.ratio > 1.01 %} over{% endif %}" style="--level: {{ [c.ratio, 1] | min }}" title="{{ c.title }}: {{ c.spent | fmt }} of {{ c.allowance | fmt }}"><span class="cell-label">{{ c.label }}</span>{% if c.spent %}{{ c.spent | fmt }}{% else %}<span class="muted">·</span>{% endif %}</td>{% endfor %}
         {% endif %}
-        <td class="now">{{ state(line.state) }}<div class="muted small">{{ detail(line) }}</div></td>
+        <td class="now">{{ state(line.state) }}<span class="muted small">{{ detail(line) }}</span></td>
       </tr>
       {% endfor %}
     </tbody>
