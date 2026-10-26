@@ -51,13 +51,17 @@ def _budget_status(budget: float, actual: float, fraction: float) -> tuple[str, 
 def _budget_rows(entries, cat_totals: dict[str, float], period) -> list[dict]:
     names = _category_names()
     actual_by_cat: dict[str, float] = {}
+    count_by_cat: Counter = Counter()
     for entry in entries:
         if entry.counts_as_spending:
             key = entry.category.key if entry.category else ''
             actual_by_cat[key] = actual_by_cat.get(key, 0.0) + entry.aed
+            count_by_cat[key] += 1
 
     budgeted = {cat for cat, budget in cat_totals.items() if budget > 0}
-    misc = sum(actual for cat, actual in actual_by_cat.items() if cat not in budgeted)
+    misc_parts = sorted(({'category': names[cat] if cat else 'Uncategorized', 'actual': actual, 'count': count_by_cat[cat]}
+                         for cat, actual in actual_by_cat.items() if cat not in budgeted), key=lambda part: -part['actual'])
+    misc = sum(part['actual'] for part in misc_parts)
     rows = []
     for cat in budgeted:
         budget = cat_totals[cat]
@@ -72,7 +76,7 @@ def _budget_rows(entries, cat_totals: dict[str, float], period) -> list[dict]:
         })
     rows.sort(key=lambda r: ({'red': 0, 'yellow': 1, 'green': 2, 'none': 3}[r['status']], -r['actual']))
     if misc:
-        rows.append({'category': _MISC, 'budget': 0.0, 'actual': misc, 'pct': 0, 'status': 'none'})
+        rows.append({'category': _MISC, 'budget': 0.0, 'actual': misc, 'pct': 0, 'status': 'none', 'parts': misc_parts})
     return rows
 
 
