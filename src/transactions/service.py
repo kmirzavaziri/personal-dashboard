@@ -157,7 +157,7 @@ def receive(config, source: str, payloads: list) -> Counter:
 
 def receive_wallet(config, request: dict) -> Counter:
     field = lambda *names: next((_wallet_text(request.get(name)) for name in names if _wallet_text(request.get(name))), '')
-    text = f"Apple Pay: spent {field('amount')} at {field('merchant')} with {field('name', 'card_or_pass', 'card')}"
+    text = f"Apple Pay: spent {field('amount')} at {field('merchant')} with {field('card_or_pass', 'card')}"
     return receive(config, 'wallet', [{'text': text, 'sender': 'Apple Wallet', 'raw': request}])
 
 
