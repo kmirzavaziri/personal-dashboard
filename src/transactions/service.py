@@ -235,12 +235,13 @@ def _same_movement(config, store: TransactionStore, tx: Transaction) -> Transact
         return exact
     patterns = {pattern['name']: pattern for pattern in _patterns(config)}
     banks = {card['display']: card.get('bank', '') for card in _cards(config)}
-    return next((row for row in rows
-                 if (row.remaining is None or tx.remaining is None)
-                 and not _distinct_events(row, tx, matching)
-                 and abs(row.at - tx.at) <= window
-                 and _compatible_types(row, tx, patterns)
-                 and _same_account_and_amount(row, tx, patterns, banks, matching.charges_aed)), None)
+    candidates = [row for row in rows
+                  if (row.remaining is None or tx.remaining is None)
+                  and not _distinct_events(row, tx, matching)
+                  and abs(row.at - tx.at) <= window
+                  and _compatible_types(row, tx, patterns)
+                  and _same_account_and_amount(row, tx, patterns, banks, matching.charges_aed)]
+    return min(candidates, key=lambda row: abs(row.at - tx.at), default=None)
 
 
 def _distinct_events(row: Transaction, tx: Transaction, matching: Matching) -> bool:
@@ -262,9 +263,9 @@ def _same_account_and_amount(row: Transaction, tx: Transaction, patterns: dict, 
         return False
     unknown, known = (row, tx) if row.account == _UNKNOWN_ACCOUNT else (tx, row)
     bank = (patterns.get(unknown.pattern) or {}).get('bank')
-    if bank and banks.get(known.account) != bank:
-        return False
-    return abs(row.amount - tx.amount) <= charges
+    if not bank:
+        return round(row.amount, 2) == round(tx.amount, 2)
+    return banks.get(known.account) == bank and abs(row.amount - tx.amount) <= charges
 
 
 def _overrides(config) -> dict[str, dict]:
