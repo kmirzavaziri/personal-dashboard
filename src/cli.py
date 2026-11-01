@@ -21,6 +21,7 @@ _PAGES = {
     'planner':  'planner.view',
     'calendar': 'agenda.view',
     'training': 'training.view',
+    'checklists': 'checklists.view',
 }
 
 app = typer.Typer(no_args_is_help=True, add_completion=False, help='Personal dashboard CLI')

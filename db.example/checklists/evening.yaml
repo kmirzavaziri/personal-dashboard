@@ -1,0 +1,12 @@
+key: evening
+name: Evening
+icon: 🌙
+order: 1
+sections:
+- name: Bag
+  items:
+  - {name: Laptop, icon: 💻}
+  - {name: Charger, icon: 🔌}
+- name: Pocket
+  items:
+  - {name: Wallet, icon: 👛}

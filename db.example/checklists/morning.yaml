@@ -1,0 +1,9 @@
+key: morning
+name: Morning
+icon: ☀️
+order: 2
+sections:
+- name: Leaving
+  items:
+  - {name: Phone, icon: 📱}
+  - {name: Keys, icon: 🔑}

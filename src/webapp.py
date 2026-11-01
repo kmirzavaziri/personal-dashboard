@@ -19,6 +19,7 @@ from expenses.web import make_expenses_bp
 from mac.web import make_mac_bp
 from planner.web import make_planner_bp
 from training.web import make_training_bp
+from checklists.web import make_checklists_bp
 from agenda.web import make_calendar_bp
 from messaging.web import make_messaging_bp
 from mac.net import display_hosts
@@ -57,7 +58,8 @@ def create_app(services: Services) -> Flask:
         services = replace(services, git=git)
 
     blueprints = [make_health_bp, make_shopping_bp, make_styling_bp,
-                  make_expenses_bp, make_planner_bp, make_calendar_bp, make_messaging_bp, make_training_bp]
+                  make_expenses_bp, make_planner_bp, make_calendar_bp, make_messaging_bp, make_training_bp,
+                  make_checklists_bp]
     if config.enable_mac:
         blueprints.append(make_mac_bp)
     for make_bp in blueprints:

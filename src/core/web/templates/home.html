@@ -28,6 +28,7 @@
 </a>
 {% endmacro %}
 <nav class="dest-grid">
+  {% call dest("/checklists", "Checklists", "Backpack and daily checklists") %}<rect x="5" y="3.5" width="14" height="17" rx="2"/><path d="M8.5 9l1.5 1.5 3-3M8.5 15.5l1.5 1.5 3-3M15 9.5h1M15 16h1"/>{% endcall %}
   {% call dest("/planner", "Task manager", "Backlog and kanban board") %}<rect x="3.5" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="16.5" y="4" width="4" height="7" rx="1.5"/>{% endcall %}
   {% call dest("/calendar", "Calendar", "Routines and dated plans") %}<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>{% endcall %}
   {% call dest("/health", "Health", "Meals, nutrition and routines") %}<path d="M3 12h4l2-5 4 10 2-5h6"/>{% endcall %}

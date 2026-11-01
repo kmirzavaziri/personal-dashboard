@@ -27,6 +27,7 @@ cp -r db.example db && dash server up
   and label ordering.
 - `calendar/` — recurring (`day:`) and dated (`date:`) entries; `task_key`
   links an entry to a planner task.
+- `checklists/` — tap-through checklists (backpack, morning…): `name`, `icon`, `order`, and `sections` of `items` (`name`, `icon`). Checks live only in the open page and clear on reload.
 - `styling/profile.yaml` — fit/size profile driving the styling review.
 - `transactions/` — message parsing rules: `patterns.yaml` (regex per message
   template, `action: record | alert | ignore`), `cards.yaml` (last4/name →

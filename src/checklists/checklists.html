@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Checklists{% endblock %}
+{% block heading %}Checklists{% endblock %}
+{% block max_width %}560px{% endblock %}
+
+{% block extra_css %}
+  .list-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin: 0.9rem 0 0.4rem; }
+  .list-count { font-size: 0.9rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .list-count.complete { color: var(--accent); font-weight: 700; }
+  .reset { padding: 0.45rem 0.9rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--strong); font: inherit; font-size: 0.85rem; cursor: pointer; }
+  .section { margin-top: 0.9rem; }
+  .section h3 { margin: 0 0 0.35rem; font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .items { display: grid; gap: 0.4rem; }
+  .item { display: flex; align-items: center; gap: 0.8rem; width: 100%; min-height: 3.4rem; padding: 0.5rem 0.9rem; text-align: left;
+    border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--strong); font: inherit; font-size: 1.05rem; cursor: pointer;
+    -webkit-tap-highlight-color: transparent; touch-action: manipulation; transition: transform 0.08s ease, opacity 0.15s ease; }
+  .item:active { transform: scale(0.98); }
+  .item-icon { flex: none; width: 2rem; font-size: 1.6rem; line-height: 1; text-align: center; }
+  .item-name { flex: 1; }
+  .item-box { flex: none; width: 1.5rem; height: 1.5rem; border: 2px solid var(--border); border-radius: 50%; }
+  .item[aria-pressed="true"] { opacity: 0.45; }
+  .item[aria-pressed="true"] .item-name { text-decoration: line-through; }
+  .item[aria-pressed="true"] .item-box { border-color: var(--accent); background: var(--accent); }
+  .item:focus-visible, .reset:focus-visible { outline: 2px solid var(--strong); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { .item { transition: none; } }
+{% endblock %}
+
+{% block content %}
+<nav role="tablist" data-tabs="checklists" data-route="/checklists">
+  {% for checklist in checklists %}<button role="tab" data-tab="{{ checklist.key }}">{{ checklist.icon }} {{ checklist.name }}</button>{% endfor %}
+</nav>
+
+{% for checklist in checklists %}
+<div role="tabpanel" data-tabs="checklists" data-tab="{{ checklist.key }}" class="checklist" hidden>
+  <div class="list-head">
+    <span class="list-count"></span>
+    <button type="button" class="reset">Uncheck all</button>
+  </div>
+  {% for section in checklist.sections %}
+  <div class="section">
+    <h3>{{ section.name }}</h3>
+    <div class="items">
+      {% for item in section.items %}
+      <button type="button" class="item" aria-pressed="false"><span class="item-icon" aria-hidden="true">{{ item.icon }}</span><span class="item-name">{{ item.name }}</span><span class="item-box" aria-hidden="true"></span></button>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endfor %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    document.querySelectorAll('.checklist').forEach(function (list) {
+      var items = Array.prototype.slice.call(list.querySelectorAll('.item'));
+      var count = list.querySelector('.list-count');
+      function refresh() {
+        var done = items.filter(function (item) { return item.getAttribute('aria-pressed') === 'true'; }).length;
+        count.textContent = done === items.length ? 'All done ✓' : done + ' of ' + items.length;
+        count.classList.toggle('complete', done === items.length);
+      }
+      items.forEach(function (item) {
+        item.addEventListener('click', function () {
+          item.setAttribute('aria-pressed', String(item.getAttribute('aria-pressed') !== 'true'));
+          if (navigator.vibrate) navigator.vibrate(10);
+          refresh();
+        });
+      });
+      list.querySelector('.reset').addEventListener('click', function () {
+        items.forEach(function (item) { item.setAttribute('aria-pressed', 'false'); });
+        refresh();
+      });
+      refresh();
+    });
+  })();
+</script>
+{% endblock %}
