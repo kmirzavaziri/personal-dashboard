@@ -250,7 +250,7 @@ def _env(ledger, config):
     env = _env_for(tuple(c.name for c in ledger.categories), tuple(ledger.account_names))
     lines = budget_lines(config)
     env.globals['sub_categories'] = {line.key: line for line in lines}
-    env.globals['unbudgeted'] = Tracker(ledger, lines, {c.key: c.name for c in ledger.categories}).unbudgeted
+    env.globals['tx_lines'] = Tracker(ledger, lines, {c.key: c.name for c in ledger.categories}).lines_by_tx
     return env
 
 

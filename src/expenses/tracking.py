@@ -136,8 +136,11 @@ class Tracker:
                 self.by_line.setdefault(piece.line.key, []).append(piece)
 
     @property
-    def unbudgeted(self) -> set[str]:
-        return {piece.entry.tx.id for piece in self.pieces if piece.line is None}
+    def lines_by_tx(self) -> dict[str, list[BudgetLine | None]]:
+        lines: dict[str, list[BudgetLine | None]] = {}
+        for piece in self.pieces:
+            lines.setdefault(piece.entry.tx.id, []).append(piece.line)
+        return lines
 
     def overview(self, period: Period) -> Overview:
         now = min(period.now, period.end)
@@ -169,7 +172,7 @@ class Tracker:
 
     def _auto_line(self, entry: Entry, category: str) -> BudgetLine | None:
         ruled = self.by_key.get(entry.match.rule.line) if entry.match and not entry.tx.category_override else None
-        if ruled and ruled.category == category:
+        if ruled:
             return ruled
         own = [line for line in self.lines if line.category == category]
         text = f'{entry.note} {entry.tx.description}'

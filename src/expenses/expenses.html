@@ -213,10 +213,10 @@
     {% for c in card_sections %}<option value="card-{{ loop.index }}" data-account="{{ c.account }}" data-tone="{{ card_tone(c.account) }}">{{ c.account }}</option>{% endfor %}
   </select>
   <input class="search-input" id="tx-search" type="search" placeholder="Search description, note, category or amount" autocomplete="off" aria-label="Search transactions">
-  <select id="tx-category" class="input-quiet" aria-label="Category filter">
-    <option value="*">All categories</option>
-    <option value="">Uncategorized</option>
-    {% for cat in categories %}<option value="{{ cat.key }}">{{ cat.name }}</option>{% endfor %}
+  <select id="tx-category" class="input-quiet tone" aria-label="Category filter">
+    <option value="*" data-tone="var(--faint)">All categories</option>
+    <option value="" data-tone="var(--faint)">Uncategorized</option>
+    {% for cat in categories %}<option value="{{ cat.key }}" data-tone="{{ tone(cat.name) }}">{{ cat.name }}</option>{% for line in sub_categories.values() if line.category == cat.key %}<option value="{{ cat.key }}/{{ line.key }}" data-tone="{{ tone(cat.name) }}">{{ cat.name }} › {{ line.name }}</option>{% endfor %}{% endfor %}
   </select>
   <label class="toggle"><input type="checkbox" id="show-self"><span class="toggle-track" aria-hidden="true"></span>Show hidden</label>
 </div>
@@ -694,14 +694,20 @@
       var root = !searchPanel.hidden ? searchPanel : panel.querySelector('[role="tabpanel"][data-tabs="card"]:not([hidden])');
       return root ? Array.prototype.slice.call(root.querySelectorAll('tr[data-category]')) : [];
     }
+    function keysOf(row) {
+      var lines = (row.dataset.lines || '').split(' ').filter(Boolean);
+      return [row.dataset.category].concat(lines.map(function (line) { return row.dataset.category + '/' + line; }));
+    }
     function apply() {
       pending = false;
       var hits = { '*': 0 }, totals = { '*': 0 };
       shownRows().forEach(function (row) {
         if (!toggle.checked && row.classList.contains('hidden-tx')) return;
         var aed = Number(row.dataset.aed) || 0;
-        hits[row.dataset.category] = (hits[row.dataset.category] || 0) + 1;
-        totals[row.dataset.category] = (totals[row.dataset.category] || 0) + aed;
+        keysOf(row).forEach(function (key) {
+          hits[key] = (hits[key] || 0) + 1;
+          totals[key] = (totals[key] || 0) + aed;
+        });
         hits['*'] += 1;
         totals['*'] += aed;
       });
@@ -709,7 +715,7 @@
         option.dataset.count = (hits[option.value] || 0) + ' · ' + compactDirhams(totals[option.value] || 0);
       });
       panel.querySelectorAll('tr[data-category]').forEach(function (row) {
-        row.classList.toggle('category-filtered', select.value !== '*' && row.dataset.category !== select.value);
+        row.classList.toggle('category-filtered', select.value !== '*' && keysOf(row).indexOf(select.value) === -1);
       });
       var searchRows = searchPanel.querySelectorAll('tr[data-category]');
       var searchShown = Array.prototype.filter.call(searchRows, function (row) {
