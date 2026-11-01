@@ -9,7 +9,7 @@ from transactions.rules import Category
 from transactions.transaction import UNCATEGORIZED
 from core.labels import colors_for
 from core.web.templating import make_env
-from expenses.budget import BudgetLine, Frequency, budget_lines, sub_categories
+from expenses.budget import BudgetLine, Frequency, budget_lines
 from expenses.tracking import Overview, Tracker
 
 HERE = Path(__file__).parent
@@ -247,7 +247,9 @@ def _trends(ledger, now: datetime, budgets: dict[str, float]) -> dict:
 
 def _env(ledger, config):
     env = _env_for(tuple(c.name for c in ledger.categories), tuple(ledger.account_names))
-    env.globals['sub_categories'] = sub_categories(config)
+    lines = budget_lines(config)
+    env.globals['sub_categories'] = {line.key: line for line in lines}
+    env.globals['unbudgeted'] = Tracker(ledger, lines, {c.key: c.name for c in ledger.categories}).unbudgeted
     return env
 
 

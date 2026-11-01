@@ -135,6 +135,10 @@ class Tracker:
             if piece.line:
                 self.by_line.setdefault(piece.line.key, []).append(piece)
 
+    @property
+    def unbudgeted(self) -> set[str]:
+        return {piece.entry.tx.id for piece in self.pieces if piece.line is None}
+
     def overview(self, period: Period) -> Overview:
         now = min(period.now, period.end)
         in_period = [piece for piece in self.pieces if period.start <= piece.at < period.end]
