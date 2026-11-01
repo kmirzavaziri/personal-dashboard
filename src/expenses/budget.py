@@ -75,6 +75,7 @@ class BudgetLine(BaseModel):
     times: int = 1
     match: list[str] = []
     hours: list[int] = []
+    absorbs: list[str] = []
     bill: bool = False
     notes: str = ''
     items: list[Item] = []

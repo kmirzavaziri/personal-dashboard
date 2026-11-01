@@ -160,9 +160,12 @@ class Tracker:
         category = entry.category.key if entry.category and entry.category.key in self.budgeted else MISC
         pieces = []
         for amount, key in entry.tx.portions():
-            line = self.by_key.get(key) or self._auto_line(entry, category)
+            line = self.by_key.get(key) or self._auto_line(entry, category) or self._absorber(category)
             pieces.append(Piece(entry=entry, amount=amount * scale, line=line, category=line.category if line else category))
         return pieces
+
+    def _absorber(self, category: str) -> BudgetLine | None:
+        return next((line for line in self.lines if category in line.absorbs), None)
 
     def _auto_line(self, entry: Entry, category: str) -> BudgetLine | None:
         ruled = self.by_key.get(entry.match.rule.line) if entry.match and not entry.tx.category_override else None
