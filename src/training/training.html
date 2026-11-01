@@ -10,6 +10,8 @@
   .day-head .muted { font-size: 0.85rem; }
   .begin { display: block; width: 100%; margin-bottom: 0.9rem; padding: 0.95rem; font-size: 1.1rem; font-weight: 700; border-radius: var(--radius);
     border: 1px solid var(--accent); background: var(--accent); color: var(--surface); cursor: pointer; font-family: inherit; }
+  .restart { display: block; margin: -0.4rem auto 0.9rem; padding: 0.4rem 0.8rem; border: none; background: none; color: var(--muted); font: inherit; font-size: 0.85rem; text-decoration: underline; cursor: pointer; }
+  .restart[hidden] { display: none; }
   .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.75rem 0.9rem; margin-bottom: 0.7rem; }
   .panel > summary { cursor: pointer; font-weight: 600; color: var(--strong); }
   .panel ul, .panel ol { margin: 0.5rem 0 0; padding-left: 1.2rem; }
@@ -38,7 +40,7 @@
   .dots { display: flex; gap: 0.3rem; }
   .dot { width: 0.7rem; height: 0.7rem; border-radius: 50%; border: 1.5px solid var(--border-strong); }
   .dot.saved { background: var(--accent); border-color: var(--accent); }
-  .row:focus-visible, .begin:focus-visible, .nav button:focus-visible, .go:focus-visible, .stop:focus-visible, .back:focus-visible { outline: 2px solid var(--strong); outline-offset: 2px; }
+  .row:focus-visible, .begin:focus-visible, .nav button:focus-visible, .go:focus-visible, .stop:focus-visible, .back:focus-visible, .restart:focus-visible { outline: 2px solid var(--strong); outline-offset: 2px; }
 
   .focus { position: fixed; inset: 0; z-index: 1000; background: var(--bg, var(--surface)); display: flex; flex-direction: column; }
   .focus[hidden] { display: none; }
@@ -98,6 +100,7 @@
 </div>
 
 <button type="button" class="begin" id="begin">Start workout</button>
+<button type="button" class="restart" id="restart" hidden>Restart today</button>
 
 <details class="panel">
   <summary>Before you go</summary>
@@ -236,6 +239,7 @@
     var saved = steps.filter(isSaved).length;
     document.getElementById('focus-progress').style.width = (saved / steps.length * 100) + '%';
     document.getElementById('begin').textContent = saved === 0 ? 'Start workout' : saved === steps.length ? 'Workout done · review' : 'Continue · set ' + (saved + 1) + ' of ' + steps.length;
+    document.getElementById('restart').hidden = saved === 0;
     steps.forEach(function (s) {
       var on = isSaved(s);
       document.querySelectorAll('.row[data-exercise="' + s.dataset.exercise + '"] .dot[data-number="' + s.dataset.number + '"]').forEach(function (d) { d.classList.toggle('saved', on); });
@@ -346,6 +350,13 @@
 
   stop.addEventListener('click', function () { if (onStop) onStop(); else closeCoach(); });
   document.getElementById('begin').addEventListener('click', function () { open(firstPending()); });
+  document.getElementById('restart').addEventListener('click', function () {
+    if (!confirm('Clear all of today\'s sets and start over?')) return;
+    fetch('/api/training/session', { method: 'DELETE' }).then(function (r) {
+      if (!r.ok) throw new Error('restart failed');
+      location.replace(location.pathname);
+    }).catch(function () { alert('Could not restart. Check the connection and try again.'); });
+  });
   document.getElementById('to-overview').addEventListener('click', toOverview);
   document.getElementById('prev').addEventListener('click', function () { if (current > 0) open(current - 1); });
   document.getElementById('next').addEventListener('click', function () { if (current < steps.length - 1) open(current + 1); else toOverview(); });

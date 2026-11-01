@@ -47,6 +47,12 @@ def record_set(config, workout: str, exercise: str, number: int, kg: float, reps
     return session
 
 
+def restart(config) -> None:
+    session = Session.objects.get_or_none(key=today(config).isoformat())
+    if session is not None:
+        session.delete()
+
+
 def _sessions() -> list[Session]:
     return sorted(Session.objects.all(), key=lambda session: session.key)
 

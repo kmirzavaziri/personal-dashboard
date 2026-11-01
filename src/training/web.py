@@ -21,4 +21,9 @@ def make_training_bp(services) -> Blueprint:
             return jsonify(ok=False), 400
         return jsonify(ok=True)
 
+    @bp.delete('/api/training/session')
+    def restart():
+        training.restart(services.config)
+        return jsonify(ok=True)
+
     return bp
