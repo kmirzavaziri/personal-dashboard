@@ -65,7 +65,20 @@
     border: 1px solid var(--border-strong); background: var(--raised); color: var(--strong); cursor: pointer; }
   .rules ol { margin: 0.5rem 0 0; padding-left: 1.2rem; }
   .rules li { margin: 0.25rem 0; }
-  main { padding-bottom: 12rem; }
+  .ex.current { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .set.current label { color: var(--accent); font-weight: 600; }
+  .next { position: fixed; inset: auto 0 0 0; z-index: 40; display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.7rem 1rem calc(0.7rem + env(safe-area-inset-bottom));
+    background: var(--surface); border-top: 1px solid var(--border-strong); box-shadow: 0 -8px 24px rgb(0 0 0 / 0.18); }
+  .next[hidden] { display: none; }
+  .next-text { flex: 1; min-width: 0; }
+  .next-step { font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .next-name { font-size: 0.98rem; font-weight: 600; color: var(--strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .next-target { font-size: 0.85rem; color: var(--strong); font-variant-numeric: tabular-nums; }
+  .next-progress { position: absolute; inset: 0 0 auto 0; height: 3px; background: var(--raised); }
+  .next-progress span { display: block; height: 100%; background: var(--accent); transition: width 0.3s; }
+  .next .go { min-width: 6.5rem; padding: 0.85rem 1rem; font-size: 1.05rem; }
+  main { padding-bottom: 12rem; scroll-padding-bottom: 8rem; }
 {% endblock %}
 
 {% block content %}
@@ -75,7 +88,7 @@
   <span class="muted">{{ plan.day.strftime('%a %-d %b') }} · about 25 min</span>
 </div>
 
-<details class="panel" open>
+<details class="panel">
   <summary>Before you go</summary>
   <ul>{% for tip in g.before_gym %}<li>{{ tip }}</li>{% endfor %}</ul>
 </details>
@@ -136,6 +149,16 @@
   <ol>{% for rule in g.rules %}<li>{{ rule }}</li>{% endfor %}</ol>
 </details>
 
+<div class="next" id="next">
+  <div class="next-progress"><span id="next-progress"></span></div>
+  <div class="next-text">
+    <div class="next-step" id="next-step"></div>
+    <div class="next-name" id="next-name"></div>
+    <div class="next-target" id="next-target"></div>
+  </div>
+  <button type="button" class="go" id="next-go">Start</button>
+</div>
+
 <div class="coach" id="coach" hidden aria-live="polite">
   <div class="coach-what" id="coach-what"></div>
   <div class="coach-cue" id="coach-cue"></div>
@@ -172,7 +195,45 @@
 
   function clear() { clearTimeout(timer); clearInterval(timer); timer = null; }
 
-  function close() { clear(); coach.hidden = true; onStop = null; }
+  function close() { clear(); coach.hidden = true; onStop = null; showNext(true); }
+
+  var nextBar = document.getElementById('next'), nextGo = document.getElementById('next-go');
+  var sequence = [];
+  document.querySelectorAll('.pair').forEach(function (pair) {
+    var cards = Array.prototype.slice.call(pair.querySelectorAll('.ex'));
+    var rounds = cards.length ? cards[0].querySelectorAll('.set').length : 0;
+    for (var round = 1; round <= rounds; round++) {
+      cards.forEach(function (card) { sequence.push({ card: card, row: card.querySelector('.set[data-number="' + round + '"]') }); });
+    }
+  });
+
+  function pending() { return sequence.filter(function (step) { return !step.row.classList.contains('saved'); }); }
+
+  function showNext(scroll) {
+    document.querySelectorAll('.ex.current, .set.current').forEach(function (el) { el.classList.remove('current'); });
+    var left = pending(), done = sequence.length - left.length;
+    document.getElementById('next-progress').style.width = (done / sequence.length * 100) + '%';
+    nextBar.hidden = !coach.hidden;
+    if (!left.length) {
+      document.getElementById('next-step').textContent = done + ' of ' + sequence.length + ' sets';
+      document.getElementById('next-name').textContent = 'Workout done';
+      document.getElementById('next-target').textContent = 'Sauna, shower, standup.';
+      nextGo.hidden = true;
+      return;
+    }
+    var step = left[0], card = step.card, row = step.row;
+    card.classList.add('current'); row.classList.add('current');
+    document.getElementById('next-step').textContent = 'Set ' + (done + 1) + ' of ' + sequence.length;
+    document.getElementById('next-name').textContent = card.dataset.name + ' · set ' + row.dataset.number;
+    document.getElementById('next-target').textContent = row.querySelector('.kg').value + ' kg × ' + card.dataset.min + '–' + card.dataset.max + ' reps';
+    nextGo.hidden = false;
+    if (scroll) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  nextGo.addEventListener('click', function () {
+    var step = pending()[0];
+    if (step) runSet(step.row, step.card);
+  });
 
   function countdown(label, seconds, done) {
     clear();
@@ -205,6 +266,7 @@
         pushing = !pushing; phase();
       }, pushing ? PUSH : LOWER);
     }
+    nextBar.hidden = true;
     countdown('Get set: ' + card.dataset.name + ', set ' + row.dataset.number, 3, function () {
       what.textContent = card.dataset.name + ' · set ' + row.dataset.number;
       stop.textContent = 'Stop: that rep didn\'t make it';
@@ -214,6 +276,7 @@
   }
 
   function finish(row, card, reps) {
+    onStop = function () {};
     row.querySelector('.reps').value = reps;
     save(row, card).then(function () { next(row, card); });
   }
@@ -235,10 +298,12 @@
       row.classList.add('saved'); row.querySelector('.go').textContent = 'Redo';
       var all = card.querySelectorAll('.set').length, saved = card.querySelectorAll('.set.saved').length;
       card.classList.toggle('complete', saved >= all);
+      if (coach.hidden) showNext(false);
     }).catch(function () { alert('Could not save this set. Check the connection and tap the reps box to retry.'); });
   }
 
   stop.addEventListener('click', function () { if (onStop) onStop(); else close(); });
+  showNext(false);
 
   document.querySelectorAll('.ex').forEach(function (card) {
     card.querySelectorAll('.set').forEach(function (row) {
