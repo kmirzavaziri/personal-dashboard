@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}Training{% endblock %}
+{% block heading %}Training{% endblock %}
+{% block max_width %}720px{% endblock %}
+
+{% block extra_css %}
+  .day-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.9rem; }
+  .day-head h2 { margin: 0; font-size: 1.35rem; color: var(--strong); }
+  .day-head .muted { font-size: 0.85rem; }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.75rem 0.9rem; margin-bottom: 0.75rem; }
+  .panel > summary { cursor: pointer; font-weight: 600; color: var(--strong); }
+  .panel ul { margin: 0.5rem 0 0; padding-left: 1.1rem; }
+  .panel li { margin: 0.2rem 0; }
+  .warmup { display: grid; gap: 0.5rem; margin-top: 0.5rem; }
+  .warmup-row { display: flex; align-items: center; gap: 0.75rem; }
+  .warmup-row .frames { width: 84px; flex: none; }
+
+  .pair { margin: 1.25rem 0 0.5rem; }
+  .pair-head { display: grid; gap: 0.1rem; margin-bottom: 0.45rem; }
+  .pair-head h3 { margin: 0; font-size: 0.95rem; color: var(--strong); }
+  .pair-head .muted { font-size: 0.8rem; }
+
+  .ex { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.75rem; margin-bottom: 0.6rem; }
+  .ex.complete { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
+  .ex-top { display: grid; grid-template-columns: 132px 1fr; gap: 0.75rem; align-items: start; }
+  .frames { position: relative; aspect-ratio: 3 / 2; border-radius: calc(var(--radius) - 2px); overflow: hidden; background: #fff; }
+  .frames img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .frames img + img { animation: flip 4s steps(1) infinite; }
+  @keyframes flip { 0% { opacity: 0; } 50% { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .frames img + img { animation: none; opacity: 0; } }
+  .ex-name { font-weight: 600; color: var(--strong); font-size: 1rem; }
+  .ex-eq { font-size: 0.78rem; color: var(--muted); }
+  .target { margin-top: 0.4rem; font-size: 1.15rem; font-weight: 600; color: var(--strong); font-variant-numeric: tabular-nums; }
+  .target small { font-size: 0.8rem; font-weight: 400; color: var(--muted); }
+  .last { font-size: 0.8rem; color: var(--muted); margin-top: 0.15rem; font-variant-numeric: tabular-nums; }
+  .ex details { margin-top: 0.5rem; font-size: 0.85rem; }
+  .ex details summary { cursor: pointer; color: var(--muted); }
+  .ex details ul { margin: 0.35rem 0 0; padding-left: 1.1rem; }
+  .video { margin-top: 0.5rem; aspect-ratio: 9 / 16; max-width: 260px; border: 0; border-radius: var(--radius); }
+
+  .sets { display: grid; gap: 0.4rem; margin-top: 0.65rem; }
+  .set { display: grid; grid-template-columns: 3.2rem 1fr 1fr auto; gap: 0.4rem; align-items: center; }
+  .set label { font-size: 0.8rem; color: var(--muted); }
+  .set .field { display: flex; align-items: center; gap: 0.25rem; }
+  .set input { width: 100%; min-width: 0; padding: 0.45rem 0.4rem; font-size: 1rem; text-align: center; font-variant-numeric: tabular-nums;
+    background: var(--raised); color: var(--strong); border: 1px solid var(--border); border-radius: calc(var(--radius) - 2px); }
+  .set .unit { font-size: 0.75rem; color: var(--muted); }
+  .set.saved input { border-color: color-mix(in srgb, var(--accent) 50%, var(--border)); }
+  .go { min-width: 4.6rem; padding: 0.5rem 0.7rem; font-size: 0.9rem; font-weight: 600; border-radius: calc(var(--radius) - 2px);
+    border: 1px solid var(--accent); background: var(--accent); color: var(--surface); cursor: pointer; }
+  .set.saved .go { background: transparent; color: var(--accent); }
+  .go:focus-visible, .stop:focus-visible { outline: 2px solid var(--strong); outline-offset: 2px; }
+
+  .coach { position: fixed; inset: auto 0 0 0; z-index: 50; padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom));
+    background: var(--surface); border-top: 1px solid var(--border-strong); box-shadow: 0 -8px 24px rgb(0 0 0 / 0.18); text-align: center; }
+  .coach[hidden] { display: none; }
+  .coach-what { font-size: 0.85rem; color: var(--muted); }
+  .coach-cue { font-size: 2.6rem; font-weight: 700; letter-spacing: 0.04em; color: var(--strong); line-height: 1.15; margin: 0.25rem 0; }
+  .coach-cue.push { color: var(--accent); }
+  .coach-count { font-size: 1rem; color: var(--strong); font-variant-numeric: tabular-nums; }
+  .coach-bar { height: 4px; background: var(--raised); border-radius: 2px; margin: 0.6rem auto 0.8rem; max-width: 320px; overflow: hidden; }
+  .coach-bar span { display: block; height: 100%; width: 0; background: var(--accent); }
+  .stop { width: 100%; max-width: 320px; padding: 0.9rem; font-size: 1.05rem; font-weight: 700; border-radius: var(--radius);
+    border: 1px solid var(--border-strong); background: var(--raised); color: var(--strong); cursor: pointer; }
+  .rules ol { margin: 0.5rem 0 0; padding-left: 1.2rem; }
+  .rules li { margin: 0.25rem 0; }
+  main { padding-bottom: 12rem; }
+{% endblock %}
+
+{% block content %}
+{% set g = plan.guide %}
+<div class="day-head">
+  <h2>{{ plan.workout.name }}</h2>
+  <span class="muted">{{ plan.day.strftime('%a %-d %b') }} · about 25 min</span>
+</div>
+
+<details class="panel" open>
+  <summary>Before you go</summary>
+  <ul>{% for tip in g.before_gym %}<li>{{ tip }}</li>{% endfor %}</ul>
+</details>
+
+<details class="panel" open>
+  <summary>Warm-up · 3 min</summary>
+  <div class="warmup">
+    {% for w in g.warmup %}
+    <div class="warmup-row">
+      {% if w.images %}<div class="frames">{% for src in w.images %}<img src="{{ src }}" alt="{{ w.name }}" loading="lazy">{% endfor %}</div>{% endif %}
+      <div><div class="ex-name">{{ w.name }}</div><div class="ex-eq">{{ w.amount }}</div></div>
+    </div>
+    {% endfor %}
+  </div>
+</details>
+
+{% for pair in plan.pairs %}
+<section class="pair">
+  <div class="pair-head">
+    <h3>Pair {{ loop.index }} of {{ plan.pairs | length }}</h3>
+    <span class="muted">{{ g.sets }} rounds: {{ pair | map(attribute='exercise.name') | join(' → ') }} → rest {{ g.rest_seconds }} s</span>
+  </div>
+  {% for slot in pair %}
+  {% set ex = slot.exercise %}
+  <article class="ex{% if slot.done | length >= g.sets %} complete{% endif %}" data-exercise="{{ ex.key }}" data-min="{{ ex.min_reps }}" data-max="{{ ex.max_reps }}" data-name="{{ ex.name }}" data-position="{{ loop.index }}" data-pair-size="{{ pair | length }}">
+    <div class="ex-top">
+      <div class="frames">{% for src in ex.images %}<img src="{{ src }}" alt="{{ ex.name }}" loading="lazy">{% endfor %}</div>
+      <div>
+        <div class="ex-name">{{ ex.name }}</div>
+        <div class="ex-eq">{{ ex.equipment }}</div>
+        <div class="target">{{ slot.kg | kg }} kg <small>× {{ ex.min_reps }}–{{ ex.max_reps }} reps</small></div>
+        <div class="last">{% if slot.last %}Last time: {{ slot.last[0].kg | kg }} kg × {{ slot.last | map(attribute='reps') | join(', ') }}{% else %}First time: starting weight, adjust if it's way off{% endif %}</div>
+      </div>
+    </div>
+    <details>
+      <summary>How to do it</summary>
+      <ul>{% for cue in ex.cues %}<li>{{ cue }}</li>{% endfor %}</ul>
+      {% if ex.video %}<iframe class="video" src="https://www.youtube-nocookie.com/embed/{{ ex.video }}" title="{{ ex.name }}" allowfullscreen loading="lazy"></iframe>{% endif %}
+    </details>
+    <div class="sets">
+      {% for number in range(1, g.sets + 1) %}
+      {% set done = slot.done | selectattr('number', 'equalto', number) | first %}
+      <div class="set{% if done %} saved{% endif %}" data-number="{{ number }}">
+        <label>Set {{ number }}</label>
+        <span class="field"><input type="number" inputmode="decimal" step="0.5" min="0" class="kg" value="{{ (done.kg if done else slot.kg) | kg }}" aria-label="{{ ex.name }} set {{ number }} weight"><span class="unit">kg</span></span>
+        <span class="field"><input type="number" inputmode="numeric" min="0" class="reps" value="{{ done.reps if done else '' }}" placeholder="reps" aria-label="{{ ex.name }} set {{ number }} reps"><span class="unit">reps</span></span>
+        <button type="button" class="go">{{ 'Redo' if done else 'Start' }}</button>
+      </div>
+      {% endfor %}
+    </div>
+  </article>
+  {% endfor %}
+</section>
+{% endfor %}
+
+<details class="panel rules">
+  <summary>The rules</summary>
+  <ol>{% for rule in g.rules %}<li>{{ rule }}</li>{% endfor %}</ol>
+</details>
+
+<div class="coach" id="coach" hidden aria-live="polite">
+  <div class="coach-what" id="coach-what"></div>
+  <div class="coach-cue" id="coach-cue"></div>
+  <div class="coach-count" id="coach-count"></div>
+  <div class="coach-bar"><span id="coach-bar"></span></div>
+  <button type="button" class="stop" id="coach-stop">Stop</button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var WORKOUT = {{ plan.workout.key | tojson }};
+  var PUSH = {{ plan.guide.push_seconds }} * 1000, LOWER = {{ plan.guide.lower_seconds }} * 1000;
+  var REST = {{ plan.guide.rest_seconds }}, SWITCH = {{ plan.guide.switch_seconds }};
+  var coach = document.getElementById('coach'), what = document.getElementById('coach-what'),
+      cue = document.getElementById('coach-cue'), count = document.getElementById('coach-count'),
+      bar = document.getElementById('coach-bar'), stop = document.getElementById('coach-stop');
+  var audio = null, timer = null, onStop = null, wakeLock = null;
+
+  function beep(freq, ms) {
+    try {
+      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+      var osc = audio.createOscillator(), gain = audio.createGain();
+      osc.frequency.value = freq; gain.gain.value = 0.25;
+      osc.connect(gain); gain.connect(audio.destination);
+      osc.start(); osc.stop(audio.currentTime + ms / 1000);
+    } catch (e) {}
+  }
+
+  function keepAwake() {
+    if (navigator.wakeLock && !wakeLock) navigator.wakeLock.request('screen').then(function (lock) { wakeLock = lock; lock.addEventListener('release', function () { wakeLock = null; }); }).catch(function () {});
+  }
+
+  function clear() { clearTimeout(timer); clearInterval(timer); timer = null; }
+
+  function close() { clear(); coach.hidden = true; onStop = null; }
+
+  function countdown(label, seconds, done) {
+    clear();
+    coach.hidden = false; what.textContent = label; cue.className = 'coach-cue';
+    stop.textContent = 'Skip';
+    var left = seconds;
+    function tick() {
+      cue.textContent = left + ' s'; count.textContent = '';
+      bar.style.width = ((seconds - left) / seconds * 100) + '%';
+      if (left <= 3 && left > 0) beep(660, 90);
+      if (left <= 0) { clear(); beep(990, 250); done(); return; }
+      left -= 1;
+    }
+    onStop = function () { clear(); done(); };
+    tick(); timer = setInterval(tick, 1000);
+  }
+
+  function runSet(row, card) {
+    keepAwake();
+    var reps = 0, pushing = true;
+    function phase() {
+      cue.textContent = pushing ? 'PUSH' : 'LOWER';
+      cue.className = 'coach-cue' + (pushing ? ' push' : '');
+      count.textContent = reps + ' reps done · target ' + card.dataset.min + '–' + card.dataset.max;
+      bar.style.transition = 'none'; bar.style.width = '0';
+      requestAnimationFrame(function () { bar.style.transition = 'width ' + (pushing ? PUSH : LOWER) + 'ms linear'; bar.style.width = '100%'; });
+      beep(pushing ? 880 : 520, 120);
+      timer = setTimeout(function () {
+        if (!pushing) reps += 1;
+        pushing = !pushing; phase();
+      }, pushing ? PUSH : LOWER);
+    }
+    countdown('Get set: ' + card.dataset.name + ', set ' + row.dataset.number, 3, function () {
+      what.textContent = card.dataset.name + ' · set ' + row.dataset.number;
+      stop.textContent = 'Stop: that rep didn\'t make it';
+      onStop = function () { clear(); finish(row, card, reps); };
+      phase();
+    });
+  }
+
+  function finish(row, card, reps) {
+    row.querySelector('.reps').value = reps;
+    save(row, card).then(function () { next(row, card); });
+  }
+
+  function next(row, card) {
+    var position = Number(card.dataset.position), size = Number(card.dataset.pairSize);
+    if (position < size) countdown('Switch to the next exercise', SWITCH, close);
+    else countdown('Rest, then round ' + (Number(row.dataset.number) + 1), REST, close);
+  }
+
+  function save(row, card) {
+    var kg = row.querySelector('.kg').value, reps = row.querySelector('.reps').value;
+    if (kg === '' || reps === '') return Promise.resolve();
+    return fetch('/api/training/set', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ workout: WORKOUT, exercise: card.dataset.exercise, number: Number(row.dataset.number), kg: Number(kg), reps: Number(reps) })
+    }).then(function (r) {
+      if (!r.ok) throw new Error('save failed');
+      row.classList.add('saved'); row.querySelector('.go').textContent = 'Redo';
+      var all = card.querySelectorAll('.set').length, saved = card.querySelectorAll('.set.saved').length;
+      card.classList.toggle('complete', saved >= all);
+    }).catch(function () { alert('Could not save this set. Check the connection and tap the reps box to retry.'); });
+  }
+
+  stop.addEventListener('click', function () { if (onStop) onStop(); else close(); });
+
+  document.querySelectorAll('.ex').forEach(function (card) {
+    card.querySelectorAll('.set').forEach(function (row) {
+      row.querySelector('.go').addEventListener('click', function () { runSet(row, card); });
+      row.querySelector('.reps').addEventListener('change', function () { save(row, card); });
+      row.querySelector('.kg').addEventListener('change', function () { if (row.classList.contains('saved')) save(row, card); });
+    });
+  });
+})();
+</script>
+{% endblock %}

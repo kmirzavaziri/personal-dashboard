@@ -20,6 +20,7 @@ _PAGES = {
     'mac':      'mac.view',
     'planner':  'planner.view',
     'calendar': 'agenda.view',
+    'training': 'training.view',
 }
 
 app = typer.Typer(no_args_is_help=True, add_completion=False, help='Personal dashboard CLI')

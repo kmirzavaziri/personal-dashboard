@@ -1,0 +1,14 @@
+- key: a
+  name: Workout A
+  order: 1
+  pairs:
+  - [chest-press, seated-row]
+  - [leg-press, face-pull]
+  - [triceps-pushdown, hammer-curl]
+- key: b
+  name: Workout B
+  order: 2
+  pairs:
+  - [incline-press, lat-pulldown]
+  - [leg-curl, leg-extension]
+  - [lateral-raise, cable-curl]

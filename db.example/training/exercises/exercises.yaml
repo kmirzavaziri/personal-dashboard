@@ -1,0 +1,145 @@
+- key: chest-press
+  name: Chest press machine
+  equipment: Machine, seated
+  start_kg: 40
+  step_kg: 5
+  min_reps: 8
+  max_reps: 12
+  images: [/storage/images/training/chest-press-0.jpg, /storage/images/training/chest-press-1.jpg]
+  cues:
+  - Seat height so the handles line up with mid-chest
+  - Shoulder blades pinned back into the pad the whole set
+  - Push until arms are straight, then lower until hands reach chest level
+- key: incline-press
+  name: Incline chest press machine
+  equipment: Machine, seated
+  start_kg: 30
+  step_kg: 5
+  min_reps: 8
+  max_reps: 12
+  images: [/storage/images/training/incline-press-0.jpg, /storage/images/training/incline-press-1.jpg]
+  cues:
+  - Handles line up with upper chest, just below the collarbone
+  - Shoulder blades back, chest up
+  - Full lockout at the top, stretch at the bottom without bouncing
+- key: seated-row
+  name: Seated cable row
+  equipment: Cable, V-handle
+  start_kg: 30
+  step_kg: 5
+  min_reps: 8
+  max_reps: 12
+  images: [/storage/images/training/seated-row-0.jpg, /storage/images/training/seated-row-1.jpg]
+  cues:
+  - Sit tall, knees slightly bent, torso stays still
+  - Pull the handle to your belly button, elbows close to the body
+  - Squeeze shoulder blades together at the end, then let the arms fully straighten
+- key: lat-pulldown
+  name: Lat pulldown
+  equipment: Cable, wide bar
+  start_kg: 35
+  step_kg: 5
+  min_reps: 8
+  max_reps: 12
+  images: [/storage/images/training/lat-pulldown-0.jpg, /storage/images/training/lat-pulldown-1.jpg]
+  cues:
+  - Thigh pad tight, grip a bit wider than shoulders
+  - Pull the bar to the top of your chest, never behind the neck
+  - Lean back slightly; arms fully straight at the top
+- key: leg-press
+  name: Leg press
+  equipment: Machine, plate-loaded
+  start_kg: 50
+  step_kg: 10
+  min_reps: 8
+  max_reps: 12
+  images: [/storage/images/training/leg-press-0.jpg, /storage/images/training/leg-press-1.jpg]
+  cues:
+  - Feet shoulder-width, middle of the platform
+  - Lower until knees reach about 90°, lower back stays on the pad
+  - Push through the heels; stop just short of locking the knees
+  - Weight is the total of both sides (25 + 25 = 50)
+- key: leg-curl
+  name: Seated leg curl
+  equipment: Machine, seated
+  start_kg: 40
+  step_kg: 5
+  min_reps: 8
+  max_reps: 12
+  images: [/storage/images/training/leg-curl-0.jpg, /storage/images/training/leg-curl-1.jpg]
+  cues:
+  - Knees line up with the machine's pivot point
+  - Curl the pad all the way under the seat
+  - Return until legs are straight, without letting the stack touch
+- key: leg-extension
+  name: Leg extension
+  equipment: Machine, seated
+  start_kg: 35
+  step_kg: 5
+  min_reps: 8
+  max_reps: 12
+  images: [/storage/images/training/leg-extension-0.jpg, /storage/images/training/leg-extension-1.jpg]
+  cues:
+  - Knees line up with the pivot, pad on the lower shin
+  - Straighten the legs fully and hold the top for a beat
+  - Lower until knees are at 90°
+- key: face-pull
+  name: Face pull
+  equipment: Cable, rope at head height
+  start_kg: 10
+  step_kg: 2.5
+  min_reps: 12
+  max_reps: 15
+  images: [/storage/images/training/face-pull-0.jpg, /storage/images/training/face-pull-1.jpg]
+  cues:
+  - Rope at forehead height, thumbs pointing back
+  - Pull the rope toward your eyes, hands ending beside your ears
+  - Light weight on purpose; it protects the neck and shoulders
+- key: triceps-pushdown
+  name: Triceps pushdown
+  equipment: Cable, rope
+  start_kg: 12.5
+  step_kg: 2.5
+  min_reps: 8
+  max_reps: 12
+  images: [/storage/images/training/triceps-pushdown-0.jpg, /storage/images/training/triceps-pushdown-1.jpg]
+  cues:
+  - Elbows glued to your sides; only the forearms move
+  - Push down until arms are straight and spread the rope apart
+  - Come up until forearms are parallel to the floor
+- key: hammer-curl
+  name: Rope hammer curl
+  equipment: Cable, rope
+  start_kg: 12.5
+  step_kg: 2.5
+  min_reps: 8
+  max_reps: 12
+  images: [/storage/images/training/hammer-curl-0.jpg, /storage/images/training/hammer-curl-1.jpg]
+  cues:
+  - Palms face each other on the rope; builds forearms
+  - Elbows stay at your sides, no swinging
+  - Curl to the shoulders, lower until arms are straight
+- key: cable-curl
+  name: Cable biceps curl
+  equipment: Cable, straight bar
+  start_kg: 12.5
+  step_kg: 2.5
+  min_reps: 8
+  max_reps: 12
+  images: [/storage/images/training/cable-curl-0.jpg, /storage/images/training/cable-curl-1.jpg]
+  cues:
+  - Palms up, elbows pinned to your sides
+  - Curl to the shoulders and squeeze
+  - Lower until arms are fully straight
+- key: lateral-raise
+  name: Dumbbell lateral raise
+  equipment: Dumbbells (weight is per hand)
+  start_kg: 5
+  step_kg: 1
+  min_reps: 12
+  max_reps: 15
+  images: [/storage/images/training/lateral-raise-0.jpg, /storage/images/training/lateral-raise-1.jpg]
+  cues:
+  - Slight bend in the elbows, lead with the elbows
+  - Raise to shoulder height, no higher; shoulders stay down, away from the ears
+  - Light weight; stop at once if the neck tenses up

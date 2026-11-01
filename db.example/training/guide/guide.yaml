@@ -1,0 +1,28 @@
+key: guide
+sets: 2
+push_seconds: 2
+lower_seconds: 2
+switch_seconds: 15
+rest_seconds: 60
+before_gym:
+- Drink 500 ml of water with an electrolyte sachet as soon as you wake up
+- Coffee on the way, 20–30 minutes before the first set
+- 'Get daylight: open the curtains and walk outside to the gym'
+- Bag packed and gymwear laid out the night before
+- Seven or more hours of sleep; it is the biggest energy lever
+- Optional if you feel flat — a banana or two dates 30 minutes before
+warmup:
+- name: Band pull-aparts
+  amount: 2 × 15
+  images: [/storage/images/training/band-pull-apart-0.jpg, /storage/images/training/band-pull-apart-1.jpg]
+- name: Arm circles and slow neck rolls
+  amount: 30 seconds
+- name: One light set of the first exercise
+  amount: 10 easy reps at half the weight
+rules:
+- Follow the beep. Push for 2 beats, lower for 2 beats.
+- A rep counts only if it reaches the full end position within its beat.
+- The set ends at the first rep that doesn't. Tap Stop, and that count is the result.
+- Both sets reach the top of the rep range → the page adds one step next time.
+- First set below the bottom of the range → the page drops one step.
+- Anything in between → same weight; try to beat last time's reps.

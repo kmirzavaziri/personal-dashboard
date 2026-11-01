@@ -83,7 +83,6 @@ def render(services) -> str:
     snack_budget = int((cs.metadata.edible.nutrition or {}).get('calories', 100)) if cs else 100
     options = snack_options(nutrition.pool, snack_budget)
     profile = read_yaml(config.health_db / 'profile.yaml')
-    gym = read_yaml(config.health_db / 'gym.yaml')
     monitoring = read_yaml(config.health_db / 'monitoring.yaml') or []
     clinics = read_yaml(config.health_db / 'clinics.yaml') or {}
     skin_clinic = read_yaml(config.health_db / 'skin_clinic.yaml') or []
@@ -103,7 +102,6 @@ def render(services) -> str:
         batches=nutrition.batches,
         routine=nutrition.routine,
         batch_subtotals=nutrition.batch_subtotals,
-        gym=gym,
         monitoring=monitoring,
         clinics=clinics,
         skin_clinic=skin_clinic,

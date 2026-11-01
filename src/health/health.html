@@ -224,49 +224,6 @@
 
 <section>
   <details open>
-  <summary><h2>Gym</h2></summary>
-  <div class="note">{{ gym.schedule }}</div>
-
-  <details open><summary><h3>Warm-up, every session</h3></summary>
-  <table>
-    <thead><tr><th>Exercise</th><th>Sets × reps</th><th>Notes</th></tr></thead>
-    <tbody>
-      {% for ex in gym.warmup %}
-      <tr><td>{{ ex.exercise }}</td><td>{{ ex.sets_reps }}</td><td class="muted">{{ ex.notes }}</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  </details>
-
-  {% for section in gym.sections %}
-  <details open><summary><h3>{{ section.name }}</h3></summary>
-  <table>
-    <thead><tr><th>Exercise</th><th>Weight</th><th>Sets × reps</th><th>Notes</th></tr></thead>
-    <tbody>
-      {% for ex in section.exercises %}
-      <tr><td>{{ ex.exercise }}</td><td>{{ ex.weight }}</td><td>{{ ex.sets_reps }}</td><td class="muted">{{ ex.notes }}</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  </details>
-  {% endfor %}
-
-  <details open><summary><h3>Progressive overload</h3></summary>
-  <div class="note">{{ gym.overload }}</div>
-  </details>
-
-  <details open><summary><h3>When to change</h3></summary>
-  <table>
-    {% for row in gym.when_to_change %}
-    <tr><td>{{ row.period }}</td><td class="muted">{{ row.action }}</td></tr>
-    {% endfor %}
-  </table>
-  </details>
-  </details>
-</section>
-
-<section>
-  <details open>
   <summary><h2>Hair &amp; skin care</h2></summary>
   {%- set care_categories = care_guide | map(attribute='category') | unique | list -%}
   <table>
