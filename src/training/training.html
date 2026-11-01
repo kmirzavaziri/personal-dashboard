@@ -5,88 +5,99 @@
 {% block max_width %}720px{% endblock %}
 
 {% block extra_css %}
-  .day-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.9rem; }
+  .day-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.8rem; }
   .day-head h2 { margin: 0; font-size: 1.35rem; color: var(--strong); }
   .day-head .muted { font-size: 0.85rem; }
-  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.75rem 0.9rem; margin-bottom: 0.75rem; }
+  .begin { display: block; width: 100%; margin-bottom: 0.9rem; padding: 0.95rem; font-size: 1.1rem; font-weight: 700; border-radius: var(--radius);
+    border: 1px solid var(--accent); background: var(--accent); color: var(--surface); cursor: pointer; font-family: inherit; }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.75rem 0.9rem; margin-bottom: 0.7rem; }
   .panel > summary { cursor: pointer; font-weight: 600; color: var(--strong); }
-  .panel ul { margin: 0.5rem 0 0; padding-left: 1.1rem; }
-  .panel li { margin: 0.2rem 0; }
-  .warmup { display: grid; gap: 0.5rem; margin-top: 0.5rem; }
+  .panel ul, .panel ol { margin: 0.5rem 0 0; padding-left: 1.2rem; }
+  .panel li { margin: 0.25rem 0; }
+  .warmup { display: grid; gap: 0.55rem; margin-top: 0.55rem; }
   .warmup-row { display: flex; align-items: center; gap: 0.75rem; }
   .warmup-row .frames { width: 84px; flex: none; }
 
-  .pair { margin: 1.25rem 0 0.5rem; }
-  .pair-head { display: grid; gap: 0.1rem; margin-bottom: 0.45rem; }
-  .pair-head h3 { margin: 0; font-size: 0.95rem; color: var(--strong); }
-  .pair-head .muted { font-size: 0.8rem; }
-
-  .ex { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.75rem; margin-bottom: 0.6rem; }
-  .ex.complete { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
-  .ex-top { display: grid; grid-template-columns: 132px 1fr; gap: 0.75rem; align-items: start; }
-  .frames { position: relative; aspect-ratio: 3 / 2; border-radius: calc(var(--radius) - 2px); overflow: hidden; background: #fff; }
+  .frames { position: relative; display: block; aspect-ratio: 3 / 2; border-radius: calc(var(--radius) - 2px); overflow: hidden; background: #fff; }
   .frames img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .frames img + img { animation: flip 4s steps(1) infinite; }
   @keyframes flip { 0% { opacity: 0; } 50% { opacity: 1; } }
   @media (prefers-reduced-motion: reduce) { .frames img + img { animation: none; opacity: 0; } }
-  .ex-name { font-weight: 600; color: var(--strong); font-size: 1rem; }
-  .ex-eq { font-size: 0.78rem; color: var(--muted); }
-  .target { margin-top: 0.4rem; font-size: 1.15rem; font-weight: 600; color: var(--strong); font-variant-numeric: tabular-nums; }
-  .target small { font-size: 0.8rem; font-weight: 400; color: var(--muted); }
-  .last { font-size: 0.8rem; color: var(--muted); margin-top: 0.15rem; font-variant-numeric: tabular-nums; }
-  .ex details { margin-top: 0.5rem; font-size: 0.85rem; }
-  .ex details summary { cursor: pointer; color: var(--muted); }
-  .ex details ul { margin: 0.35rem 0 0; padding-left: 1.1rem; }
-  .video { margin-top: 0.5rem; aspect-ratio: 9 / 16; max-width: 260px; border: 0; border-radius: var(--radius); }
 
-  .sets { display: grid; gap: 0.4rem; margin-top: 0.65rem; }
-  .set { display: grid; grid-template-columns: 3.2rem 1fr 1fr auto; gap: 0.4rem; align-items: center; }
-  .set label { font-size: 0.8rem; color: var(--muted); }
-  .set .field { display: flex; align-items: center; gap: 0.25rem; }
-  .set input { width: 100%; min-width: 0; padding: 0.45rem 0.4rem; font-size: 1rem; text-align: center; font-variant-numeric: tabular-nums;
-    background: var(--raised); color: var(--strong); border: 1px solid var(--border); border-radius: calc(var(--radius) - 2px); }
-  .set .unit { font-size: 0.75rem; color: var(--muted); }
-  .set.saved input { border-color: color-mix(in srgb, var(--accent) 50%, var(--border)); }
-  .go { min-width: 4.6rem; padding: 0.5rem 0.7rem; font-size: 0.9rem; font-weight: 600; border-radius: calc(var(--radius) - 2px);
-    border: 1px solid var(--accent); background: var(--accent); color: var(--surface); cursor: pointer; }
-  .set.saved .go { background: transparent; color: var(--accent); }
-  .go:focus-visible, .stop:focus-visible { outline: 2px solid var(--strong); outline-offset: 2px; }
+  .pair { margin: 1.1rem 0 0.4rem; }
+  .pair-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.4rem; }
+  .pair-head h3 { margin: 0; font-size: 0.95rem; color: var(--strong); }
+  .pair-head .muted { font-size: 0.8rem; }
+  .pair-list { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .row { display: grid; grid-template-columns: 64px 1fr auto; gap: 0.75rem; align-items: center; width: 100%; padding: 0.6rem 0.75rem;
+    background: none; border: 0; border-top: 1px solid var(--border); color: inherit; text-align: left; cursor: pointer; font: inherit; }
+  .row:first-child { border-top: 0; }
+  .row .frames { width: 64px; }
+  .row-name { font-weight: 600; color: var(--strong); font-size: 0.95rem; }
+  .row-target { font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .dots { display: flex; gap: 0.3rem; }
+  .dot { width: 0.7rem; height: 0.7rem; border-radius: 50%; border: 1.5px solid var(--border-strong); }
+  .dot.saved { background: var(--accent); border-color: var(--accent); }
+  .row:focus-visible, .begin:focus-visible, .nav button:focus-visible, .go:focus-visible, .stop:focus-visible, .back:focus-visible { outline: 2px solid var(--strong); outline-offset: 2px; }
 
-  .coach { position: fixed; inset: auto 0 0 0; z-index: 50; padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom));
-    background: var(--surface); border-top: 1px solid var(--border-strong); box-shadow: 0 -8px 24px rgb(0 0 0 / 0.18); text-align: center; }
+  .focus { position: fixed; inset: 0; z-index: 1000; background: var(--bg, var(--surface)); display: flex; flex-direction: column; }
+  .focus[hidden] { display: none; }
+  .focus-top { flex: none; display: flex; align-items: center; gap: 0.6rem; padding: calc(0.6rem + env(safe-area-inset-top)) 1rem 0.6rem; border-bottom: 1px solid var(--border); position: relative; background: var(--surface); }
+  .back { padding: 0.5rem 0.75rem; border-radius: calc(var(--radius) - 2px); border: 1px solid var(--border); background: var(--raised); color: var(--strong); font: inherit; font-size: 0.9rem; cursor: pointer; }
+  .focus-count { flex: 1; text-align: right; font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .focus-progress { position: absolute; inset: auto 0 -1px 0; height: 3px; background: var(--raised); }
+  .focus-progress span { display: block; height: 100%; width: 0; background: var(--accent); transition: width 0.3s; }
+  .steps { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .step { max-width: 560px; margin: 0 auto; padding: 0.9rem 1rem 1.5rem; }
+  .step[hidden] { display: none; }
+  .strip { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; font-size: 0.8rem; color: var(--muted); margin-bottom: 0.7rem; }
+  .strip .chip { padding: 0.2rem 0.55rem; border-radius: 999px; border: 1px solid var(--border); }
+  .strip .chip.on { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .strip .chip.saved { text-decoration: line-through; }
+  .step .frames { border-radius: var(--radius); }
+  .step h3 { margin: 0.8rem 0 0.1rem; font-size: 1.35rem; color: var(--strong); }
+  .eq { font-size: 0.85rem; color: var(--muted); }
+  .big-target { margin-top: 0.7rem; font-size: 2.1rem; font-weight: 700; color: var(--strong); font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .big-target small { font-size: 1rem; font-weight: 500; color: var(--muted); }
+  .last { font-size: 0.85rem; color: var(--muted); margin-top: 0.25rem; }
+  .result { margin-top: 0.7rem; padding: 0.6rem 0.75rem; border-radius: calc(var(--radius) - 2px); background: color-mix(in srgb, var(--accent) 12%, transparent);
+    color: var(--strong); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .result[hidden] { display: none; }
+  .go { display: block; width: 100%; margin-top: 0.8rem; padding: 1rem; font-size: 1.15rem; font-weight: 700; border-radius: var(--radius);
+    border: 1px solid var(--accent); background: var(--accent); color: var(--surface); cursor: pointer; font-family: inherit; }
+  .step.saved .go { background: transparent; color: var(--accent); }
+  .step details { margin-top: 0.9rem; font-size: 0.9rem; }
+  .step details summary { cursor: pointer; color: var(--muted); }
+  .step details ul { margin: 0.4rem 0 0; padding-left: 1.2rem; }
+  .step details li { margin: 0.2rem 0; }
+  .video { display: block; margin-top: 0.6rem; width: 100%; max-width: 280px; aspect-ratio: 9 / 16; border: 0; border-radius: var(--radius); }
+  .nav { flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; padding: 0.6rem 1rem calc(0.6rem + env(safe-area-inset-bottom)); border-top: 1px solid var(--border); background: var(--surface); }
+  .nav button { padding: 0.9rem; font-size: 1rem; font-weight: 600; border-radius: var(--radius); border: 1px solid var(--border-strong); background: var(--raised); color: var(--strong); cursor: pointer; font-family: inherit; }
+  .nav button:disabled { opacity: 0.4; cursor: default; }
+  body.focused { overflow: hidden; }
+
+  .coach { position: fixed; inset: auto 0 0 0; z-index: 1001; padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom));
+    background: var(--surface); border-top: 1px solid var(--border-strong); box-shadow: 0 -8px 24px rgb(0 0 0 / 0.25); text-align: center; }
   .coach[hidden] { display: none; }
   .coach-what { font-size: 0.85rem; color: var(--muted); }
-  .coach-cue { font-size: 2.6rem; font-weight: 700; letter-spacing: 0.04em; color: var(--strong); line-height: 1.15; margin: 0.25rem 0; }
+  .coach-cue { font-size: 2.8rem; font-weight: 700; letter-spacing: 0.04em; color: var(--strong); line-height: 1.15; margin: 0.25rem 0; }
   .coach-cue.push { color: var(--accent); }
   .coach-count { font-size: 1rem; color: var(--strong); font-variant-numeric: tabular-nums; }
   .coach-bar { height: 4px; background: var(--raised); border-radius: 2px; margin: 0.6rem auto 0.8rem; max-width: 320px; overflow: hidden; }
   .coach-bar span { display: block; height: 100%; width: 0; background: var(--accent); }
-  .stop { width: 100%; max-width: 320px; padding: 0.9rem; font-size: 1.05rem; font-weight: 700; border-radius: var(--radius);
-    border: 1px solid var(--border-strong); background: var(--raised); color: var(--strong); cursor: pointer; }
-  .rules ol { margin: 0.5rem 0 0; padding-left: 1.2rem; }
-  .rules li { margin: 0.25rem 0; }
-  .ex.current { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
-  .set.current label { color: var(--accent); font-weight: 600; }
-  .next { position: fixed; inset: auto 0 0 0; z-index: 40; display: flex; align-items: center; gap: 0.75rem;
-    padding: 0.7rem 1rem calc(0.7rem + env(safe-area-inset-bottom));
-    background: var(--surface); border-top: 1px solid var(--border-strong); box-shadow: 0 -8px 24px rgb(0 0 0 / 0.18); }
-  .next[hidden] { display: none; }
-  .next-text { flex: 1; min-width: 0; }
-  .next-step { font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; }
-  .next-name { font-size: 0.98rem; font-weight: 600; color: var(--strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .next-target { font-size: 0.85rem; color: var(--strong); font-variant-numeric: tabular-nums; }
-  .next-progress { position: absolute; inset: 0 0 auto 0; height: 3px; background: var(--raised); }
-  .next-progress span { display: block; height: 100%; background: var(--accent); transition: width 0.3s; }
-  .next .go { min-width: 6.5rem; padding: 0.85rem 1rem; font-size: 1.05rem; }
-  main { padding-bottom: 12rem; scroll-padding-bottom: 8rem; }
+  .stop { width: 100%; max-width: 320px; padding: 1rem; font-size: 1.1rem; font-weight: 700; border-radius: var(--radius);
+    border: 1px solid var(--border-strong); background: var(--raised); color: var(--strong); cursor: pointer; font-family: inherit; }
 {% endblock %}
 
 {% block content %}
 {% set g = plan.guide %}
+{% set ns = namespace(index=0) %}
 <div class="day-head">
   <h2>{{ plan.workout.name }}</h2>
   <span class="muted">{{ plan.day.strftime('%a %-d %b') }} · about 25 min</span>
 </div>
+
+<button type="button" class="begin" id="begin">Start workout</button>
 
 <details class="panel">
   <summary>Before you go</summary>
@@ -99,7 +110,7 @@
     {% for w in g.warmup %}
     <div class="warmup-row">
       {% if w.images %}<div class="frames">{% for src in w.images %}<img src="{{ src }}" alt="{{ w.name }}" loading="lazy">{% endfor %}</div>{% endif %}
-      <div><div class="ex-name">{{ w.name }}</div><div class="ex-eq">{{ w.amount }}</div></div>
+      <div><div class="row-name">{{ w.name }}</div><div class="row-target">{{ w.amount }}</div></div>
     </div>
     {% endfor %}
   </div>
@@ -108,55 +119,74 @@
 {% for pair in plan.pairs %}
 <section class="pair">
   <div class="pair-head">
-    <h3>Pair {{ loop.index }} of {{ plan.pairs | length }}</h3>
-    <span class="muted">{{ g.sets }} rounds: {{ pair | map(attribute='exercise.name') | join(' → ') }} → rest {{ g.rest_seconds }} s</span>
+    <h3>Pair {{ loop.index }}</h3>
+    <span class="muted">{{ g.sets }} rounds, alternating · rest {{ g.rest_seconds }} s</span>
   </div>
-  {% for slot in pair %}
-  {% set ex = slot.exercise %}
-  <article class="ex{% if slot.done | length >= g.sets %} complete{% endif %}" data-exercise="{{ ex.key }}" data-min="{{ ex.min_reps }}" data-max="{{ ex.max_reps }}" data-name="{{ ex.name }}" data-position="{{ loop.index }}" data-pair-size="{{ pair | length }}">
-    <div class="ex-top">
-      <div class="frames">{% for src in ex.images %}<img src="{{ src }}" alt="{{ ex.name }}" loading="lazy">{% endfor %}</div>
-      <div>
-        <div class="ex-name">{{ ex.name }}</div>
-        <div class="ex-eq">{{ ex.equipment }}</div>
-        <div class="target">{{ slot.kg | kg }} kg <small>× {{ ex.min_reps }}–{{ ex.max_reps }} reps</small></div>
-        <div class="last">{% if slot.last %}Last time: {{ slot.last[0].kg | kg }} kg × {{ slot.last | map(attribute='reps') | join(', ') }}{% else %}First time: starting weight, adjust if it's way off{% endif %}</div>
-      </div>
-    </div>
-    <details>
-      <summary>How to do it</summary>
-      <ul>{% for cue in ex.cues %}<li>{{ cue }}</li>{% endfor %}</ul>
-      {% if ex.video %}<iframe class="video" src="https://www.youtube-nocookie.com/embed/{{ ex.video }}" title="{{ ex.name }}" allowfullscreen loading="lazy"></iframe>{% endif %}
-    </details>
-    <div class="sets">
-      {% for number in range(1, g.sets + 1) %}
-      {% set done = slot.done | selectattr('number', 'equalto', number) | first %}
-      <div class="set{% if done %} saved{% endif %}" data-number="{{ number }}">
-        <label>Set {{ number }}</label>
-        <span class="field"><input type="number" inputmode="decimal" step="0.5" min="0" class="kg" value="{{ (done.kg if done else slot.kg) | kg }}" aria-label="{{ ex.name }} set {{ number }} weight"><span class="unit">kg</span></span>
-        <span class="field"><input type="number" inputmode="numeric" min="0" class="reps" value="{{ done.reps if done else '' }}" placeholder="reps" aria-label="{{ ex.name }} set {{ number }} reps"><span class="unit">reps</span></span>
-        <button type="button" class="go">{{ 'Redo' if done else 'Start' }}</button>
-      </div>
-      {% endfor %}
-    </div>
-  </article>
-  {% endfor %}
+  <div class="pair-list">
+    {% for slot in pair %}
+    <button type="button" class="row" data-exercise="{{ slot.exercise.key }}">
+      <span class="frames"><img src="{{ slot.exercise.images[0] }}" alt="" loading="lazy"></span>
+      <span><span class="row-name">{{ slot.exercise.name }}</span><br><span class="row-target">{{ slot.kg | kg }} kg × {{ slot.exercise.min_reps }}–{{ slot.exercise.max_reps }}</span></span>
+      <span class="dots">{% for number in range(1, g.sets + 1) %}<span class="dot{% if slot.done | selectattr('number', 'equalto', number) | first %} saved{% endif %}" data-number="{{ number }}"></span>{% endfor %}</span>
+    </button>
+    {% endfor %}
+  </div>
 </section>
 {% endfor %}
 
-<details class="panel rules">
+<details class="panel" style="margin-top: 1.1rem">
   <summary>The rules</summary>
   <ol>{% for rule in g.rules %}<li>{{ rule }}</li>{% endfor %}</ol>
 </details>
 
-<div class="next" id="next">
-  <div class="next-progress"><span id="next-progress"></span></div>
-  <div class="next-text">
-    <div class="next-step" id="next-step"></div>
-    <div class="next-name" id="next-name"></div>
-    <div class="next-target" id="next-target"></div>
+<div class="focus" id="focus" hidden>
+  <div class="focus-top">
+    <button type="button" class="back" id="to-overview">← Overview</button>
+    <span class="focus-count" id="focus-count"></span>
+    <div class="focus-progress"><span id="focus-progress"></span></div>
   </div>
-  <button type="button" class="go" id="next-go">Start</button>
+  <div class="steps" id="steps">
+    {% for pair in plan.pairs %}
+    {% set pair_index = loop.index %}
+    {% set last_pair = loop.last %}
+    {% for number in range(1, g.sets + 1) %}
+    {% set last_round = loop.last %}
+    {% for slot in pair %}
+    {% set ex = slot.exercise %}
+    {% set done = slot.done | selectattr('number', 'equalto', number) | first %}
+    {% if not loop.last %}{% set after = 'switch' %}{% set after_label = 'Switch to ' ~ pair[loop.index].exercise.name %}
+    {% elif not last_round %}{% set after = 'rest' %}{% set after_label = 'Rest, then round ' ~ (number + 1) %}
+    {% elif not last_pair %}{% set after = 'rest' %}{% set after_label = 'Rest, then pair ' ~ (pair_index + 1) %}
+    {% else %}{% set after = 'done' %}{% set after_label = '' %}{% endif %}
+    <section class="step{% if done %} saved{% endif %}" hidden data-index="{{ ns.index }}" data-exercise="{{ ex.key }}" data-number="{{ number }}"
+             data-name="{{ ex.name }}" data-min="{{ ex.min_reps }}" data-max="{{ ex.max_reps }}" data-kg="{{ slot.kg | kg }}"
+             data-after="{{ after }}" data-after-label="{{ after_label }}">
+      <div class="strip">
+        <span>Pair {{ pair_index }} · round {{ number }}/{{ g.sets }}:</span>
+        {% for other in pair %}<span class="chip{% if other.exercise.key == ex.key %} on{% endif %}" data-exercise="{{ other.exercise.key }}" data-number="{{ number }}">{{ other.exercise.name }}</span>{% if not loop.last %}<span>→</span>{% endif %}{% endfor %}
+      </div>
+      <div class="frames">{% for src in ex.images %}<img src="{{ src }}" alt="{{ ex.name }}" loading="lazy">{% endfor %}</div>
+      <h3>{{ ex.name }}</h3>
+      <div class="eq">{{ ex.equipment }} · set {{ number }} of {{ g.sets }}</div>
+      <div class="big-target">{{ slot.kg | kg }} kg <small>× {{ ex.min_reps }}–{{ ex.max_reps }} reps</small></div>
+      <div class="last">{% if slot.last %}Last time: {{ slot.last[0].kg | kg }} kg × {{ slot.last | map(attribute='reps') | join(', ') }}{% else %}First time: starting weight{% endif %}</div>
+      <div class="result" {% if not done %}hidden{% endif %}>Done: <span class="result-reps">{{ done.reps if done else '' }}</span> reps at {{ (done.kg if done else slot.kg) | kg }} kg</div>
+      <button type="button" class="go">{{ 'Redo set' if done else 'Start set' }}</button>
+      <details>
+        <summary>How to do it</summary>
+        <ul>{% for cue in ex.cues %}<li>{{ cue }}</li>{% endfor %}</ul>
+        {% if ex.video %}<iframe class="video" src="https://www.youtube-nocookie.com/embed/{{ ex.video }}" title="{{ ex.name }}" allowfullscreen loading="lazy"></iframe>{% endif %}
+      </details>
+    </section>
+    {% set ns.index = ns.index + 1 %}
+    {% endfor %}
+    {% endfor %}
+    {% endfor %}
+  </div>
+  <div class="nav">
+    <button type="button" id="prev">‹ Back</button>
+    <button type="button" id="next">Next ›</button>
+  </div>
 </div>
 
 <div class="coach" id="coach" hidden aria-live="polite">
@@ -174,10 +204,12 @@
   var WORKOUT = {{ plan.workout.key | tojson }};
   var PUSH = {{ plan.guide.push_seconds }} * 1000, LOWER = {{ plan.guide.lower_seconds }} * 1000;
   var REST = {{ plan.guide.rest_seconds }}, SWITCH = {{ plan.guide.switch_seconds }};
+  var steps = Array.prototype.slice.call(document.querySelectorAll('.step'));
+  var focus = document.getElementById('focus'), stepsBox = document.getElementById('steps');
   var coach = document.getElementById('coach'), what = document.getElementById('coach-what'),
       cue = document.getElementById('coach-cue'), count = document.getElementById('coach-count'),
       bar = document.getElementById('coach-bar'), stop = document.getElementById('coach-stop');
-  var audio = null, timer = null, onStop = null, wakeLock = null;
+  var current = -1, audio = null, timer = null, onStop = null, wakeLock = null;
 
   function beep(freq, ms) {
     try {
@@ -193,55 +225,64 @@
     if (navigator.wakeLock && !wakeLock) navigator.wakeLock.request('screen').then(function (lock) { wakeLock = lock; lock.addEventListener('release', function () { wakeLock = null; }); }).catch(function () {});
   }
 
-  function clear() { clearTimeout(timer); clearInterval(timer); timer = null; }
+  function isSaved(step) { return step.classList.contains('saved'); }
 
-  function close() { clear(); coach.hidden = true; onStop = null; showNext(true); }
-
-  var nextBar = document.getElementById('next'), nextGo = document.getElementById('next-go');
-  var sequence = [];
-  document.querySelectorAll('.pair').forEach(function (pair) {
-    var cards = Array.prototype.slice.call(pair.querySelectorAll('.ex'));
-    var rounds = cards.length ? cards[0].querySelectorAll('.set').length : 0;
-    for (var round = 1; round <= rounds; round++) {
-      cards.forEach(function (card) { sequence.push({ card: card, row: card.querySelector('.set[data-number="' + round + '"]') }); });
-    }
-  });
-
-  function pending() { return sequence.filter(function (step) { return !step.row.classList.contains('saved'); }); }
-
-  function showNext(scroll) {
-    document.querySelectorAll('.ex.current, .set.current').forEach(function (el) { el.classList.remove('current'); });
-    var left = pending(), done = sequence.length - left.length;
-    document.getElementById('next-progress').style.width = (done / sequence.length * 100) + '%';
-    nextBar.hidden = !coach.hidden;
-    if (!left.length) {
-      document.getElementById('next-step').textContent = done + ' of ' + sequence.length + ' sets';
-      document.getElementById('next-name').textContent = 'Workout done';
-      document.getElementById('next-target').textContent = 'Sauna, shower, standup.';
-      nextGo.hidden = true;
-      return;
-    }
-    var step = left[0], card = step.card, row = step.row;
-    card.classList.add('current'); row.classList.add('current');
-    document.getElementById('next-step').textContent = 'Set ' + (done + 1) + ' of ' + sequence.length;
-    document.getElementById('next-name').textContent = card.dataset.name + ' · set ' + row.dataset.number;
-    document.getElementById('next-target').textContent = row.querySelector('.kg').value + ' kg × ' + card.dataset.min + '–' + card.dataset.max + ' reps';
-    nextGo.hidden = false;
-    if (scroll) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  function firstPending() {
+    var step = steps.filter(function (s) { return !isSaved(s); })[0];
+    return step ? Number(step.dataset.index) : 0;
   }
 
-  nextGo.addEventListener('click', function () {
-    var step = pending()[0];
-    if (step) runSet(step.row, step.card);
-  });
+  function refresh() {
+    var saved = steps.filter(isSaved).length;
+    document.getElementById('focus-progress').style.width = (saved / steps.length * 100) + '%';
+    document.getElementById('begin').textContent = saved === 0 ? 'Start workout' : saved === steps.length ? 'Workout done · review' : 'Continue · set ' + (saved + 1) + ' of ' + steps.length;
+    steps.forEach(function (s) {
+      var on = isSaved(s);
+      document.querySelectorAll('.row[data-exercise="' + s.dataset.exercise + '"] .dot[data-number="' + s.dataset.number + '"]').forEach(function (d) { d.classList.toggle('saved', on); });
+      document.querySelectorAll('.chip[data-exercise="' + s.dataset.exercise + '"][data-number="' + s.dataset.number + '"]').forEach(function (c) { c.classList.toggle('saved', on); });
+    });
+  }
+
+  function show(index) {
+    current = Math.max(0, Math.min(index, steps.length - 1));
+    steps.forEach(function (s, i) { s.hidden = i !== current; });
+    focus.hidden = false; document.body.classList.add('focused');
+    document.getElementById('focus-count').textContent = 'Set ' + (current + 1) + ' of ' + steps.length;
+    document.getElementById('prev').disabled = current === 0;
+    document.getElementById('next').textContent = current === steps.length - 1 ? 'Finish' : 'Next ›';
+    stepsBox.scrollTop = 0;
+    keepAwake();
+  }
+
+  function open(index) {
+    if (location.hash === '#set-' + (index + 1)) show(index);
+    else if (/^#set-\d+$/.test(location.hash)) location.replace('#set-' + (index + 1));
+    else location.hash = 'set-' + (index + 1);
+  }
+
+  function closeFocus() { focus.hidden = true; document.body.classList.remove('focused'); refresh(); }
+
+  function toOverview() {
+    if (/^#set-\d+$/.test(location.hash)) history.back(); else closeFocus();
+  }
+
+  function route() {
+    var match = /^#set-(\d+)$/.exec(location.hash);
+    if (match) show(Number(match[1]) - 1); else closeFocus();
+  }
+
+  function clear() { clearTimeout(timer); clearInterval(timer); timer = null; }
+
+  function closeCoach() { clear(); coach.hidden = true; onStop = null; }
 
   function countdown(label, seconds, done) {
     clear();
-    coach.hidden = false; what.textContent = label; cue.className = 'coach-cue';
+    coach.hidden = false; what.textContent = label; cue.className = 'coach-cue'; count.textContent = '';
     stop.textContent = 'Skip';
     var left = seconds;
     function tick() {
-      cue.textContent = left + ' s'; count.textContent = '';
+      cue.textContent = left + ' s';
+      bar.style.transition = 'none';
       bar.style.width = ((seconds - left) / seconds * 100) + '%';
       if (left <= 3 && left > 0) beep(660, 90);
       if (left <= 0) { clear(); beep(990, 250); done(); return; }
@@ -251,13 +292,13 @@
     tick(); timer = setInterval(tick, 1000);
   }
 
-  function runSet(row, card) {
+  function runSet(step) {
     keepAwake();
     var reps = 0, pushing = true;
     function phase() {
       cue.textContent = pushing ? 'PUSH' : 'LOWER';
       cue.className = 'coach-cue' + (pushing ? ' push' : '');
-      count.textContent = reps + ' reps done · target ' + card.dataset.min + '–' + card.dataset.max;
+      count.textContent = reps + ' reps done · target ' + step.dataset.min + '–' + step.dataset.max;
       bar.style.transition = 'none'; bar.style.width = '0';
       requestAnimationFrame(function () { bar.style.transition = 'width ' + (pushing ? PUSH : LOWER) + 'ms linear'; bar.style.width = '100%'; });
       beep(pushing ? 880 : 520, 120);
@@ -266,52 +307,61 @@
         pushing = !pushing; phase();
       }, pushing ? PUSH : LOWER);
     }
-    nextBar.hidden = true;
-    countdown('Get set: ' + card.dataset.name + ', set ' + row.dataset.number, 3, function () {
-      what.textContent = card.dataset.name + ' · set ' + row.dataset.number;
+    countdown('Get set: ' + step.dataset.name + ', set ' + step.dataset.number, 3, function () {
+      what.textContent = step.dataset.name + ' · set ' + step.dataset.number;
       stop.textContent = 'Stop: that rep didn\'t make it';
-      onStop = function () { clear(); finish(row, card, reps); };
+      onStop = function () { clear(); finish(step, reps); };
       phase();
     });
   }
 
-  function finish(row, card, reps) {
+  function finish(step, reps) {
     onStop = function () {};
-    row.querySelector('.reps').value = reps;
-    save(row, card).then(function () { next(row, card); });
+    save(step, reps).then(function () { after(step); });
   }
 
-  function next(row, card) {
-    var position = Number(card.dataset.position), size = Number(card.dataset.pairSize);
-    if (position < size) countdown('Switch to the next exercise', SWITCH, close);
-    else countdown('Rest, then round ' + (Number(row.dataset.number) + 1), REST, close);
+  function advance() {
+    closeCoach();
+    if (current + 1 < steps.length) open(current + 1); else toOverview();
   }
 
-  function save(row, card) {
-    var kg = row.querySelector('.kg').value, reps = row.querySelector('.reps').value;
-    if (kg === '' || reps === '') return Promise.resolve();
+  function after(step) {
+    if (step.dataset.after === 'done') { closeCoach(); beep(990, 400); toOverview(); return; }
+    countdown(step.dataset.afterLabel, step.dataset.after === 'switch' ? SWITCH : REST, advance);
+  }
+
+  function save(step, reps) {
     return fetch('/api/training/set', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ workout: WORKOUT, exercise: card.dataset.exercise, number: Number(row.dataset.number), kg: Number(kg), reps: Number(reps) })
+      body: JSON.stringify({ workout: WORKOUT, exercise: step.dataset.exercise, number: Number(step.dataset.number), kg: Number(step.dataset.kg), reps: reps })
     }).then(function (r) {
       if (!r.ok) throw new Error('save failed');
-      row.classList.add('saved'); row.querySelector('.go').textContent = 'Redo';
-      var all = card.querySelectorAll('.set').length, saved = card.querySelectorAll('.set.saved').length;
-      card.classList.toggle('complete', saved >= all);
-      if (coach.hidden) showNext(false);
-    }).catch(function () { alert('Could not save this set. Check the connection and tap the reps box to retry.'); });
+      step.classList.add('saved');
+      step.querySelector('.go').textContent = 'Redo set';
+      step.querySelector('.result-reps').textContent = reps;
+      step.querySelector('.result').hidden = false;
+      refresh();
+    }).catch(function () { closeCoach(); alert('Could not save this set. Check the connection and tap Redo set.'); throw new Error('save failed'); });
   }
 
-  stop.addEventListener('click', function () { if (onStop) onStop(); else close(); });
-  showNext(false);
-
-  document.querySelectorAll('.ex').forEach(function (card) {
-    card.querySelectorAll('.set').forEach(function (row) {
-      row.querySelector('.go').addEventListener('click', function () { runSet(row, card); });
-      row.querySelector('.reps').addEventListener('change', function () { save(row, card); });
-      row.querySelector('.kg').addEventListener('change', function () { if (row.classList.contains('saved')) save(row, card); });
+  stop.addEventListener('click', function () { if (onStop) onStop(); else closeCoach(); });
+  document.getElementById('begin').addEventListener('click', function () { open(firstPending()); });
+  document.getElementById('to-overview').addEventListener('click', toOverview);
+  document.getElementById('prev').addEventListener('click', function () { if (current > 0) open(current - 1); });
+  document.getElementById('next').addEventListener('click', function () { if (current < steps.length - 1) open(current + 1); else toOverview(); });
+  document.querySelectorAll('.row').forEach(function (row) {
+    row.addEventListener('click', function () {
+      var own = steps.filter(function (s) { return s.dataset.exercise === row.dataset.exercise; });
+      var target = own.filter(function (s) { return !isSaved(s); })[0] || own[0];
+      open(Number(target.dataset.index));
     });
   });
+  steps.forEach(function (step) {
+    step.querySelector('.go').addEventListener('click', function () { runSet(step); });
+  });
+  window.addEventListener('hashchange', route);
+  refresh();
+  route();
 })();
 </script>
 {% endblock %}
