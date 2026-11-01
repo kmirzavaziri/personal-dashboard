@@ -98,8 +98,10 @@ class BudgetLine(BaseModel):
         return any(term.casefold() in folded for term in self.match)
 
     def fits(self, hour: int, workday: bool) -> bool:
-        if not self.hours or (self.frequency is Frequency.WORKDAY and not workday):
+        if self.frequency is Frequency.WORKDAY and not workday:
             return False
+        if not self.hours:
+            return True
         start, end = self.hours
         return start <= hour < end if start < end else hour >= start or hour < end
 

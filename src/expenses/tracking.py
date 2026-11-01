@@ -177,8 +177,9 @@ class Tracker:
         own = [line for line in self.lines if line.category == category]
         text = f'{entry.note} {entry.tx.description}'
         local = self.ledger.clock.local(entry.tx.at)
-        timed = next((line for line in own if line.fits(local.hour, self._is_workday(_day(self.ledger.clock, entry.tx.at)))), None)
-        matched = next((line for line in own if line.claims(text)), None) or timed
+        workday = self._is_workday(_day(self.ledger.clock, entry.tx.at))
+        timed = next((line for line in own if line.hours and line.fits(local.hour, workday)), None)
+        matched = next((line for line in own if line.claims(text) and line.fits(local.hour, workday)), None) or timed
         if matched:
             return matched
         open_lines = [line for line in own if not line.match and not line.hours and not line.bill]
