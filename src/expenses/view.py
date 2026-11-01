@@ -92,9 +92,9 @@ def _vendor_rows(ledger, type_keys: list[str]) -> list[dict]:
     for folded, summary in summaries.items():
         rules = assigned.get(folded, [])
         split = any(rule.slots for _, rule in rules)
-        per_slot = {slot: (category.key, rule.note) for category, rule in rules for slot in rule.slots}
-        single = next(((category.key, rule.note) for category, rule in rules if not rule.slots), ('', ''))
-        primary = single[0] if not split else next(iter(per_slot.values()), ('', ''))[0]
+        per_slot = {slot: (_picked(category, rule), rule.note) for category, rule in rules for slot in rule.slots}
+        single = next(((_picked(category, rule), rule.note) for category, rule in rules if not rule.slots), ('', ''))
+        primary = (single[0] if not split else next(iter(per_slot.values()), ('', ''))[0]).partition('/')[0]
         by_type = '' if rules else next(iter(key for key, _ in summary['by_type'].most_common(1)), '')
         primary = primary or by_type
         hidden = summary['count'] == 0 and summary['hidden_count'] > 0
@@ -115,6 +115,10 @@ def _vendor_rows(ledger, type_keys: list[str]) -> list[dict]:
             'category_name': ledger.category(primary).name if ledger.category(primary) else '',
         })
     return sorted(rows, key=lambda row: -row['total'])
+
+
+def _picked(category, rule) -> str:
+    return f'{category.key}/{rule.line}' if rule.line else category.key
 
 
 def _category_budgets(lines: list[BudgetLine]) -> dict[str, float]:

@@ -400,7 +400,8 @@ def assign_vendor(config, vendor: str, assignments: list[dict]) -> None:
         if assignment.get('category'):
             Category.objects.get(key=assignment['category'])
             rules.setdefault(assignment['category'], []).append(
-                Rule(match=vendor, slots=slots, note=(assignment.get('note') or '').strip(), type=type_override))
+                Rule(match=vendor, slots=slots, note=(assignment.get('note') or '').strip(), type=type_override,
+                     line=assignment.get('line') or ''))
     for category in Category.objects.all():
         kept = [rule for rule in category.rules if rule.match.casefold() != vendor.casefold()]
         updated = kept + rules.get(category.key, [])

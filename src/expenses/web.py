@@ -8,6 +8,13 @@ from expenses.view import render, render_card_periods, render_previous_periods, 
 from pkg.model.base import DoesNotExist
 
 
+def _with_sub_category(assignment: dict, lines: dict) -> dict:
+    category, _, line = (assignment.get('category') or '').partition('/')
+    if line and (line not in lines or lines[line].category != category):
+        raise ValueError(f'{line!r} is not a sub-category of {category!r}')
+    return {**assignment, 'category': category, 'line': line}
+
+
 def make_expenses_bp(services) -> Blueprint:
     bp = Blueprint('expenses', __name__)
 
@@ -123,7 +130,9 @@ def make_expenses_bp(services) -> Blueprint:
         vendor = (payload.get('vendor') or '').strip()
         if not vendor:
             return 'vendor is required', 400
-        tx_service.assign_vendor(services.config, vendor, payload.get('assignments') or [])
+        lines = sub_categories(services.config)
+        assignments = [_with_sub_category(assignment, lines) for assignment in payload.get('assignments') or []]
+        tx_service.assign_vendor(services.config, vendor, assignments)
         return changed({'vendor': vendor})
 
     @bp.post('/api/categories')

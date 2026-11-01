@@ -169,6 +169,7 @@ class Rule(BaseModel):
     slots: list[str] = []
     note: str = ''
     type: str = ''
+    line: str = ''
 
     @property
     def precedence(self) -> bool:

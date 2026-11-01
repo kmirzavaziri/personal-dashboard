@@ -89,6 +89,7 @@ class CategoryStatus:
 class Overview:
     period: Period
     categories: list[CategoryStatus]
+    out_of_budget: list[Entry]
 
     @property
     def budget(self) -> float:
@@ -146,7 +147,9 @@ class Tracker:
                                         spent=sum(piece.amount for piece in unassigned), expected=0.0, state='unassigned'))
             categories.append(CategoryStatus(key=key or 'misc', name=self.names.get(key, 'Misc.'), lines=lines))
         categories.sort(key=lambda category: (category.key == 'misc', -category.budget))
-        return Overview(period=period, categories=categories)
+        out_of_budget = list({piece.entry.tx.id: piece.entry for piece in in_period if piece.line is None}.values())
+        return Overview(period=period, categories=categories,
+                        out_of_budget=sorted(out_of_budget, key=lambda entry: entry.tx.at, reverse=True))
 
     def _pieces(self, entry: Entry) -> list[Piece]:
         scale = entry.aed / entry.tx.aed if entry.tx.aed else 1.0
@@ -158,6 +161,9 @@ class Tracker:
         return pieces
 
     def _auto_line(self, entry: Entry, category: str) -> BudgetLine | None:
+        ruled = self.by_key.get(entry.match.rule.line) if entry.match and not entry.tx.category_override else None
+        if ruled and ruled.category == category:
+            return ruled
         own = [line for line in self.lines if line.category == category]
         text = f'{entry.note} {entry.tx.description}'
         local = self.ledger.clock.local(entry.tx.at)
