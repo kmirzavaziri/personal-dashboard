@@ -13,7 +13,8 @@
     <div class="vendor-assign">
       <div class="assign-blocks">
       <div class="assign-single"{% if v.split %} hidden{% endif %}>{{ category_select(v.single[0], v.by_type) }}<input class="vnote input-quiet" value="{{ v.single[1] }}" placeholder="Note" maxlength="80" aria-label="Note"></div>
-      <div class="assign-split"{% if not v.split %} hidden{% endif %}>{% if v.split %}
+      {% if v.split %}<button type="button" class="split-summary" title="Edit the time split">{% for s in slots %}{% set picked = v.per_slot.get(s.key, ('', ''))[0] %}{% set key, _, line_key = picked.partition('/') %}{% set cat = categories | selectattr('key', 'equalto', key) | first %}<span class="split-part"><span class="muted">{{ s.short }}</span> <span class="dot" style="--tone: {{ tone(cat.name) if cat else 'var(--faint)' }}"></span>{{ cat.name if cat else '—' }}{% if sub_categories.get(line_key) %} › {{ sub_categories[line_key].name }}{% endif %}</span>{% endfor %}</button>{% endif %}
+      <div class="assign-split{% if v.split %} collapsed{% endif %}"{% if not v.split %} hidden{% endif %}>{% if v.split %}
         {% for s in slots %}{% set a = v.per_slot.get(s.key, ('', '')) %}<div class="slot-row" data-slot="{{ s.key }}"><span class="slot-label" title="{{ s.label }}">{{ s.short }}</span>{{ category_select(a[0]) }}<input class="vnote input-quiet" value="{{ a[1] }}" placeholder="Note" maxlength="80" aria-label="Note"></div>{% endfor %}
       {% endif %}</div>
       </div>
