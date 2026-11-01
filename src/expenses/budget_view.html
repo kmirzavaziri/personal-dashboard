@@ -32,7 +32,6 @@ Paid {{ when(line.last_paid) }}{% if line.state == 'over' %}, {{ (line.spent - l
 <div class="budget-summary">
   <div><span class="muted">{{ overview.period.name }} · day {{ overview.period.elapsed_days }} of {{ overview.period.length_days }}</span><strong>{{ dh }}{{ overview.spent | fmt }}</strong><span class="muted">of {{ overview.budget | fmt }} budgeted</span></div>
   <div><span class="muted">Day-to-day spending</span><strong>{{ dh }}{{ paced_spent | fmt }}</strong><span class="muted">{% if paced_spent > paced_expected %}{{ (paced_spent - paced_expected) | fmt }} ahead of pace{% else %}{{ (paced_expected - paced_spent) | fmt }} under pace{% endif %} · {{ overview.daily_left | fmt }} / day left</span></div>
-  {% if overview.unassigned %}<a class="summary-link" href="#out-of-budget"><span class="muted">Not in your budget</span><strong>{{ dh }}{{ overview.unassigned | fmt }}</strong><span class="muted">{{ overview.out_of_budget | length }} transactions · review below</span></a>{% endif %}
 </div>
 {% endmacro %}
 
