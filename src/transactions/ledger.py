@@ -88,6 +88,9 @@ class Ledger:
                                              self._accounts, matching, clock)
         resolved = [self._resolve(tx) for tx in named]
         refunds = _refunds_by_purchase(resolved, matching)
+        for entry in resolved:
+            if entry.tx.pays_back:
+                refunds[entry.tx.pays_back].append(entry.tx)
         self._hidden = {tx.id for txs in refunds.values() for tx in txs}
         own = _self_transfers(resolved, set(self._accounts.values()), owner, matching.self_transfer)
         settled = _settled_transfers([entry for entry in resolved if entry.tx.id not in own], matching.settlement)

@@ -16,6 +16,7 @@ HERE = Path(__file__).parent
 
 
 _AVERAGE_MONTHS = 6
+_PAYBACK_DAYS = 45
 _MISC = 'Misc.'
 _MISC_KEY = ''
 _ALL_SPENDING = 'All spending'
@@ -310,6 +311,18 @@ def _matches_query(entry, terms: list[str]) -> bool:
     haystack = ' '.join((entry.tx.description, entry.tx.venue, entry.note, entry.category_name, entry.account, entry.type,
                          f'{abs(entry.tx.aed):.2f}', f'{abs(entry.tx.amount):.2f}')).casefold()
     return all(term in haystack for term in terms)
+
+
+def payback_candidates(services, tx_id: str) -> list[dict]:
+    ledger = Ledger.load(services.config)
+    incoming = next((entry for entry in ledger.entries if entry.tx.id == tx_id), None)
+    if incoming is None:
+        return []
+    earliest = incoming.tx.at - timedelta(days=_PAYBACK_DAYS)
+    purchases = [entry for entry in ledger.visible
+                 if entry.counts_as_spending and entry.tx.aed > 0 and earliest <= entry.tx.at <= incoming.tx.at]
+    return [{'id': entry.tx.id, 'label': f"{ledger.clock.local(entry.tx.at):%b %-d} · {entry.tx.description} · {entry.tx.aed:,.2f}"}
+            for entry in sorted(purchases, key=lambda entry: entry.tx.at, reverse=True)]
 
 
 def render_rows(services, ids: list[str], show_account: bool) -> str:

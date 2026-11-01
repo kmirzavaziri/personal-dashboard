@@ -4,7 +4,7 @@ from pydantic import ValidationError
 import transactions.service as tx_service
 from expenses.budget import sub_categories
 from transactions.ledger import Ledger
-from expenses.view import render, render_card_periods, render_previous_periods, render_rows, render_search, render_vendor_rows
+from expenses.view import payback_candidates, render, render_card_periods, render_previous_periods, render_rows, render_search, render_vendor_rows
 from pkg.model.base import DoesNotExist
 
 
@@ -51,6 +51,17 @@ def make_expenses_bp(services) -> Blueprint:
     @bp.get('/expenses/periods')
     def previous_periods():
         return render_previous_periods(services, request.args['before'], int(request.args.get('count', 3)))
+
+    @bp.get('/expenses/payback-candidates')
+    def list_payback_candidates():
+        return jsonify(payback_candidates(services, request.args.get('tx', '')))
+
+    @bp.post('/api/transaction/<tx_id>/pays_back')
+    def set_transaction_pays_back(tx_id):
+        purchase = body().get('purchase', '')
+        if not tx_service.set_pays_back(services.config, tx_id, purchase):
+            return 'transaction not found', 404
+        return changed({'id': tx_id, 'purchase': purchase})
 
     @bp.get('/expenses/rows')
     def rows():

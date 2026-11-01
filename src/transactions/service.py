@@ -279,10 +279,10 @@ def _overrides(config) -> dict[str, dict]:
     return {
         tx.id: {'category_override': tx.category_override, 'budget_line': tx.budget_line, 'note': tx.note,
                 'splits': tx.splits, 'description_override': tx.description_override, 'voided': tx.voided,
-                'marked_settled': tx.marked_settled}
+                'marked_settled': tx.marked_settled, 'pays_back': tx.pays_back}
         for tx in _store(config).all()
         if tx.category_override or tx.budget_line or tx.note or tx.splits or tx.description_override or tx.voided
-        or tx.marked_settled
+        or tx.marked_settled or tx.pays_back
     }
 
 
@@ -337,6 +337,15 @@ def set_note(config, tx_id: str, note: str) -> bool:
 
 def set_budget_line(config, tx_id: str, category_key: str, line_key: str) -> bool:
     return _store(config).update(tx_id, category_override=category_key, budget_line=line_key)
+
+
+def set_pays_back(config, tx_id: str, purchase_id: str) -> bool:
+    rows = {row.id: row for row in _store(config).all()}
+    if tx_id not in rows:
+        return False
+    if purchase_id and (purchase_id not in rows or rows[purchase_id].aed <= 0 or rows[tx_id].aed >= 0):
+        raise ValueError('only incoming money can pay back an outgoing transaction')
+    return _store(config).update(tx_id, pays_back=purchase_id)
 
 
 def set_splits(config, tx_id: str, splits: list[dict]) -> bool:

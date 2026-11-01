@@ -41,6 +41,7 @@ class Transaction(BaseModel):
     note: str = ''
     budget_line: str = ''
     splits: list[Split] = []
+    pays_back: str = ''
 
     @property
     def at(self) -> datetime:
